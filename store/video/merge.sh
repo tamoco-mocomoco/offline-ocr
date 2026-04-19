@@ -4,28 +4,40 @@
 #
 # Usage:
 #   cd store/video
-#   bash merge.sh
+#   bash merge.sh              # Build Japanese version (default)
+#   bash merge.sh en           # Build English version
 #
 # Output:
-#   store/video/promo-video.mp4
+#   store/video/promo-video-ja.mp4  or  store/video/promo-video-en.mp4
 #
 
 set -e
 cd "$(dirname "$0")"
 
+LANG="${1:-ja}"
 RECORDINGS="recordings"
 VOICE="voice"
-OUTPUT="promo-video.mp4"
 FADE_DURATION=0.8
+
+if [ "$LANG" = "en" ]; then
+  SUFFIX="-en"
+  OUTPUT="promo-video-en.mp4"
+else
+  SUFFIX=""
+  OUTPUT="promo-video-ja.mp4"
+fi
+
+echo "=== Building ${LANG} version ==="
+echo ""
 
 # Scene files in order
 SCENES=(
-  "scene0-title.mp4"
-  "scene1-demo.mp4"
-  "scene2-features.mp4"
-  "scene3-privacy.mp4"
-  "scene4-cleaning.mp4"
-  "scene5-architecture.mp4"
+  "scene0-title${SUFFIX}.mp4"
+  "scene1-demo${SUFFIX}.mp4"
+  "scene2-features${SUFFIX}.mp4"
+  "scene3-privacy${SUFFIX}.mp4"
+  "scene4-cleaning${SUFFIX}.mp4"
+  "scene5-architecture${SUFFIX}.mp4"
 )
 
 echo "=== Step 1: Getting scene durations ==="
@@ -83,7 +95,7 @@ echo "  Filter: ${FILTER:0:100}..."
 echo ""
 echo "=== Step 3: Rendering video with crossfades ==="
 
-TEMP_VIDEO="recordings/faded-video.mp4"
+TEMP_VIDEO="recordings/faded-video${SUFFIX}.mp4"
 ffmpeg -y \
   $INPUTS \
   -filter_complex "$FILTER" \
@@ -91,16 +103,22 @@ ffmpeg -y \
   -c:v libx264 -crf 18 -preset slow -pix_fmt yuv420p \
   "$TEMP_VIDEO" 2>/dev/null
 
-echo "  → faded-video.mp4"
+echo "  → faded-video${SUFFIX}.mp4"
 
 echo ""
 echo "=== Step 4: Merging video + narration ==="
 
-ffmpeg -y \
-  -i "$TEMP_VIDEO" \
-  -i "$VOICE/narration-full.m4a" \
-  -c:v copy -c:a aac -shortest \
-  "$OUTPUT" 2>/dev/null
+NARRATION="$VOICE/narration-full${SUFFIX}.m4a"
+if [ ! -f "$NARRATION" ]; then
+  echo "  ⚠ ${NARRATION} not found. Outputting video without audio."
+  cp "$TEMP_VIDEO" "$OUTPUT"
+else
+  ffmpeg -y \
+    -i "$TEMP_VIDEO" \
+    -i "$NARRATION" \
+    -c:v copy -c:a aac -shortest \
+    "$OUTPUT" 2>/dev/null
+fi
 
 echo "  → $OUTPUT"
 

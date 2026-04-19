@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<title>Promo Tiles</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;700;900&display=swap');
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Noto Sans JP', sans-serif;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 40px;
+    padding: 40px;
+    background: #888;
+  }
+
+  /* ── Shared ── */
+  .tile {
+    background: linear-gradient(135deg, #1E3A5F 0%, #2C5F8A 50%, #5B9BD5 100%);
+    color: #fff;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .tile::before {
+    content: '';
+    position: absolute;
+    top: -40%;
+    right: -20%;
+    width: 500px;
+    height: 500px;
+    background: radial-gradient(circle, rgba(255,255,255,0.06) 0%, transparent 70%);
+    border-radius: 50%;
+  }
+
+  .icon {
+    border-radius: 18px;
+    overflow: hidden;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.3);
+    flex-shrink: 0;
+  }
+  .icon img { width: 100%; height: 100%; }
+
+  .badge {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    background: rgba(255,255,255,0.12);
+    border: 1px solid rgba(255,255,255,0.2);
+    border-radius: 20px;
+    color: rgba(255,255,255,0.9);
+  }
+
+  /* ── Small Tile (440x280) ── */
+  .tile-small {
+    width: 440px;
+    height: 280px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 28px;
+    padding: 0 36px;
+  }
+
+  .tile-small .icon { width: 80px; height: 80px; }
+
+  .tile-small .text {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    z-index: 1;
+  }
+
+  .tile-small h1 {
+    font-size: 32px;
+    font-weight: 900;
+    letter-spacing: 1px;
+    line-height: 1.2;
+  }
+
+  .tile-small .subtitle {
+    font-size: 14px;
+    color: rgba(255,255,255,0.85);
+    line-height: 1.6;
+  }
+
+  .tile-small .badges {
+    display: flex;
+    gap: 8px;
+    margin-top: 4px;
+    flex-wrap: wrap;
+  }
+
+  .tile-small .badge {
+    padding: 3px 10px;
+    font-size: 11px;
+  }
+
+  /* ── Marquee Tile (1400x560) ── */
+  .tile-marquee {
+    width: 1400px;
+    height: 560px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 60px;
+    padding: 0 100px;
+  }
+
+  .tile-marquee .icon { width: 140px; height: 140px; border-radius: 30px; }
+
+  .tile-marquee .text {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    z-index: 1;
+  }
+
+  .tile-marquee h1 {
+    font-size: 64px;
+    font-weight: 900;
+    letter-spacing: 2px;
+    line-height: 1.2;
+  }
+
+  .tile-marquee .subtitle {
+    font-size: 26px;
+    color: rgba(255,255,255,0.85);
+    line-height: 1.6;
+  }
+
+  .tile-marquee .desc {
+    font-size: 18px;
+    color: rgba(255,255,255,0.7);
+    line-height: 1.7;
+    max-width: 700px;
+  }
+
+  .tile-marquee .badges {
+    display: flex;
+    gap: 14px;
+    margin-top: 8px;
+    flex-wrap: wrap;
+  }
+
+  .tile-marquee .badge {
+    padding: 8px 20px;
+    font-size: 16px;
+  }
+
+  /* ── i18n ── */
+  [data-lang-en] { display: none; }
+  [data-lang-ja] { display: initial; }
+  body.lang-en [data-lang-en] { display: initial; }
+  body.lang-en [data-lang-ja] { display: none; }
+  /* block-level */
+  p[data-lang-en], div[data-lang-en] { display: none; }
+  p[data-lang-ja], div[data-lang-ja] { display: block; }
+  body.lang-en p[data-lang-en], body.lang-en div[data-lang-en] { display: block; }
+  body.lang-en p[data-lang-ja], body.lang-en div[data-lang-ja] { display: none; }
+  /* flex */
+  .badges[data-lang-en] { display: none; }
+  .badges[data-lang-ja] { display: flex; }
+  body.lang-en .badges[data-lang-en] { display: flex; }
+  body.lang-en .badges[data-lang-ja] { display: none; }
+</style>
+</head>
+<body>
+
+<!-- ── Small Tile (440×280) ── -->
+<div class="tile tile-small" id="tile-small">
+  <div class="icon">
+    <img src="../public/icons/icon128.png" alt="icon">
+  </div>
+  <div class="text">
+    <span data-lang-ja><h1>オフラインOCR</h1></span>
+    <span data-lang-en><h1>Offline OCR</h1></span>
+    <p class="subtitle" data-lang-ja>どこにも通信しない<br>安全な範囲選択OCR</p>
+    <p class="subtitle" data-lang-en>Safe, fully offline<br>region-select OCR</p>
+    <div class="badges" data-lang-ja>
+      <span class="badge">🔒 完全オフライン</span>
+      <span class="badge">🇯🇵 日本語特化</span>
+      <span class="badge">📐 縦書き対応</span>
+    </div>
+    <div class="badges" data-lang-en>
+      <span class="badge">🔒 Fully Offline</span>
+      <span class="badge">🇯🇵 Japanese OCR</span>
+      <span class="badge">📐 Vertical Text</span>
+    </div>
+  </div>
+</div>
+
+<!-- ── Marquee Tile (1400×560) ── -->
+<div class="tile tile-marquee" id="tile-marquee">
+  <div class="icon">
+    <img src="../public/icons/icon128.png" alt="icon">
+  </div>
+  <div class="text">
+    <span data-lang-ja><h1>オフラインOCR</h1></span>
+    <span data-lang-en><h1>Offline OCR</h1></span>
+    <p class="subtitle" data-lang-ja>どこにも通信しない、安全な範囲選択OCR</p>
+    <p class="subtitle" data-lang-en>Safe, fully offline region-select OCR</p>
+    <p class="desc" data-lang-ja>画面上のテキストをマウスで選択するだけ。国立国会図書館のOCR技術で<br>日本語テキストを高精度に認識し、クリップボードに自動コピーします。</p>
+    <p class="desc" data-lang-en>Just select text on screen with your mouse. Powered by the National Diet Library's<br>OCR technology for high-accuracy Japanese text recognition.</p>
+    <div class="badges" data-lang-ja>
+      <span class="badge">🔒 完全オフライン</span>
+      <span class="badge">🇯🇵 日本語特化</span>
+      <span class="badge">📐 縦書き対応</span>
+      <span class="badge">⚡ ワンクリック</span>
+      <span class="badge">🧹 正規表現クリーニング</span>
+    </div>
+    <div class="badges" data-lang-en>
+      <span class="badge">🔒 Fully Offline</span>
+      <span class="badge">🇯🇵 Japanese OCR</span>
+      <span class="badge">📐 Vertical Text</span>
+      <span class="badge">⚡ One Click</span>
+      <span class="badge">🧹 Regex Cleaning</span>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>

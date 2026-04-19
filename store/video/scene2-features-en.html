@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Scene 2: Key Features</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;700;900&display=swap');
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  :root {
+    --primary: #5B9BD5;
+    --bg-gradient: linear-gradient(135deg, #1E3A5F 0%, #2C5F8A 50%, #5B9BD5 100%);
+  }
+
+  body {
+    font-family: 'Noto Sans JP', sans-serif;
+    display: flex; justify-content: center; align-items: center;
+    min-height: 100vh; background: #111;
+  }
+
+  .slide {
+    width: 1920px; height: 1080px;
+    background: #fff;
+    display: flex; flex-direction: column;
+    padding: 72px 100px;
+    overflow: hidden;
+  }
+
+  .section-header {
+    display: flex; align-items: center; gap: 16px; margin-bottom: 12px;
+    opacity: 0; animation: fadeSlideDown 0.6s ease forwards 0.3s;
+  }
+  .bar { width: 6px; height: 40px; background: var(--primary); border-radius: 3px; }
+  h2 { font-size: 46px; font-weight: 900; color: #1a1a1a; }
+
+  .section-sub {
+    font-size: 22px; color: #888; margin-bottom: 56px; margin-left: 22px;
+    opacity: 0; animation: fadeSlideDown 0.5s ease forwards 0.6s;
+  }
+
+  .features-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 28px; flex: 1;
+  }
+
+  .feature-card {
+    background: #F7FAFD;
+    border: 1px solid #E4EEF7;
+    border-radius: 16px;
+    padding: 36px 32px;
+    display: flex; flex-direction: column; gap: 12px;
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  .feature-card:nth-child(1) { animation: fadeSlideUp 0.6s ease forwards 4.8s; }
+  .feature-card:nth-child(2) { animation: fadeSlideUp 0.6s ease forwards 9.5s; }
+  .feature-card:nth-child(3) { animation: fadeSlideUp 0.6s ease forwards 18.0s; }
+  .feature-card:nth-child(4) { animation: fadeSlideUp 0.6s ease forwards 22.5s; }
+  .feature-card:nth-child(5) { animation: fadeSlideUp 0.6s ease forwards 30.3s; }
+  .feature-card:nth-child(6) { animation: fadeSlideUp 0.6s ease forwards 34.0s; }
+
+  .feature-icon {
+    width: 64px; height: 64px;
+    background: var(--bg-gradient);
+    border-radius: 14px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 32px;
+    box-shadow: 0 4px 12px rgba(91,155,213,0.3);
+  }
+  .feature-card h3 { font-size: 24px; font-weight: 700; color: #1a1a1a; margin-top: 6px; }
+  .feature-card p { font-size: 16px; color: #666; line-height: 1.8; }
+
+  @keyframes fadeSlideDown {
+    from { opacity: 0; transform: translateY(-15px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes fadeSlideUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+</style>
+</head>
+<body>
+<div class="slide">
+  <div class="section-header">
+    <div class="bar"></div>
+    <h2>Key Features</h2>
+  </div>
+  <p class="section-sub">Safe, accurate, and customizable local OCR</p>
+
+  <div class="features-grid">
+    <div class="feature-card">
+      <div class="feature-icon">🔒</div>
+      <h3>Fully Offline</h3>
+      <p>All processing happens in your browser. No images or text are ever sent to external servers.</p>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">🏛️</div>
+      <h3>NDL OCR Technology</h3>
+      <p>Powered by NDLOCR-Lite from the National Diet Library of Japan. High-accuracy Japanese text recognition.</p>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">📐</div>
+      <h3>Vertical & Horizontal</h3>
+      <p>Accurately recognizes both horizontal and vertical Japanese text, including old books and legal documents.</p>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">🚀</div>
+      <h3>3 Ways to Launch</h3>
+      <p>Toolbar icon, keyboard shortcut (Alt+Shift+O), or right-click context menu.</p>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">🧹</div>
+      <h3>Regex Cleaning Rules</h3>
+      <p>Auto-clean OCR results before copying — remove commas, spaces, line breaks with custom regex rules.</p>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">🌐</div>
+      <h3>Multilingual UI</h3>
+      <p>Automatically switches between Japanese and English based on your browser language settings.</p>
+    </div>
+  </div>
+</div>
+</body>
+</html>

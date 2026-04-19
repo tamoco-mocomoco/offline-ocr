@@ -9,6 +9,10 @@ import {
 } from "../ndl-parser";
 import type { Detection } from "../../engine/deim";
 
+function det(classIndex: number, box: [number, number, number, number], confidence: number): Detection {
+  return { classIndex, box, confidence, className: `class_${classIndex}`, predCharCount: 0 };
+}
+
 // ── createElement ──
 
 describe("createElement", () => {
@@ -102,10 +106,10 @@ describe("detectionsToPage", () => {
   it("places lines inside text blocks", () => {
     const detections: Detection[] = [
       // text_block (classIndex 0)
-      { classIndex: 0, box: [100, 100, 500, 400], confidence: 0.9 },
+      det(0, [100, 100, 500, 400], 0.9),
       // line_main (classIndex 1) inside the text block
-      { classIndex: 1, box: [120, 120, 480, 160], confidence: 0.8 },
-      { classIndex: 1, box: [120, 170, 480, 210], confidence: 0.85 },
+      det(1, [120, 120, 480, 160], 0.8),
+      det(1, [120, 170, 480, 210], 0.85),
     ];
     const page = detectionsToPage(1024, 800, "test.png", detections);
     const textblocks = findAll(page, "TEXTBLOCK");
@@ -116,7 +120,7 @@ describe("detectionsToPage", () => {
 
   it("filters low-confidence detections", () => {
     const detections: Detection[] = [
-      { classIndex: 1, box: [10, 10, 100, 50], confidence: 0.05 },
+      det(1, [10, 10, 100, 50], 0.05),
     ];
     const page = detectionsToPage(1024, 800, "test.png", detections, 0.1);
     const lines = findAll(page, "LINE");
@@ -125,7 +129,7 @@ describe("detectionsToPage", () => {
 
   it("creates independent lines for lines outside blocks", () => {
     const detections: Detection[] = [
-      { classIndex: 1, box: [10, 10, 200, 50], confidence: 0.9 },
+      det(1, [10, 10, 200, 50], 0.9),
     ];
     const page = detectionsToPage(1024, 800, "test.png", detections);
     // Line should be a direct child of PAGE (no TEXTBLOCK parent)
@@ -136,9 +140,9 @@ describe("detectionsToPage", () => {
   it("handles table blocks", () => {
     const detections: Detection[] = [
       // block_table (classIndex 15)
-      { classIndex: 15, box: [50, 50, 500, 300], confidence: 0.9 },
+      det(15, [50, 50, 500, 300], 0.9),
       // line_main inside table
-      { classIndex: 1, box: [60, 60, 200, 100], confidence: 0.8 },
+      det(1, [60, 60, 200, 100], 0.8),
     ];
     const page = detectionsToPage(1024, 800, "test.png", detections);
     const blocks = findAll(page, "BLOCK");
@@ -149,9 +153,9 @@ describe("detectionsToPage", () => {
   it("filters bboxes smaller than minBboxSize", () => {
     const detections: Detection[] = [
       // Tiny text_block
-      { classIndex: 0, box: [10, 10, 12, 12], confidence: 0.9 },
+      det(0, [10, 10, 12, 12], 0.9),
       // line inside it
-      { classIndex: 1, box: [10, 10, 12, 12], confidence: 0.9 },
+      det(1, [10, 10, 12, 12], 0.9),
     ];
     const page = detectionsToPage(1024, 800, "test.png", detections, 0.1, 5);
     const textblocks = findAll(page, "TEXTBLOCK");
@@ -162,9 +166,9 @@ describe("detectionsToPage", () => {
   it("handles ad blocks", () => {
     const detections: Detection[] = [
       // block_ad (classIndex 7)
-      { classIndex: 7, box: [600, 50, 900, 300], confidence: 0.8 },
+      det(7, [600, 50, 900, 300], 0.8),
       // line_ad (classIndex 3) inside the ad block
-      { classIndex: 3, box: [620, 60, 880, 100], confidence: 0.7 },
+      det(3, [620, 60, 880, 100], 0.7),
     ];
     const page = detectionsToPage(1024, 800, "test.png", detections);
     const blocks = findAll(page, "BLOCK");

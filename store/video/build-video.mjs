@@ -12,9 +12,10 @@
  *   - VOICEVOX app running (localhost:50021)
  *
  * Usage:
- *   node store/video/build-video.mjs              # Run all steps
- *   node store/video/build-video.mjs --video-only # Skip voice generation
- *   node store/video/build-video.mjs --voice-only # Skip video recording
+ *   node store/video/build-video.mjs                    # Build Japanese version (default)
+ *   node store/video/build-video.mjs --lang en          # Build English version
+ *   node store/video/build-video.mjs --video-only       # Skip voice generation
+ *   node store/video/build-video.mjs --voice-only       # Skip video recording
  */
 
 import { createRequire } from "module";
@@ -25,15 +26,30 @@ import { execSync } from "child_process";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
+// ── Args ────────────────────────────────────────────────────────────────────
+
+const args = process.argv.slice(2);
+const videoOnly = args.includes("--video-only");
+const voiceOnly = args.includes("--voice-only");
+const langIdx = args.indexOf("--lang");
+const LANG = langIdx >= 0 && args[langIdx + 1] ? args[langIdx + 1] : "ja";
+
+if (LANG !== "ja" && LANG !== "en") {
+  console.error(`Unknown language: ${LANG}. Use "ja" or "en".`);
+  process.exit(1);
+}
+
 // ── Config ──────────────────────────────────────────────────────────────────
 
+const suffix = LANG === "en" ? "-en" : "";
+
 const scenes = [
-  { file: "scene0-title.html", duration: 11_000 },
-  { file: "scene1-demo.html", duration: 36_000 },
-  { file: "scene2-features.html", duration: 42_000 },
-  { file: "scene3-privacy.html", duration: 38_000 },
-  { file: "scene4-cleaning.html", duration: 39_000 },
-  { file: "scene5-architecture.html", duration: 42_000 },
+  { file: `scene0-title${suffix}.html`, duration: 11_000 },
+  { file: `scene1-demo${suffix}.html`, duration: 36_000 },
+  { file: `scene2-features${suffix}.html`, duration: 42_000 },
+  { file: `scene3-privacy${suffix}.html`, duration: 38_000 },
+  { file: `scene4-cleaning${suffix}.html`, duration: 39_000 },
+  { file: `scene5-architecture${suffix}.html`, duration: 42_000 },
 ];
 
 const VOICEVOX_URL = "http://localhost:50021";
@@ -41,42 +57,60 @@ const SPEAKER_ID = 68; // あいえるたん
 
 // Timing rule: element appears → 0.5s pause → narration starts → narration ends → 2s gap → next element
 // Scene transitions: 3s gap
-const narrations = [
-  // Scene 0: タイトル (0s〜)
-  { start: 1.5,   file: "scene0-01", text: "オフラインOCR。どこにも通信しない、安全な範囲選択OCRです。" },         // 6.3s → end 7.8 → +3s
-
-  // Scene 1: 操作デモ (10.8s〜, 相対時間で記載)
-  { start: 11.3,  file: "scene1-01", text: "使い方はとてもシンプルです。" },                                       // 2.2s → 13.5 → +2s
-  { start: 16.0,  file: "scene1-02", text: "OCRしたい箇所をマウスでドラッグするだけ。" },                           // 3.3s → 19.3 → +2s
-  { start: 21.8,  file: "scene1-03", text: "国立国会図書館のOCR技術が、ブラウザの中だけで文字を認識します。" },       // 6.0s → 27.8 → +2s
-  { start: 30.3,  file: "scene1-04", text: "認識結果は自動でクリップボードにコピー。そのままペーストできます。" },     // 4.9s → 35.2 → +2s
-  { start: 37.7,  file: "scene1-05", text: "完全オフライン。日本語に特化。縦書きにも対応。ワンクリックで起動できます。" }, // 6.3s → 44.0 → +3s
-
-  // Scene 2: 特徴一覧 (47.0s〜)
-  { start: 47.5,  file: "scene2-01", text: "主な特徴をご紹介します。" },                                           // 2.3s → 49.8 → +2s
-  { start: 52.3,  file: "scene2-02", text: "すべての処理がブラウザ内で完結。外部への通信は一切ありません。国立国会図書館が開発した高精度エンジンを搭載しています。" }, // 10.2s → 62.5 → +2.5s
-  { start: 65.5,  file: "scene2-03", text: "横書きだけでなく、古い書籍の縦書きテキストにも対応。ツールバー、ショートカット、右クリックメニューの3通りで起動できます。" }, // 9.3s → 74.8 → +2.5s
-  { start: 77.8,  file: "scene2-04", text: "正規表現でOCR結果を自動整形するクリーニング機能。UIは日本語と英語を自動で切り替えます。" }, // 8.1s → 85.9 → +3s
-
-  // Scene 3: プライバシー (88.9s〜)
-  { start: 89.4,  file: "scene3-01", text: "プライバシーについて。このアプリはあなたのデータを一切外部に送りません。" }, // 5.3s → 94.7 → +2s
-  { start: 97.2,  file: "scene3-02", text: "画像のキャプチャ、OCRエンジン、AIモデル、認識結果。すべてがあなたのブラウザの中だけで動作します。" }, // 8.3s → 105.5 → +2s
-  { start: 108.0, file: "scene3-03", text: "外部サーバーとの通信は完全にブロック。画像もテキストも送信されません。" }, // 5.6s → 113.6 → +2s
-  { start: 116.1, file: "scene3-04", text: "ネットワークリクエストはゼロ。データ収集もゼロ。インターネットに接続していなくても、そのまま使えます。" }, // 7.9s → 124.0 → +3s
-
-  // Scene 4: クリーニング (127.0s〜)
-  { start: 127.5, file: "scene4-01", text: "クリーニングルール機能をご紹介します。" },                             // 2.7s → 130.2 → +2s
-  { start: 132.7, file: "scene4-02", text: "OCRの結果を、コピーする前に正規表現で自動整形できます。スペースの除去、カンマの削除、改行の整理。ルールは自由に追加・並べ替え可能です。" }, // 12.9s → 145.6 → +2s
-  { start: 148.1, file: "scene4-03", text: "たとえば、請求書の金額。OCRの生データにはカンマやスペースが含まれていますが、" }, // 6.8s → 154.9 → +2s
-  { start: 157.4, file: "scene4-04", text: "ルールを適用すると、不要な文字が除去され、きれいな数値に整形されます。" }, // 5.6s → 163.0 → +3s
-
-  // Scene 5: アーキテクチャ (166.0s〜)
-  { start: 166.5, file: "scene5-01", text: "技術的な仕組みをご説明します。" },                                     // 2.5s → 169.0 → +2s
-  { start: 171.5, file: "scene5-02", text: "コンテントスクリプトがページ上で範囲選択UIを表示し、座標をサービスワーカーに送ります。" }, // 7.0s → 178.5 → +2s
-  { start: 181.0, file: "scene5-03", text: "サービスワーカーがスクリーンショットを取得し、OCRワーカーに転送。" },     // 5.2s → 186.2 → +2s
-  { start: 188.7, file: "scene5-04", text: "ONNX Runtime Webでローカル推論を実行します。" },                       // 4.3s → 193.0 → +2s
-  { start: 195.5, file: "scene5-05", text: "認識結果がコンテントスクリプトに返され、クリップボードに書き込まれます。すべてマニフェストV3ベースで、安全にローカル完結しています。" }, // 9.9s → 205.4
+const narrations_ja = [
+  { start: 1.5,   file: "scene0-01", text: "オフラインOCR。どこにも通信しない、安全な範囲選択OCRです。" },
+  { start: 11.3,  file: "scene1-01", text: "使い方はとてもシンプルです。" },
+  { start: 16.0,  file: "scene1-02", text: "OCRしたい箇所をマウスでドラッグするだけ。" },
+  { start: 21.8,  file: "scene1-03", text: "国立国会図書館のOCR技術が、ブラウザの中だけで文字を認識します。" },
+  { start: 30.3,  file: "scene1-04", text: "認識結果は自動でクリップボードにコピー。そのままペーストできます。" },
+  { start: 37.7,  file: "scene1-05", text: "完全オフライン。日本語に特化。縦書きにも対応。ワンクリックで起動できます。" },
+  { start: 47.5,  file: "scene2-01", text: "主な特徴をご紹介します。" },
+  { start: 52.3,  file: "scene2-02", text: "すべての処理がブラウザ内で完結。外部への通信は一切ありません。国立国会図書館が開発した高精度エンジンを搭載しています。" },
+  { start: 65.5,  file: "scene2-03", text: "横書きだけでなく、古い書籍の縦書きテキストにも対応。ツールバー、ショートカット、右クリックメニューの3通りで起動できます。" },
+  { start: 77.8,  file: "scene2-04", text: "正規表現でOCR結果を自動整形するクリーニング機能。UIは日本語と英語を自動で切り替えます。" },
+  { start: 89.4,  file: "scene3-01", text: "プライバシーについて。このアプリはあなたのデータを一切外部に送りません。" },
+  { start: 97.2,  file: "scene3-02", text: "画像のキャプチャ、OCRエンジン、AIモデル、認識結果。すべてがあなたのブラウザの中だけで動作します。" },
+  { start: 108.0, file: "scene3-03", text: "外部サーバーとの通信は完全にブロック。画像もテキストも送信されません。" },
+  { start: 116.1, file: "scene3-04", text: "ネットワークリクエストはゼロ。データ収集もゼロ。インターネットに接続していなくても、そのまま使えます。" },
+  { start: 127.5, file: "scene4-01", text: "クリーニングルール機能をご紹介します。" },
+  { start: 132.7, file: "scene4-02", text: "OCRの結果を、コピーする前に正規表現で自動整形できます。スペースの除去、カンマの削除、改行の整理。ルールは自由に追加・並べ替え可能です。" },
+  { start: 148.1, file: "scene4-03", text: "たとえば、請求書の金額。OCRの生データにはカンマやスペースが含まれていますが、" },
+  { start: 157.4, file: "scene4-04", text: "ルールを適用すると、不要な文字が除去され、きれいな数値に整形されます。" },
+  { start: 166.5, file: "scene5-01", text: "技術的な仕組みをご説明します。" },
+  { start: 171.5, file: "scene5-02", text: "コンテントスクリプトがページ上で範囲選択UIを表示し、座標をサービスワーカーに送ります。" },
+  { start: 181.0, file: "scene5-03", text: "サービスワーカーがスクリーンショットを取得し、OCRワーカーに転送。" },
+  { start: 188.7, file: "scene5-04", text: "ONNX Runtime Webでローカル推論を実行します。" },
+  { start: 195.5, file: "scene5-05", text: "認識結果がコンテントスクリプトに返され、クリップボードに書き込まれます。すべてマニフェストV3ベースで、安全にローカル完結しています。" },
 ];
+
+// English narration in katakana for VOICEVOX (subtitle SRT provides accurate English text)
+const narrations_en = [
+  { start: 1.5,   file: "scene0-01", text: "オフラインOCR。完全オフラインで安全な、範囲選択OCRです。" },
+  { start: 11.3,  file: "scene1-01", text: "使い方はとてもシンプルです。" },
+  { start: 16.0,  file: "scene1-02", text: "OCRしたいテキストの上を、マウスでドラッグするだけ。" },
+  { start: 21.8,  file: "scene1-03", text: "国立国会図書館のOCRテクノロジーが、ブラウザ内でテキストを認識します。" },
+  { start: 30.3,  file: "scene1-04", text: "結果は自動でクリップボードにコピー。すぐにペーストできます。" },
+  { start: 37.7,  file: "scene1-05", text: "完全オフライン。日本語に最適化。縦書きサポート。ワンクリックで起動。" },
+  { start: 47.5,  file: "scene2-01", text: "主なフィーチャーを紹介します。" },
+  { start: 52.3,  file: "scene2-02", text: "すべてのプロセスがブラウザ内で完結。データは外部に送信されません。国立国会図書館が開発した、高精度エンジンを搭載しています。" },
+  { start: 65.5,  file: "scene2-03", text: "横書きと縦書き、両方の日本語テキストをサポート。古い書籍にも対応。ツールバー、ショートカット、右クリックメニューから起動できます。" },
+  { start: 77.8,  file: "scene2-04", text: "カスタム正規表現ルールでOCR結果をオートクリーン。UIは日本語と英語を自動で切り替えます。" },
+  { start: 89.4,  file: "scene3-01", text: "プライバシーについて。このエクステンションはデータを外部に送信しません。" },
+  { start: 97.2,  file: "scene3-02", text: "スクリーンショット、OCRエンジン、AIモデル、認識結果。すべてブラウザ内で完結します。" },
+  { start: 108.0, file: "scene3-03", text: "外部サーバーとの通信は完全にブロック。画像もテキストも送信されません。" },
+  { start: 116.1, file: "scene3-04", text: "ネットワークリクエスト、ゼロ。データコレクション、ゼロ。インターネット接続なしでも動作します。" },
+  { start: 127.5, file: "scene4-01", text: "クリーニングルール機能を紹介します。" },
+  { start: 132.7, file: "scene4-02", text: "コピー前に、正規表現でOCR結果をオートフォーマットできます。ルールの追加、並べ替え、切り替えが自由にできます。" },
+  { start: 148.1, file: "scene4-03", text: "例えば、インボイスの金額。OCRの生データにはカンマやスペースが含まれています。" },
+  { start: 157.4, file: "scene4-04", text: "ルールを適用すると、クリーンな数値にフォーマットされます。" },
+  { start: 166.5, file: "scene5-01", text: "内部の仕組みを説明します。" },
+  { start: 171.5, file: "scene5-02", text: "コンテントスクリプトが選択UIを表示し、座標をサービスワーカーに送ります。" },
+  { start: 181.0, file: "scene5-03", text: "サービスワーカーがスクリーンショットをキャプチャし、OCRワーカーにフォワードします。" },
+  { start: 188.7, file: "scene5-04", text: "ONNXランタイムウェブで、ローカル推論を実行します。" },
+  { start: 195.5, file: "scene5-05", text: "結果がクリップボードに書き込まれます。すべてマニフェストV3ベースで、ローカルで完結しています。" },
+];
+
+const narrations = LANG === "en" ? narrations_en : narrations_ja;
 
 const SAMPLE_RATE = 24000;
 const BYTES_PER_SAMPLE = 2;
@@ -86,12 +120,6 @@ const TOTAL_DURATION = 210;
 
 const recordingsDir = resolve(__dirname, "recordings");
 const voiceDir = resolve(__dirname, "voice");
-
-// ── Args ────────────────────────────────────────────────────────────────────
-
-const args = process.argv.slice(2);
-const videoOnly = args.includes("--video-only");
-const voiceOnly = args.includes("--voice-only");
 
 // ── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -130,7 +158,7 @@ function buildWavHeader(pcmLength) {
 
 async function recordVideos() {
   console.log("\n========================================");
-  console.log(" Step 1: Recording scene videos (WebM)");
+  console.log(` Step 1: Recording scene videos [${LANG}] (WebM)`);
   console.log("========================================\n");
 
   mkdirSync(recordingsDir, { recursive: true });
@@ -191,7 +219,7 @@ async function recordVideos() {
 
 function convertToMp4() {
   console.log("\n========================================");
-  console.log(" Step 2: Converting WebM → MP4");
+  console.log(` Step 2: Converting WebM → MP4 [${LANG}]`);
   console.log("========================================\n");
 
   const webmFiles = readdirSync(recordingsDir).filter(
@@ -217,19 +245,19 @@ function convertToMp4() {
   );
   writeFileSync(listFile, mp4Files.join("\n") + "\n");
 
-  const fullMp4 = resolve(recordingsDir, "full-video.mp4");
+  const fullMp4 = resolve(recordingsDir, `full-video${suffix}.mp4`);
   execSync(
     `ffmpeg -y -f concat -safe 0 -i "${listFile}" -c copy "${fullMp4}"`,
     { stdio: "pipe" }
   );
-  console.log(`    → full-video.mp4`);
+  console.log(`    → full-video${suffix}.mp4`);
 }
 
 // ── Step 3: Generate voice ──────────────────────────────────────────────────
 
 async function generateVoice() {
   console.log("\n========================================");
-  console.log(" Step 3: Generating narration (VOICEVOX)");
+  console.log(` Step 3: Generating narration [${LANG}] (VOICEVOX)`);
   console.log("========================================\n");
 
   mkdirSync(voiceDir, { recursive: true });
@@ -245,12 +273,14 @@ async function generateVoice() {
     return;
   }
 
-  console.log(`  Speaker: あいえるたん (ID: ${SPEAKER_ID})\n`);
+  console.log(`  Speaker: あいえるたん (ID: ${SPEAKER_ID})`);
+  console.log(`  Language: ${LANG}\n`);
 
   const clips = [];
 
   for (const item of narrations) {
-    process.stdout.write(`  Generating ${item.file}...`);
+    const fileKey = `${item.file}${suffix}`;
+    process.stdout.write(`  Generating ${fileKey}...`);
 
     // audio_query
     const queryRes = await fetch(
@@ -271,7 +301,7 @@ async function generateVoice() {
     const wav = Buffer.from(await synthRes.arrayBuffer());
 
     // Save individual clip
-    const outPath = resolve(voiceDir, `${item.file}.wav`);
+    const outPath = resolve(voiceDir, `${fileKey}.wav`);
     writeFileSync(outPath, wav);
 
     const pcm = wavToPcm(wav);
@@ -297,55 +327,57 @@ async function generateVoice() {
     );
   }
 
+  const narrationBase = `narration-full${suffix}`;
   const header = buildWavHeader(combinedPcm.length);
   const fullWav = Buffer.concat([header, combinedPcm]);
-  writeFileSync(resolve(voiceDir, "narration-full.wav"), fullWav);
-  writeFileSync(resolve(voiceDir, "timestamps.txt"), timestamps.join("\n") + "\n");
-  console.log(`    → narration-full.wav (${TOTAL_DURATION}s)`);
-  console.log(`    → timestamps.txt`);
+  writeFileSync(resolve(voiceDir, `${narrationBase}.wav`), fullWav);
+  writeFileSync(resolve(voiceDir, `timestamps${suffix}.txt`), timestamps.join("\n") + "\n");
+  console.log(`    → ${narrationBase}.wav (${TOTAL_DURATION}s)`);
+  console.log(`    → timestamps${suffix}.txt`);
 
   // Convert to MP4-compatible audio (AAC)
   console.log("\n  Converting narration to AAC...");
   execSync(
-    `ffmpeg -y -i "${resolve(voiceDir, "narration-full.wav")}" -c:a aac -b:a 192k "${resolve(voiceDir, "narration-full.m4a")}"`,
+    `ffmpeg -y -i "${resolve(voiceDir, `${narrationBase}.wav`)}" -c:a aac -b:a 192k "${resolve(voiceDir, `${narrationBase}.m4a`)}"`,
     { stdio: "pipe" }
   );
-  console.log(`    → narration-full.m4a`);
+  console.log(`    → ${narrationBase}.m4a`);
 }
 
 // ── Step 4: Merge video + audio ─────────────────────────────────────────────
 
 function mergeVideoAudio() {
-  const videoPath = resolve(recordingsDir, "full-video.mp4");
-  const audioPath = resolve(voiceDir, "narration-full.m4a");
-  const outputPath = resolve(__dirname, "promo-video.mp4");
+  const videoPath = resolve(recordingsDir, `full-video${suffix}.mp4`);
+  const audioPath = resolve(voiceDir, `narration-full${suffix}.m4a`);
+  const outputName = `promo-video-${LANG}.mp4`;
+  const outputPath = resolve(__dirname, outputName);
 
   if (!existsSync(videoPath)) {
-    console.log("\n  ⚠ full-video.mp4 not found. Skipping merge.");
+    console.log(`\n  ⚠ full-video${suffix}.mp4 not found. Skipping merge.`);
     return;
   }
   if (!existsSync(audioPath)) {
-    console.log("\n  ⚠ narration-full.m4a not found. Skipping merge.");
+    console.log(`\n  ⚠ narration-full${suffix}.m4a not found. Skipping merge.`);
     return;
   }
 
   console.log("\n========================================");
-  console.log(" Step 4: Merging video + narration");
+  console.log(` Step 4: Merging video + narration [${LANG}]`);
   console.log("========================================\n");
 
   execSync(
     `ffmpeg -y -i "${videoPath}" -i "${audioPath}" -c:v copy -c:a aac -shortest "${outputPath}"`,
     { stdio: "pipe" }
   );
-  console.log(`  → promo-video.mp4\n`);
-  console.log("Done! Final video: store/video/promo-video.mp4");
+  console.log(`  → ${outputName}\n`);
+  console.log(`Done! Final video: store/video/${outputName}`);
 }
 
 // ── Main ────────────────────────────────────────────────────────────────────
 
 async function main() {
   console.log("╔══════════════════════════════════════╗");
-  console.log("║   Offline OCR — Video Builder        ║");
+  console.log(`║   Offline OCR — Video Builder [${LANG}]    ║`);
   console.log("╚══════════════════════════════════════╝");
 
   if (!voiceOnly) {

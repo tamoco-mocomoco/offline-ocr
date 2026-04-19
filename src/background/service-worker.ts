@@ -128,7 +128,7 @@ async function handleSelectionCompleted(
 ): Promise<void> {
   activeOcrTabId = tabId;
   try {
-    // captureVisibleTab is restricted by activeTab to the focused window.
+    // captureVisibleTab requires host permission for the active tab.
     const winId = (await chrome.tabs.get(tabId)).windowId;
     const dataUrl = await chrome.tabs.captureVisibleTab(winId, {
       format: "png",

@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Scene 1: Demo</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;700;900&display=swap');
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  :root {
+    --primary: #5B9BD5;
+    --primary-light: #A8D0F0;
+    --bg-gradient: linear-gradient(135deg, #1E3A5F 0%, #2C5F8A 50%, #5B9BD5 100%);
+  }
+
+  body {
+    font-family: 'Noto Sans JP', sans-serif;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    background: #111;
+  }
+
+  .slide {
+    width: 1920px;
+    height: 1080px;
+    background: var(--bg-gradient);
+    color: #fff;
+    padding: 40px 80px 28px;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    position: relative;
+  }
+
+  /* ── Header ── */
+  .hero-header {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    margin-bottom: 8px;
+    opacity: 0;
+    animation: fadeSlideDown 0.8s ease forwards 0.3s;
+  }
+
+  .hero-icon {
+    width: 64px; height: 64px;
+    border-radius: 14px;
+    overflow: hidden;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+  }
+  .hero-icon img { width: 100%; height: 100%; }
+
+  h1 { font-size: 44px; font-weight: 900; letter-spacing: 2px; }
+
+  .subtitle {
+    font-size: 20px;
+    color: rgba(255,255,255,0.85);
+    margin-bottom: 20px;
+    margin-left: 84px;
+    opacity: 0;
+    animation: fadeSlideDown 0.8s ease forwards 1.0s;
+  }
+
+  /* ── Demo area ── */
+  .demo-area {
+    flex: 1;
+    display: flex;
+    gap: 36px;
+    align-items: stretch;
+    opacity: 0;
+    animation: fadeIn 0.8s ease forwards 2.0s;
+  }
+
+  /* Mock browser */
+  .mock-browser {
+    flex: 1;
+    background: #fff;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.25);
+    display: flex;
+    flex-direction: column;
+    position: relative;
+  }
+
+  .browser-toolbar {
+    background: #e8ecef;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    padding: 0 12px;
+    gap: 8px;
+  }
+  .browser-dot { width: 10px; height: 10px; border-radius: 50%; }
+  .browser-dot.r { background: #f5655b; }
+  .browser-dot.y { background: #f6bd3b; }
+  .browser-dot.g { background: #3cc842; }
+  .browser-url {
+    flex: 1; margin-left: 12px; background: #fff; border-radius: 4px;
+    height: 22px; display: flex; align-items: center; padding: 0 10px;
+    font-size: 11px; color: #888; font-family: ui-monospace, monospace;
+  }
+
+  .browser-content {
+    flex: 1;
+    padding: 28px 32px;
+    position: relative;
+    color: #333;
+    font-size: 14px;
+    line-height: 2;
+  }
+
+  .page-title {
+    font-size: 26px; font-weight: 700; color: #1a1a1a;
+    margin-bottom: 20px; border-bottom: 2px solid #e0e0e0; padding-bottom: 14px;
+  }
+  .page-text { color: #444; font-size: 16px; line-height: 2.2; }
+
+  /* Selection rectangle — animated */
+  .selection-rect {
+    position: absolute;
+    top: 68px; left: 24px;
+    width: 0; height: 0;
+    border: 2.5px solid var(--primary);
+    background: rgba(91,155,213,0.10);
+    border-radius: 3px;
+    pointer-events: none;
+    opacity: 0;
+    animation:
+      rectAppear 0.1s ease forwards 4.7s,
+      rectGrow 2.5s ease-out forwards 4.8s;
+  }
+
+  .cursor-cross {
+    position: absolute;
+    bottom: -14px; right: -14px;
+    width: 28px; height: 28px;
+  }
+  .cursor-cross::before, .cursor-cross::after {
+    content: ''; position: absolute; background: #333; border-radius: 1px;
+  }
+  .cursor-cross::before { width: 28px; height: 2.5px; top: 50%; left: 0; transform: translateY(-50%); }
+  .cursor-cross::after { width: 2.5px; height: 28px; left: 50%; top: 0; transform: translateX(-50%); }
+
+  /* Toast — appears after selection */
+  .mock-toast {
+    position: absolute;
+    bottom: 20px; right: 20px;
+    background: #222; color: #fff; font-size: 13px;
+    padding: 10px 18px; border-radius: 8px;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.3);
+    display: flex; align-items: center; gap: 8px;
+    opacity: 0;
+    transform: translateY(10px);
+    animation: fadeSlideUp 0.5s ease forwards 20.0s;
+  }
+  .toast-check { color: #4caf50; font-size: 16px; line-height: 1; }
+
+  /* ── Right side ── */
+  .demo-right {
+    width: 480px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    flex-shrink: 0;
+  }
+
+  .demo-step {
+    display: flex; align-items: center; gap: 14px;
+    background: rgba(255,255,255,0.10);
+    border: 1px solid rgba(255,255,255,0.15);
+    border-radius: 14px;
+    padding: 18px 24px;
+    opacity: 0;
+    transform: translateX(20px);
+  }
+  .demo-step:nth-child(1) { animation: fadeSlideLeft 0.6s ease forwards 4.7s; }
+  .demo-step:nth-child(2) { animation: fadeSlideLeft 0.6s ease forwards 10.5s; }
+  .demo-step:nth-child(3) { animation: fadeSlideLeft 0.6s ease forwards 19.0s; }
+
+  .demo-step.active {
+    background: rgba(255,255,255,0.18);
+    border-color: rgba(255,255,255,0.35);
+  }
+
+  .ds-num {
+    width: 36px; height: 36px;
+    background: var(--primary); border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 16px; font-weight: 900; flex-shrink: 0;
+  }
+  .ds-text { display: flex; flex-direction: column; gap: 2px; }
+  .ds-title { font-size: 19px; font-weight: 700; }
+  .ds-desc { font-size: 14px; color: rgba(255,255,255,0.85); }
+
+  /* Result card */
+  .result-card {
+    flex: 1;
+    background: rgba(255,255,255,0.08);
+    border: 1px solid rgba(255,255,255,0.15);
+    border-radius: 14px;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    opacity: 0;
+    animation: fadeIn 0.8s ease forwards 26.4s;
+  }
+  .result-label {
+    font-size: 12px; font-weight: 700; color: var(--primary-light);
+    text-transform: uppercase; letter-spacing: 1px;
+  }
+  .result-text {
+    font-size: 15px; line-height: 1.9; color: rgba(255,255,255,0.85);
+    font-family: ui-monospace, monospace; flex: 1;
+  }
+  .result-copied {
+    display: flex; align-items: center; gap: 6px;
+    font-size: 13px; color: #6fcf7c; font-weight: 700;
+    opacity: 0;
+    animation: fadeIn 0.5s ease forwards 28.0s;
+  }
+
+  /* ── Badges ── */
+  .badge-row {
+    display: flex; gap: 12px; margin-top: 12px;
+    justify-content: center; flex-shrink: 0;
+    opacity: 0;
+    animation: fadeIn 0.6s ease forwards 26.4s;
+  }
+  .badge {
+    display: flex; align-items: center; gap: 8px;
+    background: rgba(255,255,255,0.1);
+    border: 1px solid rgba(255,255,255,0.15);
+    border-radius: 30px; padding: 7px 18px;
+    font-size: 13px; color: rgba(255,255,255,0.85);
+  }
+  .badge-icon { font-size: 16px; }
+
+  /* ── Keyframes ── */
+  @keyframes fadeIn {
+    to { opacity: 1; }
+  }
+  @keyframes fadeSlideDown {
+    from { opacity: 0; transform: translateY(-15px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes fadeSlideUp {
+    from { opacity: 0; transform: translateY(10px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes fadeSlideLeft {
+    from { opacity: 0; transform: translateX(20px); }
+    to   { opacity: 1; transform: translateX(0); }
+  }
+  @keyframes rectAppear {
+    to { opacity: 1; }
+  }
+  @keyframes rectGrow {
+    from { width: 0; height: 0; }
+    to   { width: calc(100% - 48px); height: 200px; }
+  }
+</style>
+</head>
+<body>
+<div class="slide">
+  <div class="hero-header">
+    <div class="hero-icon">
+      <img src="../../public/icons/icon128.png" alt="icon">
+    </div>
+    <h1>Offline OCR</h1>
+  </div>
+  <p class="subtitle">A safe, fully offline region-select OCR</p>
+
+  <div class="demo-area">
+    <div class="mock-browser">
+      <div class="browser-toolbar">
+        <div class="browser-dot r"></div>
+        <div class="browser-dot y"></div>
+        <div class="browser-dot g"></div>
+        <div class="browser-url">example.com/documents/annual-report-2026.pdf</div>
+      </div>
+      <div class="browser-content">
+        <div class="page-title">FY2026 Annual Report</div>
+        <div class="page-text">This report summarizes the overview of business activities for fiscal year 2026. During this period, as part of the digital transformation initiative, we actively promoted the adoption of Optical Character Recognition (OCR) technology, significantly streamlining the digitization of paper documents. In particular, by leveraging the NDLOCR technology published by the National Diet Library, we achieved high-accuracy Japanese text recognition and contributed to improving work quality.</div>
+        <div class="selection-rect">
+          <div class="cursor-cross"></div>
+        </div>
+        <div class="mock-toast">
+          <span class="toast-check">✓</span>
+          Copied (142 chars)
+        </div>
+      </div>
+    </div>
+
+    <div class="demo-right">
+      <div class="demo-step">
+        <div class="ds-num">1</div>
+        <div class="ds-text">
+          <div class="ds-title">Drag to select</div>
+          <div class="ds-desc">Draw a rectangle around the text</div>
+        </div>
+      </div>
+      <div class="demo-step">
+        <div class="ds-num">2</div>
+        <div class="ds-text">
+          <div class="ds-title">OCR in browser</div>
+          <div class="ds-desc">NDLOCR-Lite recognizes text locally</div>
+        </div>
+      </div>
+      <div class="demo-step active">
+        <div class="ds-num">3</div>
+        <div class="ds-text">
+          <div class="ds-title">Auto-copy to clipboard</div>
+          <div class="ds-desc">Result is copied instantly</div>
+        </div>
+      </div>
+
+      <div class="result-card">
+        <div class="result-label">Result</div>
+        <div class="result-text">This report summarizes the overview of business activities for fiscal year 2026. During this period, as part of the digital transformation initiative, we actively promoted the adoption of Optical Character Recognition (OCR) technology, significantly streamlining the digitization of paper documents. In particular, by leveraging the NDLOCR technology published by the National Diet Library, we achieved high-accuracy Japanese text recognition and contributed to improving work quality.</div>
+        <div class="result-copied">✓ Copied to clipboard</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="badge-row">
+    <div class="badge"><span class="badge-icon">🔒</span> Fully Offline</div>
+    <div class="badge"><span class="badge-icon">🇯🇵</span> Japanese OCR</div>
+    <div class="badge"><span class="badge-icon">📐</span> Vertical Text</div>
+    <div class="badge"><span class="badge-icon">⚡</span> One Click</div>
+  </div>
+</div>
+</body>
+</html>
