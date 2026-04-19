@@ -1,0 +1,47 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <title>NDLOCR-Lite</title>
+    <style>
+      :root { color-scheme: light dark; }
+      body {
+        font: 13px/1.5 -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+        margin: 0;
+        padding: 14px;
+        width: 260px;
+      }
+      h1 { font-size: 14px; margin: 0 0 8px; }
+      p  { margin: 0 0 10px; color: #666; }
+      button {
+        width: 100%;
+        padding: 10px 12px;
+        font: inherit;
+        font-weight: 600;
+        background: #4ea3ff;
+        color: #fff;
+        border: 0;
+        border-radius: 6px;
+        cursor: pointer;
+      }
+      button:hover { background: #3892ee; }
+      kbd {
+        font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+        background: rgba(127,127,127,0.15);
+        border-radius: 3px;
+        padding: 1px 5px;
+        font-size: 11px;
+      }
+    </style>
+  </head>
+  <body>
+    <h1 data-i18n="popupTitle"></h1>
+    <p id="popup-desc"></p>
+    <button id="start" data-i18n="popupStartButton"></button>
+    <p id="status" style="margin-top:8px; min-height:1.2em; font-size:11px; color:#c33;"></p>
+    <p style="margin:12px 0 0; font-size:11px; text-align:right;">
+      <a href="#" id="open-options" style="color:#4ea3ff; text-decoration:none;" data-i18n="popupSettingsLink"></a>
+    </p>
+    <script type="module" src="./popup.ts"></script>
+  </body>
+</html>

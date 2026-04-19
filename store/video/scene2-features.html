@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<title>Scene 2: 特徴一覧</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;700;900&display=swap');
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  :root {
+    --primary: #5B9BD5;
+    --bg-gradient: linear-gradient(135deg, #1E3A5F 0%, #2C5F8A 50%, #5B9BD5 100%);
+  }
+
+  body {
+    font-family: 'Noto Sans JP', sans-serif;
+    display: flex; justify-content: center; align-items: center;
+    min-height: 100vh; background: #111;
+  }
+
+  .slide {
+    width: 1920px; height: 1080px;
+    background: #fff;
+    display: flex; flex-direction: column;
+    padding: 72px 100px;
+    overflow: hidden;
+  }
+
+  .section-header {
+    display: flex; align-items: center; gap: 16px; margin-bottom: 12px;
+    opacity: 0; animation: fadeSlideDown 0.6s ease forwards 0.3s;
+  }
+  .bar { width: 6px; height: 40px; background: var(--primary); border-radius: 3px; }
+  h2 { font-size: 46px; font-weight: 900; color: #1a1a1a; }
+
+  .section-sub {
+    font-size: 22px; color: #888; margin-bottom: 56px; margin-left: 22px;
+    opacity: 0; animation: fadeSlideDown 0.5s ease forwards 0.6s;
+  }
+
+  .features-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 28px; flex: 1;
+  }
+
+  .feature-card {
+    background: #F7FAFD;
+    border: 1px solid #E4EEF7;
+    border-radius: 16px;
+    padding: 36px 32px;
+    display: flex; flex-direction: column; gap: 12px;
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  .feature-card:nth-child(1) { animation: fadeSlideUp 0.6s ease forwards 4.8s; }
+  .feature-card:nth-child(2) { animation: fadeSlideUp 0.6s ease forwards 9.5s; }
+  .feature-card:nth-child(3) { animation: fadeSlideUp 0.6s ease forwards 18.0s; }
+  .feature-card:nth-child(4) { animation: fadeSlideUp 0.6s ease forwards 22.5s; }
+  .feature-card:nth-child(5) { animation: fadeSlideUp 0.6s ease forwards 30.3s; }
+  .feature-card:nth-child(6) { animation: fadeSlideUp 0.6s ease forwards 34.0s; }
+
+  .feature-icon {
+    width: 64px; height: 64px;
+    background: var(--bg-gradient);
+    border-radius: 14px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 32px;
+    box-shadow: 0 4px 12px rgba(91,155,213,0.3);
+  }
+  .feature-card h3 { font-size: 24px; font-weight: 700; color: #1a1a1a; margin-top: 6px; }
+  .feature-card p { font-size: 16px; color: #666; line-height: 1.8; }
+
+  @keyframes fadeSlideDown {
+    from { opacity: 0; transform: translateY(-15px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes fadeSlideUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+</style>
+</head>
+<body>
+<div class="slide">
+  <div class="section-header">
+    <div class="bar"></div>
+    <h2>主な特徴</h2>
+  </div>
+  <p class="section-sub">安全・高精度・カスタマイズ自在なローカルOCR</p>
+
+  <div class="features-grid">
+    <div class="feature-card">
+      <div class="feature-icon">🔒</div>
+      <h3>完全オフライン</h3>
+      <p>すべての処理がブラウザ内で完結。画像やテキストが外部サーバーに送信されることは一切ありません。</p>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">🏛️</div>
+      <h3>国会図書館のOCR技術</h3>
+      <p>国立国会図書館が開発したNDLOCRの軽量版を採用。日本語テキストの認識に優れた高精度エンジン。</p>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">📐</div>
+      <h3>縦書き・横書き対応</h3>
+      <p>横書きはもちろん、古い書籍や法律文書などの縦書きテキストも正確に認識します。</p>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">🚀</div>
+      <h3>3つの起動方法</h3>
+      <p>ツールバーアイコン、キーボードショートカット (Alt+Shift+O)、右クリックメニューから起動。</p>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">🧹</div>
+      <h3>正規表現クリーニング</h3>
+      <p>OCR結果のカンマ除去やスペース整理など、コピー前に自動整形するルールを自由に設定可能。</p>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">🌐</div>
+      <h3>多言語UI</h3>
+      <p>日本語・英語のUIを自動切替。ブラウザの言語設定に合わせて表示言語が変わります。</p>
+    </div>
+  </div>
+</div>
+</body>
+</html>

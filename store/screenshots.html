@@ -1,0 +1,1689 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Offline OCR — Store Screenshots</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;700;900&display=swap');
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Noto Sans JP', sans-serif;
+    background: #f0f0f0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 40px;
+    padding: 40px;
+  }
+
+  /* ── Each slide is 1280x800 at desktop, scales down on mobile ── */
+  .slide {
+    width: 100%;
+    max-width: 1280px;
+    min-height: 800px;
+    position: relative;
+    overflow: hidden;
+    border-radius: 0;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.15);
+    flex-shrink: 0;
+  }
+
+  /* ── Color palette ── */
+  :root {
+    --primary: #5B9BD5;
+    --primary-dark: #3A7BBF;
+    --primary-light: #A8D0F0;
+    --accent: #4A8BC2;
+    --bg-dark: #1E3A5F;
+    --bg-gradient: linear-gradient(135deg, #1E3A5F 0%, #2C5F8A 50%, #5B9BD5 100%);
+    --white: #FFFFFF;
+    --text-light: rgba(255,255,255,0.85);
+    --text-muted: rgba(255,255,255,0.6);
+  }
+
+  /* ============================================================
+     SLIDE 1: 操作デモ
+     ============================================================ */
+  .slide-1 {
+    background: var(--bg-gradient);
+    display: flex;
+    flex-direction: column;
+    color: var(--white);
+    padding: 28px 60px 20px;
+  }
+
+  .slide-1 .hero-header {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 6px;
+  }
+
+  .slide-1 .hero-icon {
+    width: 52px;
+    height: 52px;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+  }
+
+  .slide-1 .hero-icon img {
+    width: 100%;
+    height: 100%;
+  }
+
+  .slide-1 h1 {
+    font-size: 36px;
+    font-weight: 900;
+    letter-spacing: 1px;
+  }
+
+  .slide-1 .subtitle {
+    font-size: 16px;
+    color: var(--text-light);
+    margin-bottom: 16px;
+    margin-left: 68px;
+  }
+
+  .demo-area {
+    flex: 1;
+    display: flex;
+    gap: 28px;
+    align-items: stretch;
+  }
+
+  /* Mock browser window */
+  .mock-browser {
+    flex: 1;
+    background: #fff;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.25);
+    display: flex;
+    flex-direction: column;
+    position: relative;
+  }
+
+  .browser-toolbar {
+    background: #e8ecef;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    padding: 0 12px;
+    gap: 8px;
+    flex-shrink: 0;
+  }
+
+  .browser-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+  }
+  .browser-dot.r { background: #f5655b; }
+  .browser-dot.y { background: #f6bd3b; }
+  .browser-dot.g { background: #3cc842; }
+
+  .browser-url {
+    flex: 1;
+    margin-left: 12px;
+    background: #fff;
+    border-radius: 4px;
+    height: 22px;
+    display: flex;
+    align-items: center;
+    padding: 0 10px;
+    font-size: 11px;
+    color: #888;
+    font-family: ui-monospace, monospace;
+  }
+
+  .browser-content {
+    flex: 1;
+    padding: 28px 32px;
+    position: relative;
+    color: #333;
+    font-size: 14px;
+    line-height: 2;
+    background: #fff;
+  }
+
+  .browser-content .page-title {
+    font-size: 22px;
+    font-weight: 700;
+    color: #1a1a1a;
+    margin-bottom: 16px;
+    border-bottom: 2px solid #e0e0e0;
+    padding-bottom: 12px;
+  }
+
+  .browser-content .page-text {
+    color: #444;
+    font-size: 13.5px;
+    line-height: 2.1;
+  }
+
+  /* Selection rectangle overlay */
+  .selection-rect {
+    position: absolute;
+    top: 68px;
+    left: 24px;
+    right: 24px;
+    height: 200px;
+    border: 2.5px solid var(--primary);
+    background: rgba(91,155,213,0.10);
+    border-radius: 3px;
+    pointer-events: none;
+  }
+
+  /* Cursor: CSS crosshair */
+  .cursor-cross {
+    position: absolute;
+    bottom: -14px;
+    right: -14px;
+    width: 28px;
+    height: 28px;
+    filter: drop-shadow(1px 2px 2px rgba(0,0,0,0.25));
+  }
+  .cursor-cross::before,
+  .cursor-cross::after {
+    content: '';
+    position: absolute;
+    background: #333;
+    border-radius: 1px;
+  }
+  .cursor-cross::before {
+    /* horizontal line */
+    width: 28px;
+    height: 2.5px;
+    top: 50%;
+    left: 0;
+    transform: translateY(-50%);
+  }
+  .cursor-cross::after {
+    /* vertical line */
+    width: 2.5px;
+    height: 28px;
+    left: 50%;
+    top: 0;
+    transform: translateX(-50%);
+  }
+
+  /* Toast notification */
+  .mock-toast {
+    position: absolute;
+    bottom: 20px;
+    right: 20px;
+    background: #222;
+    color: #fff;
+    font-size: 13px;
+    padding: 10px 18px;
+    border-radius: 8px;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.3);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .mock-toast .toast-check {
+    color: #4caf50;
+    font-size: 16px;
+    line-height: 1;
+  }
+
+  /* Right side: steps + result */
+  .demo-right {
+    width: 380px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    flex-shrink: 0;
+  }
+
+  .demo-step {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    background: rgba(255,255,255,0.10);
+    border: 1px solid rgba(255,255,255,0.15);
+    border-radius: 14px;
+    padding: 16px 20px;
+  }
+
+  .demo-step.active {
+    background: rgba(255,255,255,0.18);
+    border-color: rgba(255,255,255,0.35);
+  }
+
+  .demo-step .ds-num {
+    width: 36px;
+    height: 36px;
+    background: var(--primary);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+    font-weight: 900;
+    flex-shrink: 0;
+  }
+
+  .demo-step .ds-text {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .demo-step .ds-title {
+    font-size: 16px;
+    font-weight: 700;
+  }
+
+  .demo-step .ds-desc {
+    font-size: 12px;
+    color: var(--text-light);
+  }
+
+  /* Result preview card */
+  .result-card {
+    flex: 1;
+    background: rgba(255,255,255,0.08);
+    border: 1px solid rgba(255,255,255,0.15);
+    border-radius: 14px;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .result-card .result-label {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--primary-light);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+
+  .result-card .result-text {
+    font-size: 13px;
+    line-height: 1.8;
+    color: var(--text-light);
+    font-family: ui-monospace, monospace;
+    flex: 1;
+  }
+
+  .result-card .result-copied {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13px;
+    color: #6fcf7c;
+    font-weight: 700;
+  }
+
+  .slide-1 .badge-row {
+    display: flex;
+    gap: 12px;
+    margin-top: 12px;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+
+  .badge {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(255,255,255,0.1);
+    border: 1px solid rgba(255,255,255,0.15);
+    border-radius: 30px;
+    padding: 7px 18px;
+    font-size: 13px;
+    color: var(--text-light);
+  }
+
+  .badge .badge-icon {
+    font-size: 16px;
+  }
+
+  /* ============================================================
+     SLIDE 2: 特徴一覧
+     ============================================================ */
+  .slide-2 {
+    background: var(--white);
+    display: flex;
+    flex-direction: column;
+    padding: 60px 80px;
+  }
+
+  .slide-2 .section-header {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 12px;
+  }
+
+  .slide-2 .section-header .bar {
+    width: 6px;
+    height: 40px;
+    background: var(--primary);
+    border-radius: 3px;
+  }
+
+  .slide-2 h2 {
+    font-size: 38px;
+    font-weight: 900;
+    color: #1a1a1a;
+  }
+
+  .slide-2 .section-sub {
+    font-size: 18px;
+    color: #888;
+    margin-bottom: 48px;
+    margin-left: 22px;
+  }
+
+  .features-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 28px;
+    flex: 1;
+  }
+
+  .feature-card {
+    background: #F7FAFD;
+    border: 1px solid #E4EEF7;
+    border-radius: 16px;
+    padding: 32px 28px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .feature-card .feature-icon {
+    width: 56px;
+    height: 56px;
+    background: var(--bg-gradient);
+    border-radius: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 28px;
+    box-shadow: 0 4px 12px rgba(91,155,213,0.3);
+  }
+
+  .feature-card h3 {
+    font-size: 20px;
+    font-weight: 700;
+    color: #1a1a1a;
+    margin-top: 4px;
+  }
+
+  .feature-card p {
+    font-size: 14px;
+    color: #666;
+    line-height: 1.7;
+  }
+
+  /* ============================================================
+     SLIDE 3: アーキテクチャ
+     ============================================================ */
+  .slide-3 {
+    background: var(--bg-gradient);
+    display: flex;
+    flex-direction: column;
+    padding: 56px 80px;
+    color: var(--white);
+  }
+
+  .slide-3 .section-header {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 8px;
+  }
+
+  .slide-3 .section-header .bar {
+    width: 6px;
+    height: 40px;
+    background: var(--primary-light);
+    border-radius: 3px;
+  }
+
+  .slide-3 h2 {
+    font-size: 36px;
+    font-weight: 900;
+  }
+
+  .slide-3 .section-sub {
+    font-size: 16px;
+    color: var(--text-light);
+    margin-bottom: 40px;
+    margin-left: 22px;
+  }
+
+  .arch-flow {
+    display: flex;
+    align-items: stretch;
+    gap: 0;
+    flex: 1;
+    justify-content: center;
+  }
+
+  .arch-block {
+    flex: 1;
+    max-width: 300px;
+    background: rgba(255,255,255,0.08);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255,255,255,0.15);
+    border-radius: 18px;
+    padding: 28px 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .arch-block .arch-label {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .arch-block .arch-icon {
+    width: 44px;
+    height: 44px;
+    background: rgba(255,255,255,0.15);
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 22px;
+  }
+
+  .arch-block .arch-name {
+    font-size: 18px;
+    font-weight: 700;
+  }
+
+  .arch-block .arch-file {
+    font-size: 12px;
+    color: var(--text-muted);
+    font-family: ui-monospace, monospace;
+  }
+
+  .arch-block ul {
+    list-style: none;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .arch-block li {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 14px;
+    color: var(--text-light);
+  }
+
+  .arch-block li .dot {
+    width: 8px;
+    height: 8px;
+    background: var(--primary-light);
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  .arch-arrow {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    width: 60px;
+    gap: 8px;
+    flex-shrink: 0;
+  }
+
+  .arch-arrow .arrow-line {
+    width: 40px;
+    height: 2px;
+    background: var(--primary-light);
+    position: relative;
+  }
+
+  .arch-arrow .arrow-line::after {
+    content: '';
+    position: absolute;
+    right: -2px;
+    top: -5px;
+    border: 6px solid transparent;
+    border-left: 8px solid var(--primary-light);
+  }
+
+  .arch-arrow .arrow-label {
+    font-size: 11px;
+    color: var(--text-muted);
+    text-align: center;
+    writing-mode: horizontal-tb;
+    white-space: nowrap;
+  }
+
+  .slide-3 .tech-row {
+    display: flex;
+    gap: 12px;
+    margin-top: 32px;
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+
+  .tech-badge {
+    background: rgba(255,255,255,0.1);
+    border: 1px solid rgba(255,255,255,0.15);
+    border-radius: 8px;
+    padding: 8px 16px;
+    font-size: 13px;
+    color: var(--text-light);
+    font-family: ui-monospace, monospace;
+  }
+
+  /* ============================================================
+     SLIDE 5: プライバシー
+     ============================================================ */
+  .slide-5 {
+    background: var(--bg-gradient);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    color: var(--white);
+    padding: 48px 80px;
+  }
+
+  .slide-5 .section-header {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 10px;
+    align-self: flex-start;
+  }
+
+  .slide-5 .section-header .bar {
+    width: 6px;
+    height: 40px;
+    background: var(--primary-light);
+    border-radius: 3px;
+  }
+
+  .slide-5 h2 {
+    font-size: 36px;
+    font-weight: 900;
+  }
+
+  .slide-5 .section-sub {
+    font-size: 16px;
+    color: var(--text-light);
+    margin-bottom: 40px;
+    align-self: flex-start;
+    margin-left: 22px;
+  }
+
+  .privacy-diagram {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0;
+    flex: 1;
+    width: 100%;
+  }
+
+  .privacy-zone {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 20px;
+    padding: 36px 40px;
+    border-radius: 20px;
+    position: relative;
+  }
+
+  .privacy-zone.local {
+    background: rgba(76, 175, 80, 0.12);
+    border: 2px solid rgba(76, 175, 80, 0.4);
+    flex: 1;
+  }
+
+  .privacy-zone.external {
+    background: rgba(208, 72, 72, 0.10);
+    border: 2px dashed rgba(208, 72, 72, 0.4);
+    width: 260px;
+  }
+
+  .zone-label {
+    font-size: 13px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    position: absolute;
+    top: -12px;
+    padding: 2px 16px;
+    border-radius: 20px;
+  }
+
+  .privacy-zone.local .zone-label {
+    background: #2E7D32;
+    color: #fff;
+  }
+
+  .privacy-zone.external .zone-label {
+    background: #D04848;
+    color: #fff;
+  }
+
+  .privacy-items {
+    display: flex;
+    gap: 24px;
+    align-items: flex-start;
+    justify-content: center;
+    flex-wrap: wrap;
+    margin-top: 8px;
+  }
+
+  .privacy-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    width: 140px;
+  }
+
+  .privacy-item .pi-icon {
+    width: 64px;
+    height: 64px;
+    background: rgba(255,255,255,0.12);
+    border-radius: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 32px;
+  }
+
+  .privacy-item .pi-name {
+    font-size: 14px;
+    font-weight: 700;
+    text-align: center;
+  }
+
+  .privacy-item .pi-desc {
+    font-size: 11px;
+    color: var(--text-light);
+    text-align: center;
+    line-height: 1.5;
+  }
+
+  .privacy-wall {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    width: 80px;
+    gap: 8px;
+    flex-shrink: 0;
+  }
+
+  .privacy-wall .wall-line {
+    width: 3px;
+    height: 60px;
+    background: rgba(208, 72, 72, 0.5);
+    border-radius: 2px;
+  }
+
+  .privacy-wall .wall-x {
+    width: 48px;
+    height: 48px;
+    background: rgba(208, 72, 72, 0.15);
+    border: 2px solid rgba(208, 72, 72, 0.5);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 24px;
+    font-weight: 900;
+    color: #D04848;
+  }
+
+  .privacy-bottom {
+    display: flex;
+    gap: 20px;
+    margin-top: 32px;
+    flex-shrink: 0;
+  }
+
+  .privacy-stat {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: rgba(255,255,255,0.08);
+    border: 1px solid rgba(255,255,255,0.15);
+    border-radius: 12px;
+    padding: 14px 24px;
+  }
+
+  .privacy-stat .ps-icon {
+    font-size: 24px;
+  }
+
+  .privacy-stat .ps-text {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .privacy-stat .ps-title {
+    font-size: 15px;
+    font-weight: 700;
+  }
+
+  .privacy-stat .ps-desc {
+    font-size: 12px;
+    color: var(--text-light);
+  }
+
+  /* ============================================================
+     SLIDE 4: クリーニングルール
+     ============================================================ */
+  .slide-4 {
+    background: var(--white);
+    display: flex;
+    flex-direction: column;
+    padding: 48px 80px;
+  }
+
+  .slide-4 .section-header {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 10px;
+  }
+
+  .slide-4 .section-header .bar {
+    width: 6px;
+    height: 40px;
+    background: var(--primary);
+    border-radius: 3px;
+  }
+
+  .slide-4 h2 {
+    font-size: 36px;
+    font-weight: 900;
+    color: #1a1a1a;
+  }
+
+  .slide-4 .section-sub {
+    font-size: 16px;
+    color: #888;
+    margin-bottom: 32px;
+    margin-left: 22px;
+  }
+
+  .cleaning-layout {
+    display: flex;
+    gap: 36px;
+    flex: 1;
+    align-items: stretch;
+  }
+
+  /* Mock settings panel */
+  .mock-settings {
+    flex: 1;
+    background: #F7FAFD;
+    border: 1px solid #E4EEF7;
+    border-radius: 14px;
+    padding: 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+
+  .mock-settings .settings-title {
+    font-size: 15px;
+    font-weight: 700;
+    color: #1a1a1a;
+    padding-bottom: 10px;
+    border-bottom: 1px solid #E4EEF7;
+  }
+
+  .mock-rule {
+    background: #fff;
+    border: 1px solid #E4EEF7;
+    border-radius: 10px;
+    padding: 14px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .mock-rule .rule-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .mock-rule .rule-checkbox {
+    width: 16px;
+    height: 16px;
+    border-radius: 3px;
+    background: var(--primary);
+    position: relative;
+    flex-shrink: 0;
+  }
+
+  .mock-rule .rule-checkbox::after {
+    content: '✓';
+    color: #fff;
+    font-size: 11px;
+    position: absolute;
+    top: 0;
+    left: 3px;
+  }
+
+  .mock-rule .rule-checkbox.off {
+    background: #ccc;
+  }
+
+  .mock-rule .rule-checkbox.off::after {
+    display: none;
+  }
+
+  .mock-rule .rule-name {
+    font-size: 13px;
+    font-weight: 700;
+    color: #333;
+    flex: 1;
+  }
+
+  .mock-rule .rule-name[data-lang-en] { display: none; }
+  .mock-rule .rule-name[data-lang-ja] { display: inline; }
+  body.lang-en .mock-rule .rule-name[data-lang-en] { display: inline; }
+  body.lang-en .mock-rule .rule-name[data-lang-ja] { display: none; }
+
+  .mock-rule .rule-fields {
+    display: flex;
+    gap: 8px;
+    font-size: 11px;
+    font-family: ui-monospace, monospace;
+    color: #666;
+  }
+
+  .mock-rule .rule-field {
+    background: #F0F4F8;
+    border: 1px solid #dce4ed;
+    border-radius: 4px;
+    padding: 4px 8px;
+    min-height: 32px;
+    display: flex;
+    align-items: center;
+  }
+
+  .mock-rule .rule-field-label {
+    color: #999;
+    font-size: 10px;
+    margin-right: 4px;
+  }
+
+  /* Before / After comparison */
+  .cleaning-demo {
+    width: 420px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    flex-shrink: 0;
+  }
+
+  .cleaning-box {
+    flex: 1;
+    border-radius: 12px;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .cleaning-box.before {
+    background: #FFF5F5;
+    border: 1px solid #FFD4D4;
+  }
+
+  .cleaning-box.after {
+    background: #F0FAF0;
+    border: 1px solid #C8E6C8;
+  }
+
+  .cleaning-box .box-label {
+    font-size: 12px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+
+  .cleaning-box.before .box-label { color: #D04848; }
+  .cleaning-box.after .box-label { color: #2E7D32; }
+
+  .cleaning-box .box-text {
+    font-size: 13px;
+    line-height: 1.9;
+    font-family: ui-monospace, monospace;
+    color: #444;
+    flex: 1;
+  }
+
+  .cleaning-box .highlight {
+    background: rgba(208,72,72,0.15);
+    border-radius: 2px;
+    padding: 0 2px;
+  }
+
+  .cleaning-arrow {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    color: var(--primary);
+    font-weight: 700;
+    font-size: 14px;
+    flex-shrink: 0;
+  }
+
+  .cleaning-arrow .down-arrow {
+    font-size: 24px;
+  }
+
+  /* ── Language toggle ── */
+  .lang-toggle {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 9999;
+    display: flex;
+    background: #fff;
+    border-radius: 8px;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.15);
+    overflow: hidden;
+    border: 1px solid #ddd;
+  }
+
+  .lang-toggle button {
+    padding: 8px 20px;
+    font-size: 14px;
+    font-weight: 700;
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    color: #888;
+    font-family: 'Noto Sans JP', sans-serif;
+    transition: all 0.2s;
+  }
+
+  .lang-toggle button.active {
+    background: var(--primary);
+    color: #fff;
+  }
+
+  /* ============================================================
+     RESPONSIVE
+     ============================================================ */
+
+  /* ── Tablet (≤ 960px) ── */
+  @media (max-width: 960px) {
+    body { padding: 20px; gap: 24px; }
+    .slide { min-height: auto; }
+
+    /* Slide 1 */
+    .slide-1 { padding: 24px 28px 20px; }
+    .slide-1 h1 { font-size: 28px; }
+    .slide-1 .subtitle { margin-left: 0; }
+    .demo-area { flex-direction: column; gap: 20px; }
+    .demo-right { width: 100%; }
+    .result-card .result-text { font-size: 12px; }
+
+    /* Slide 2 */
+    .slide-2 { padding: 40px 36px; }
+    .features-grid { grid-template-columns: 1fr 1fr; }
+
+    /* Slide 3 (arch) */
+    .slide-3 { padding: 40px 36px; }
+    .arch-flow { flex-direction: column; align-items: center; gap: 16px; }
+    .arch-block { max-width: 100%; width: 100%; }
+    .arch-arrow {
+      width: 100%;
+      flex-direction: row;
+      justify-content: center;
+      height: auto;
+    }
+    .arch-arrow .arrow-line {
+      width: 2px;
+      height: 30px;
+      transform: rotate(90deg);
+    }
+    .arch-arrow .arrow-line::after {
+      right: auto;
+      top: auto;
+      bottom: -8px;
+      left: -5px;
+      border: 6px solid transparent;
+      border-top: 8px solid var(--primary-light);
+      border-left: 6px solid transparent;
+    }
+
+    /* Slide 4 (cleaning) */
+    .slide-4 { padding: 36px 28px; }
+    .cleaning-layout { flex-direction: column; }
+    .cleaning-demo { width: 100%; }
+
+    /* Slide 5 (privacy) */
+    .slide-5 { padding: 36px 28px; }
+    .privacy-diagram { flex-direction: column; gap: 0; }
+    .privacy-zone.external { width: 100%; }
+    .privacy-wall {
+      flex-direction: row;
+      width: 100%;
+      height: auto;
+      padding: 8px 0;
+    }
+    .privacy-wall .wall-line {
+      width: 60px;
+      height: 3px;
+    }
+    .privacy-bottom { flex-direction: column; gap: 12px; }
+  }
+
+  /* ── Mobile (≤ 600px) ── */
+  @media (max-width: 600px) {
+    body { padding: 12px; gap: 16px; }
+
+    .lang-toggle { top: 8px; right: 8px; }
+    .lang-toggle button { padding: 6px 14px; font-size: 12px; }
+
+    /* Slide 1 */
+    .slide-1 { padding: 16px 16px 14px; }
+    .slide-1 .hero-header { gap: 10px; }
+    .slide-1 .hero-icon { width: 36px; height: 36px; border-radius: 8px; }
+    .slide-1 h1 { font-size: 22px; }
+    .slide-1 .subtitle { font-size: 13px; }
+    .demo-area { gap: 14px; }
+    .browser-content { padding: 16px; }
+    .browser-content .page-title { font-size: 16px; }
+    .browser-content .page-text { font-size: 12px; }
+    .demo-step { padding: 12px 14px; }
+    .demo-step .ds-title { font-size: 14px; }
+    .demo-step .ds-num { width: 28px; height: 28px; font-size: 13px; }
+    .result-card { padding: 14px; }
+    .badge-row { flex-wrap: wrap; gap: 8px; }
+    .badge { padding: 5px 12px; font-size: 11px; }
+
+    /* Slide 2 */
+    .slide-2 { padding: 28px 20px; }
+    .slide-2 h2 { font-size: 26px; }
+    .slide-2 .section-sub { font-size: 14px; margin-bottom: 24px; }
+    .features-grid { grid-template-columns: 1fr; gap: 16px; }
+    .feature-card { padding: 20px 18px; }
+    .feature-card .feature-icon { width: 44px; height: 44px; font-size: 22px; }
+    .feature-card h3 { font-size: 17px; }
+    .feature-card p { font-size: 13px; }
+
+    /* Slide 3 (arch) */
+    .slide-3 { padding: 28px 20px; }
+    .slide-3 h2 { font-size: 26px; }
+    .arch-block { padding: 20px 16px; }
+    .arch-block .arch-name { font-size: 16px; }
+    .tech-row { gap: 8px; margin-top: 20px; }
+    .tech-badge { font-size: 11px; padding: 6px 10px; }
+
+    /* Slide 4 (cleaning) */
+    .slide-4 { padding: 28px 16px; }
+    .slide-4 h2 { font-size: 26px; }
+    .mock-settings { padding: 16px; }
+    .mock-rule .rule-fields { flex-direction: column; }
+    .cleaning-box .box-text { font-size: 12px; }
+
+    /* Slide 5 (privacy) */
+    .slide-5 { padding: 28px 16px; }
+    .slide-5 h2 { font-size: 26px; }
+    .privacy-items { gap: 16px; }
+    .privacy-item { width: 100px; }
+    .privacy-item .pi-icon { width: 48px; height: 48px; font-size: 24px; }
+    .privacy-item .pi-name { font-size: 12px; }
+    .privacy-item .pi-desc { font-size: 10px; }
+    .privacy-stat { padding: 10px 16px; }
+    .privacy-stat .ps-title { font-size: 13px; }
+    .privacy-stat .ps-desc { font-size: 11px; }
+  }
+
+  /* i18n: hide inactive language */
+  [data-lang-en] { display: none; }
+  [data-lang-ja] { display: initial; }
+  body.lang-en [data-lang-en] { display: initial; }
+  body.lang-en [data-lang-ja] { display: none; }
+  /* block-level elements */
+  div[data-lang-en], p[data-lang-en], li[data-lang-en] { display: none; }
+  div[data-lang-ja], p[data-lang-ja], li[data-lang-ja] { display: block; }
+  body.lang-en div[data-lang-en], body.lang-en p[data-lang-en], body.lang-en li[data-lang-en] { display: block; }
+  body.lang-en div[data-lang-ja], body.lang-en p[data-lang-ja], body.lang-en li[data-lang-ja] { display: none; }
+  /* flex items */
+  .demo-step[data-lang-en], .badge[data-lang-en], .feature-card[data-lang-en] { display: none; }
+  .demo-step[data-lang-ja], .badge[data-lang-ja], .feature-card[data-lang-ja] { display: flex; }
+  body.lang-en .demo-step[data-lang-en], body.lang-en .badge[data-lang-en], body.lang-en .feature-card[data-lang-en] { display: flex; }
+  body.lang-en .demo-step[data-lang-ja], body.lang-en .badge[data-lang-ja], body.lang-en .feature-card[data-lang-ja] { display: none; }
+  li[data-lang-ja] { display: flex !important; }
+  li[data-lang-en] { display: none !important; }
+  body.lang-en li[data-lang-ja] { display: none !important; }
+  body.lang-en li[data-lang-en] { display: flex !important; }
+  /* result-copied uses flex for icon+text alignment */
+  .result-copied[data-lang-ja] { display: flex !important; }
+  .result-copied[data-lang-en] { display: none !important; }
+  body.lang-en .result-copied[data-lang-ja] { display: none !important; }
+  body.lang-en .result-copied[data-lang-en] { display: flex !important; }
+</style>
+</head>
+<body>
+
+<div class="lang-toggle">
+  <button id="btn-ja" class="active" onclick="setLang('ja')">日本語</button>
+  <button id="btn-en" onclick="setLang('en')">English</button>
+</div>
+
+<!-- ────────────────────────────────────────────
+     SLIDE 1: 操作デモ
+     ──────────────────────────────────────────── -->
+<div class="slide slide-1">
+  <div class="hero-header">
+    <div class="hero-icon">
+      <img src="../public/icons/icon128.png" alt="icon">
+    </div>
+    <span data-lang-ja><h1>オフラインOCR</h1></span>
+    <span data-lang-en><h1>Offline OCR</h1></span>
+  </div>
+  <p class="subtitle" data-lang-ja>どこにも通信しない、安全な範囲選択OCR</p>
+  <p class="subtitle" data-lang-en>A safe, fully offline region-select OCR</p>
+
+  <div class="demo-area">
+    <!-- Left: Mock browser with selection -->
+    <div class="mock-browser">
+      <div class="browser-toolbar">
+        <div class="browser-dot r"></div>
+        <div class="browser-dot y"></div>
+        <div class="browser-dot g"></div>
+        <span data-lang-ja><div class="browser-url">example.co.jp/document/report-2026.pdf</div></span>
+        <span data-lang-en><div class="browser-url">example.com/documents/annual-report-2026.pdf</div></span>
+      </div>
+      <div class="browser-content">
+        <div class="page-title" data-lang-ja>令和8年度 業務報告書</div>
+        <div class="page-title" data-lang-en>FY2026 Annual Report</div>
+        <div class="page-text" data-lang-ja>本報告書は、令和8年度における事業活動の概要をまとめたものである。当該年度においては、デジタル化推進事業の一環として、光学文字認識（OCR）技術の導入を積極的に進め、紙媒体の電子化作業を大幅に効率化した。特に、国立国会図書館が公開するNDLOCR技術を活用することで、高精度な日本語テキスト認識を実現し、業務品質の向上に寄与した。今後も引き続き、最新技術の導入を検討していく方針である。</div>
+        <div class="page-text" data-lang-en>This report summarizes the overview of business activities for fiscal year 2026. During this period, as part of the digital transformation initiative, we actively promoted the adoption of Optical Character Recognition (OCR) technology, significantly streamlining the digitization of paper documents. In particular, by leveraging the NDLOCR technology published by the National Diet Library, we achieved high-accuracy Japanese text recognition and contributed to improving work quality.</div>
+
+        <!-- Selection overlay -->
+        <div class="selection-rect">
+          <div class="cursor-cross"></div>
+        </div>
+
+        <!-- Toast -->
+        <div class="mock-toast" data-lang-ja>
+          <span class="toast-check">✓</span>
+          コピーしました (142文字)
+        </div>
+        <div class="mock-toast" data-lang-en>
+          <span class="toast-check">✓</span>
+          Copied (142 chars)
+        </div>
+      </div>
+    </div>
+
+    <!-- Right: Steps + result -->
+    <div class="demo-right">
+      <div class="demo-step" data-lang-ja>
+        <div class="ds-num">1</div>
+        <div class="ds-text">
+          <div class="ds-title">ドラッグで範囲選択</div>
+          <div class="ds-desc">OCRしたい箇所をマウスで囲む</div>
+        </div>
+      </div>
+      <div class="demo-step" data-lang-en>
+        <div class="ds-num">1</div>
+        <div class="ds-text">
+          <div class="ds-title">Drag to select</div>
+          <div class="ds-desc">Draw a rectangle around the text</div>
+        </div>
+      </div>
+      <div class="demo-step" data-lang-ja>
+        <div class="ds-num">2</div>
+        <div class="ds-text">
+          <div class="ds-title">ブラウザ内でOCR</div>
+          <div class="ds-desc">NDLOCR-Liteがローカルで文字認識</div>
+        </div>
+      </div>
+      <div class="demo-step" data-lang-en>
+        <div class="ds-num">2</div>
+        <div class="ds-text">
+          <div class="ds-title">OCR in browser</div>
+          <div class="ds-desc">NDLOCR-Lite recognizes text locally</div>
+        </div>
+      </div>
+      <div class="demo-step active" data-lang-ja>
+        <div class="ds-num">3</div>
+        <div class="ds-text">
+          <div class="ds-title">自動でクリップボードへ</div>
+          <div class="ds-desc">認識結果がそのままコピー完了</div>
+        </div>
+      </div>
+      <div class="demo-step active" data-lang-en>
+        <div class="ds-num">3</div>
+        <div class="ds-text">
+          <div class="ds-title">Auto-copy to clipboard</div>
+          <div class="ds-desc">Result is copied instantly</div>
+        </div>
+      </div>
+
+      <div class="result-card">
+        <div class="result-label" data-lang-ja>認識結果</div>
+        <div class="result-label" data-lang-en>Result</div>
+        <div class="result-text" data-lang-ja>本報告書は、令和8年度における事業活動の概要をまとめたものである。当該年度においては、デジタル化推進事業の一環として、光学文字認識（OCR）技術の導入を積極的に進め、紙媒体の電子化作業を大幅に効率化した。特に、国立国会図書館が公開するNDLOCR技術を活用することで、高精度な日本語テキスト認識を実現し、業務品質の向上に寄与した。今後も引き続き、最新技術の導入を検討していく方針である。</div>
+        <div class="result-text" data-lang-en>This report summarizes the overview of business activities for fiscal year 2026. During this period, as part of the digital transformation initiative, we actively promoted the adoption of Optical Character Recognition (OCR) technology, significantly streamlining the digitization of paper documents. In particular, by leveraging the NDLOCR technology published by the National Diet Library, we achieved high-accuracy Japanese text recognition and contributed to improving work quality.</div>
+        <div class="result-copied" data-lang-ja>✓ クリップボードにコピー済み</div>
+        <div class="result-copied" data-lang-en>✓ Copied to clipboard</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="badge-row">
+    <div class="badge" data-lang-ja><span class="badge-icon">🔒</span> 完全オフライン</div>
+    <div class="badge" data-lang-ja><span class="badge-icon">🇯🇵</span> 日本語特化</div>
+    <div class="badge" data-lang-ja><span class="badge-icon">📐</span> 縦書き対応</div>
+    <div class="badge" data-lang-ja><span class="badge-icon">⚡</span> ワンクリック</div>
+    <div class="badge" data-lang-en><span class="badge-icon">🔒</span> Fully Offline</div>
+    <div class="badge" data-lang-en><span class="badge-icon">🇯🇵</span> Japanese OCR</div>
+    <div class="badge" data-lang-en><span class="badge-icon">📐</span> Vertical Text</div>
+    <div class="badge" data-lang-en><span class="badge-icon">⚡</span> One Click</div>
+  </div>
+</div>
+
+<!-- ────────────────────────────────────────────
+     SLIDE 2: 特徴一覧
+     ──────────────────────────────────────────── -->
+<div class="slide slide-2">
+  <div class="section-header">
+    <div class="bar"></div>
+    <span data-lang-ja><h2>主な特徴</h2></span>
+    <span data-lang-en><h2>Key Features</h2></span>
+  </div>
+  <p class="section-sub" data-lang-ja>安全・高精度・カスタマイズ自在なローカルOCR</p>
+  <p class="section-sub" data-lang-en>Safe, accurate, and customizable local OCR</p>
+
+  <div class="features-grid">
+    <div class="feature-card" data-lang-ja>
+      <div class="feature-icon">🔒</div>
+      <h3>完全オフライン</h3>
+      <p>すべての処理がブラウザ内で完結。画像やテキストが外部サーバーに送信されることは一切ありません。</p>
+    </div>
+    <div class="feature-card" data-lang-en>
+      <div class="feature-icon">🔒</div>
+      <h3>Fully Offline</h3>
+      <p>All processing happens in your browser. No images or text are ever sent to external servers.</p>
+    </div>
+    <div class="feature-card" data-lang-ja>
+      <div class="feature-icon">🏛️</div>
+      <h3>国会図書館のOCR技術</h3>
+      <p>国立国会図書館が開発したNDLOCRの軽量版を採用。日本語テキストの認識に優れた高精度エンジン。</p>
+    </div>
+    <div class="feature-card" data-lang-en>
+      <div class="feature-icon">🏛️</div>
+      <h3>NDL OCR Technology</h3>
+      <p>Powered by NDLOCR-Lite from the National Diet Library of Japan. High-accuracy Japanese text recognition.</p>
+    </div>
+    <div class="feature-card" data-lang-ja>
+      <div class="feature-icon">📐</div>
+      <h3>縦書き・横書き対応</h3>
+      <p>横書きはもちろん、古い書籍や法律文書などの縦書きテキストも正確に認識します。</p>
+    </div>
+    <div class="feature-card" data-lang-en>
+      <div class="feature-icon">📐</div>
+      <h3>Vertical &amp; Horizontal</h3>
+      <p>Accurately recognizes both horizontal and vertical Japanese text, including old books and legal documents.</p>
+    </div>
+    <div class="feature-card" data-lang-ja>
+      <div class="feature-icon">🚀</div>
+      <h3>3つの起動方法</h3>
+      <p>ツールバーアイコン、キーボードショートカット (Alt+Shift+O)、右クリックメニューから起動。</p>
+    </div>
+    <div class="feature-card" data-lang-en>
+      <div class="feature-icon">🚀</div>
+      <h3>3 Ways to Launch</h3>
+      <p>Toolbar icon, keyboard shortcut (Alt+Shift+O), or right-click context menu.</p>
+    </div>
+    <div class="feature-card" data-lang-ja>
+      <div class="feature-icon">🧹</div>
+      <h3>正規表現クリーニング</h3>
+      <p>OCR結果のカンマ除去やスペース整理など、コピー前に自動整形するルールを自由に設定可能。</p>
+    </div>
+    <div class="feature-card" data-lang-en>
+      <div class="feature-icon">🧹</div>
+      <h3>Regex Cleaning Rules</h3>
+      <p>Auto-clean OCR results before copying — remove commas, spaces, line breaks with custom regex rules.</p>
+    </div>
+    <div class="feature-card" data-lang-ja>
+      <div class="feature-icon">🌐</div>
+      <h3>多言語UI</h3>
+      <p>日本語・英語のUIを自動切替。ブラウザの言語設定に合わせて表示言語が変わります。</p>
+    </div>
+    <div class="feature-card" data-lang-en>
+      <div class="feature-icon">🌐</div>
+      <h3>Multilingual UI</h3>
+      <p>Automatically switches between Japanese and English based on your browser language settings.</p>
+    </div>
+  </div>
+</div>
+
+<!-- ────────────────────────────────────────────
+     SLIDE 3: プライバシー
+     ──────────────────────────────────────────── -->
+<div class="slide slide-5">
+  <div class="section-header">
+    <div class="bar"></div>
+    <span data-lang-ja><h2>完全オフライン — 通信ゼロ</h2></span>
+    <span data-lang-en><h2>Fully Offline — Zero Network</h2></span>
+  </div>
+  <p class="section-sub" data-lang-ja>画像もテキストも一切外部に送信しません。すべてブラウザ内で完結します。</p>
+  <p class="section-sub" data-lang-en>No images or text ever leave your browser. Everything runs 100% locally.</p>
+
+  <div class="privacy-diagram">
+    <div class="privacy-zone local">
+      <div class="zone-label" data-lang-ja>あなたのブラウザ内</div>
+      <div class="zone-label" data-lang-en>Inside Your Browser</div>
+      <div class="privacy-items">
+        <div class="privacy-item">
+          <div class="pi-icon">🖼️</div>
+          <div class="pi-name" data-lang-ja>画像キャプチャ</div>
+          <div class="pi-name" data-lang-en>Screenshot</div>
+          <div class="pi-desc" data-lang-ja>スクリーンショットは<br>ローカルで処理</div>
+          <div class="pi-desc" data-lang-en>Captured and processed<br>locally</div>
+        </div>
+        <div class="privacy-item">
+          <div class="pi-icon">🧠</div>
+          <div class="pi-name" data-lang-ja>OCRエンジン</div>
+          <div class="pi-name" data-lang-en>OCR Engine</div>
+          <div class="pi-desc" data-lang-ja>ONNX Runtime Web<br>でローカル推論</div>
+          <div class="pi-desc" data-lang-en>ONNX Runtime Web<br>local inference</div>
+        </div>
+        <div class="privacy-item">
+          <div class="pi-icon">📦</div>
+          <div class="pi-name" data-lang-ja>AIモデル</div>
+          <div class="pi-name" data-lang-en>AI Models</div>
+          <div class="pi-desc" data-lang-ja>DEIM + PARSeq<br>拡張に内蔵</div>
+          <div class="pi-desc" data-lang-en>DEIM + PARSeq<br>bundled in extension</div>
+        </div>
+        <div class="privacy-item">
+          <div class="pi-icon">📋</div>
+          <div class="pi-name" data-lang-ja>認識結果</div>
+          <div class="pi-name" data-lang-en>Result</div>
+          <div class="pi-desc" data-lang-ja>テキストは<br>クリップボードへ</div>
+          <div class="pi-desc" data-lang-en>Text goes to<br>your clipboard only</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="privacy-wall">
+      <div class="wall-line"></div>
+      <div class="wall-x">✕</div>
+      <div class="wall-line"></div>
+    </div>
+
+    <div class="privacy-zone external">
+      <div class="zone-label" data-lang-ja>外部サーバー</div>
+      <div class="zone-label" data-lang-en>External Server</div>
+      <div class="privacy-items" style="margin-top: 16px;">
+        <div class="privacy-item">
+          <div class="pi-icon" style="opacity: 0.4;">☁️</div>
+          <div class="pi-name" style="opacity: 0.4;" data-lang-ja>通信しません</div>
+          <div class="pi-name" style="opacity: 0.4;" data-lang-en>No connection</div>
+          <div class="pi-desc" data-lang-ja>画像・テキスト・<br>個人情報の送信なし</div>
+          <div class="pi-desc" data-lang-en>No images, text, or<br>personal data sent</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="privacy-bottom">
+    <div class="privacy-stat">
+      <div class="ps-icon">🔒</div>
+      <div class="ps-text">
+        <div class="ps-title" data-lang-ja>ネットワークリクエスト: 0</div>
+        <div class="ps-title" data-lang-en>Network requests: 0</div>
+        <div class="ps-desc" data-lang-ja>インストール後、一切の通信を行いません</div>
+        <div class="ps-desc" data-lang-en>No network activity after installation</div>
+      </div>
+    </div>
+    <div class="privacy-stat">
+      <div class="ps-icon">🛡️</div>
+      <div class="ps-text">
+        <div class="ps-title" data-lang-ja>データ収集: なし</div>
+        <div class="ps-title" data-lang-en>Data collection: None</div>
+        <div class="ps-desc" data-lang-ja>個人情報・利用統計の収集はありません</div>
+        <div class="ps-desc" data-lang-en>No personal data or usage analytics collected</div>
+      </div>
+    </div>
+    <div class="privacy-stat">
+      <div class="ps-icon">✈️</div>
+      <div class="ps-text">
+        <div class="ps-title" data-lang-ja>オフライン動作</div>
+        <div class="ps-title" data-lang-en>Works offline</div>
+        <div class="ps-desc" data-lang-ja>インターネット接続なしで使えます</div>
+        <div class="ps-desc" data-lang-en>No internet connection required</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ────────────────────────────────────────────
+     SLIDE 4: クリーニングルール
+     ──────────────────────────────────────────── -->
+<div class="slide slide-4">
+
+<!-- ────────────────────────────────────────────
+     (moved below) SLIDE 4: アーキテクチャ
+     ──────────────────────────────────────────── -->
+  <div class="section-header">
+    <div class="bar"></div>
+    <span data-lang-ja><h2>正規表現クリーニング</h2></span>
+    <span data-lang-en><h2>Regex Cleaning Rules</h2></span>
+  </div>
+  <p class="section-sub" data-lang-ja>OCR結果をコピー前に自動整形 — 自由にルールを追加・並べ替え</p>
+  <p class="section-sub" data-lang-en>Auto-clean OCR results before copying — add and reorder rules freely</p>
+
+  <div class="cleaning-layout">
+    <!-- Left: Mock settings panel -->
+    <div class="mock-settings">
+      <div class="settings-title" data-lang-ja>🧹 クリーニングルール</div>
+      <div class="settings-title" data-lang-en>🧹 Cleaning Rules</div>
+
+      <div class="mock-rule">
+        <div class="rule-header">
+          <div class="rule-checkbox"></div>
+          <div class="rule-name" data-lang-ja>日本語の間のスペース削除</div>
+          <div class="rule-name" data-lang-en>Remove spaces between Japanese</div>
+        </div>
+        <div class="rule-fields">
+          <div class="rule-field"><span class="rule-field-label">Pattern</span>([ぁ-んァ-ヶ一-龥])\s+([ぁ-んァ-ヶ一-龥])</div>
+          <div class="rule-field"><span class="rule-field-label">Replace</span>$1$2</div>
+        </div>
+      </div>
+
+      <div class="mock-rule">
+        <div class="rule-header">
+          <div class="rule-checkbox"></div>
+          <div class="rule-name" data-lang-ja>カンマを削除</div>
+          <div class="rule-name" data-lang-en>Remove commas</div>
+        </div>
+        <div class="rule-fields">
+          <div class="rule-field"><span class="rule-field-label">Pattern</span>[,，]</div>
+          <div class="rule-field"><span class="rule-field-label">Replace</span>(empty)</div>
+        </div>
+      </div>
+
+      <div class="mock-rule">
+        <div class="rule-header">
+          <div class="rule-checkbox"></div>
+          <div class="rule-name" data-lang-ja>連続改行を1つに</div>
+          <div class="rule-name" data-lang-en>Collapse multiple newlines</div>
+        </div>
+        <div class="rule-fields">
+          <div class="rule-field"><span class="rule-field-label">Pattern</span>\n{2,}</div>
+          <div class="rule-field"><span class="rule-field-label">Replace</span>\n</div>
+        </div>
+      </div>
+
+      <div class="mock-rule">
+        <div class="rule-header">
+          <div class="rule-checkbox off"></div>
+          <div class="rule-name" data-lang-ja>改行を削除</div>
+          <div class="rule-name" data-lang-en>Remove all newlines</div>
+        </div>
+        <div class="rule-fields">
+          <div class="rule-field"><span class="rule-field-label">Pattern</span>\n</div>
+          <div class="rule-field"><span class="rule-field-label">Replace</span>(empty)</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Right: Before / After -->
+    <div class="cleaning-demo">
+      <div class="cleaning-box before">
+        <div class="box-label">Before</div>
+        <div class="box-text" data-lang-ja>売 上 高　<span class="highlight">1,234,567</span>円<br><br>経 常 利 益　<span class="highlight">890,123</span>円<br><br>当 期 利 益　<span class="highlight">456,789</span>円</div>
+        <div class="box-text" data-lang-en>Sales　<span class="highlight">1,234,567</span> yen<br><br>Ordinary profit　<span class="highlight">890,123</span> yen<br><br>Net income　<span class="highlight">456,789</span> yen</div>
+      </div>
+      <div class="cleaning-arrow">
+        <span class="down-arrow">↓</span>
+        <span data-lang-ja>ルール適用</span>
+        <span data-lang-en>Rules applied</span>
+        <span class="down-arrow">↓</span>
+      </div>
+      <div class="cleaning-box after">
+        <div class="box-label">After</div>
+        <div class="box-text" data-lang-ja>売上高　1234567円<br>経常利益　890123円<br>当期利益　456789円</div>
+        <div class="box-text" data-lang-en>Sales　1234567 yen<br>Ordinary profit　890123 yen<br>Net income　456789 yen</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ────────────────────────────────────────────
+     SLIDE 4: アーキテクチャ
+     ──────────────────────────────────────────── -->
+<div class="slide slide-3">
+  <div class="section-header">
+    <div class="bar"></div>
+    <span data-lang-ja><h2>技術アーキテクチャ</h2></span>
+    <span data-lang-en><h2>Architecture</h2></span>
+  </div>
+  <p class="section-sub" data-lang-ja>Manifest V3 ベースの3コンテキスト構成で安全にローカル推論</p>
+  <p class="section-sub" data-lang-en>3-context Manifest V3 design for safe, local inference</p>
+
+  <div class="arch-flow">
+    <div class="arch-block">
+      <div class="arch-label">
+        <div class="arch-icon">📄</div>
+        <div>
+          <div class="arch-name">Content Script</div>
+          <div class="arch-file">content.ts</div>
+        </div>
+      </div>
+      <ul>
+        <li data-lang-ja><span class="dot"></span>範囲選択オーバーレイ</li>
+        <li data-lang-ja><span class="dot"></span>進捗トースト表示</li>
+        <li data-lang-ja><span class="dot"></span>クリップボード書き込み</li>
+        <li data-lang-ja><span class="dot"></span>クリーニングルール適用</li>
+        <li data-lang-en><span class="dot"></span>Selection overlay</li>
+        <li data-lang-en><span class="dot"></span>Progress toast</li>
+        <li data-lang-en><span class="dot"></span>Clipboard write</li>
+        <li data-lang-en><span class="dot"></span>Cleaning rules</li>
+      </ul>
+    </div>
+
+    <div class="arch-arrow">
+      <span data-lang-ja><div class="arrow-label">選択座標</div></span>
+      <span data-lang-en><div class="arrow-label">Selection</div></span>
+      <div class="arrow-line"></div>
+      <div style="height: 24px"></div>
+      <div class="arrow-line" style="transform: scaleX(-1)"></div>
+      <span data-lang-ja><div class="arrow-label">認識結果</div></span>
+      <span data-lang-en><div class="arrow-label">Result</div></span>
+    </div>
+
+    <div class="arch-block">
+      <div class="arch-label">
+        <div class="arch-icon">⚙️</div>
+        <div>
+          <div class="arch-name">Service Worker</div>
+          <div class="arch-file">service-worker.ts</div>
+        </div>
+      </div>
+      <ul>
+        <li data-lang-ja><span class="dot"></span>コマンド受信・ルーティング</li>
+        <li data-lang-ja><span class="dot"></span>captureVisibleTab</li>
+        <li data-lang-ja><span class="dot"></span>スクリーンショット転送</li>
+        <li data-lang-ja><span class="dot"></span>モデルのプリウォーム</li>
+        <li data-lang-en><span class="dot"></span>Command routing</li>
+        <li data-lang-en><span class="dot"></span>captureVisibleTab</li>
+        <li data-lang-en><span class="dot"></span>Screenshot transfer</li>
+        <li data-lang-en><span class="dot"></span>Model pre-warming</li>
+      </ul>
+    </div>
+
+    <div class="arch-arrow">
+      <div class="arrow-label">screenshot</div>
+      <div class="arrow-line"></div>
+      <div style="height: 24px"></div>
+      <div class="arrow-line" style="transform: scaleX(-1)"></div>
+      <span data-lang-ja><div class="arrow-label">OCR結果</div></span>
+      <span data-lang-en><div class="arrow-label">OCR result</div></span>
+    </div>
+
+    <div class="arch-block">
+      <div class="arch-label">
+        <div class="arch-icon">🧠</div>
+        <div>
+          <div class="arch-name">OCR Worker</div>
+          <div class="arch-file">offscreen + worker</div>
+        </div>
+      </div>
+      <ul>
+        <li><span class="dot"></span>ONNX Runtime Web</li>
+        <li data-lang-ja><span class="dot"></span>DEIM 検出モデル</li>
+        <li data-lang-ja><span class="dot"></span>PARSeq 認識モデル</li>
+        <li data-lang-ja><span class="dot"></span>XY-Cut 読み順解析</li>
+        <li data-lang-en><span class="dot"></span>DEIM detection</li>
+        <li data-lang-en><span class="dot"></span>PARSeq recognition</li>
+        <li data-lang-en><span class="dot"></span>XY-Cut reading order</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="tech-row">
+    <div class="tech-badge">ONNX Runtime Web (WASM)</div>
+    <div class="tech-badge">DEIM FP32</div>
+    <div class="tech-badge">PARSeq FP32</div>
+    <div class="tech-badge">Manifest V3</div>
+    <div class="tech-badge">TypeScript + Vite</div>
+    <div class="tech-badge">Chrome 116+</div>
+  </div>
+</div>
+
+<script>
+function setLang(lang) {
+  document.body.classList.toggle('lang-en', lang === 'en');
+  document.getElementById('btn-ja').classList.toggle('active', lang === 'ja');
+  document.getElementById('btn-en').classList.toggle('active', lang === 'en');
+}
+</script>
+</body>
+</html>

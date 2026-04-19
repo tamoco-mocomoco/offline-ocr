@@ -1,0 +1,91 @@
+1
+00:00:01,500 --> 00:00:07,800
+Offline OCR — a safe, fully offline region-select OCR.
+
+2
+00:00:11,300 --> 00:00:13,500
+It's incredibly simple to use.
+
+3
+00:00:16,000 --> 00:00:19,300
+Just drag your mouse over the text you want to OCR.
+
+4
+00:00:21,800 --> 00:00:27,800
+The National Diet Library's OCR technology recognizes text right inside your browser.
+
+5
+00:00:30,300 --> 00:00:35,200
+The result is automatically copied to your clipboard. Ready to paste.
+
+6
+00:00:37,700 --> 00:00:44,000
+Fully offline. Optimized for Japanese. Supports vertical text. One-click launch.
+
+7
+00:00:47,500 --> 00:00:49,800
+Let's look at the key features.
+
+8
+00:00:52,300 --> 00:01:02,500
+All processing happens inside your browser. No data is ever sent externally. Powered by a high-accuracy engine developed by the National Diet Library of Japan.
+
+9
+00:01:05,500 --> 00:01:14,800
+Supports both horizontal and vertical Japanese text, including old books. Launch from the toolbar, keyboard shortcut, or right-click menu.
+
+10
+00:01:17,800 --> 00:01:25,900
+Auto-clean OCR results with custom regex rules. The UI automatically switches between Japanese and English.
+
+11
+00:01:29,400 --> 00:01:34,700
+About privacy. This extension never sends your data anywhere.
+
+12
+00:01:37,200 --> 00:01:45,500
+Screenshots, the OCR engine, AI models, and results — everything stays in your browser.
+
+13
+00:01:48,000 --> 00:01:53,600
+Communication with external servers is completely blocked. No images or text are transmitted.
+
+14
+00:01:56,100 --> 00:02:04,000
+Zero network requests. Zero data collection. It works even without an internet connection.
+
+15
+00:02:07,500 --> 00:02:10,200
+Let's look at the cleaning rules feature.
+
+16
+00:02:12,700 --> 00:02:25,600
+You can auto-format OCR results with regex before copying. Add, reorder, and toggle rules freely.
+
+17
+00:02:28,100 --> 00:02:34,900
+For example, invoice amounts. The raw OCR data contains commas and spaces...
+
+18
+00:02:37,400 --> 00:02:43,000
+Apply the rules, and the result is cleaned up into plain numbers.
+
+19
+00:02:46,500 --> 00:02:49,000
+Here's how it works under the hood.
+
+20
+00:02:51,500 --> 00:02:58,500
+The Content Script displays the selection UI and sends coordinates to the Service Worker.
+
+21
+00:03:01,000 --> 00:03:06,200
+The Service Worker captures a screenshot and forwards it to the OCR Worker.
+
+22
+00:03:08,700 --> 00:03:13,000
+ONNX Runtime Web runs local inference.
+
+23
+00:03:15,500 --> 00:03:25,400
+The result is sent back and written to the clipboard. All running locally on Manifest V3.

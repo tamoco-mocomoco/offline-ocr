@@ -1,0 +1,187 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <title data-i18n="optionsPageTitle"></title>
+    <style>
+      :root { color-scheme: light dark; }
+      body {
+        font: 13px/1.55 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        margin: 0;
+        padding: 24px;
+        max-width: 880px;
+      }
+      h1 { font-size: 18px; margin: 0 0 4px; }
+      h2 { font-size: 14px; margin: 24px 0 8px; }
+      p.desc { color: #777; margin: 0 0 16px; }
+      a { color: #4ea3ff; }
+      .card {
+        border: 1px solid rgba(127,127,127,0.3);
+        border-radius: 8px;
+        padding: 14px 16px;
+        margin: 0 0 14px;
+      }
+      .rule {
+        border: 1px solid rgba(127,127,127,0.25);
+        border-radius: 6px;
+        padding: 10px 12px;
+        margin-bottom: 10px;
+        background: rgba(127,127,127,0.04);
+      }
+      .rule-head {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+        margin-bottom: 8px;
+      }
+      .rule-head .name {
+        flex: 1;
+        min-width: 0;
+      }
+      .rule-body {
+        display: grid;
+        grid-template-columns: minmax(0, 2fr) 80px minmax(0, 2fr);
+        gap: 8px;
+        align-items: stretch;
+      }
+      .rule-body label {
+        display: flex;
+        flex-direction: column;
+        gap: 3px;
+        min-width: 0;
+        font-size: 11px;
+        color: #888;
+      }
+      .rule input[type="text"] {
+        width: 100%;
+        padding: 6px 8px;
+        border: 1px solid rgba(127,127,127,0.4);
+        border-radius: 4px;
+        background: transparent;
+        font: inherit;
+        color: inherit;
+        font-family: ui-monospace, Menlo, monospace;
+        font-size: 12px;
+        box-sizing: border-box;
+        min-width: 0;
+      }
+      .rule input.name { font-family: inherit; }
+      button {
+        padding: 6px 12px;
+        font: inherit;
+        background: #4ea3ff;
+        color: #fff;
+        border: 0;
+        border-radius: 4px;
+        cursor: pointer;
+      }
+      button:hover { background: #3892ee; }
+      button.secondary {
+        background: transparent;
+        color: inherit;
+        border: 1px solid rgba(127,127,127,0.4);
+      }
+      button.move-btn {
+        padding: 4px 8px;
+        font-size: 10px;
+        line-height: 1;
+        min-width: 0;
+      }
+      button.move-btn:disabled {
+        opacity: 0.3;
+        cursor: default;
+      }
+      button.danger { background: #d04848; }
+      button.danger:hover { background: #b73a3a; }
+      .row { display: flex; gap: 8px; align-items: center; margin-top: 8px; }
+      .hint {
+        font-size: 11px;
+        color: #888;
+        margin: 4px 0 0;
+        font-family: ui-monospace, Menlo, monospace;
+      }
+      textarea {
+        width: 100%;
+        min-height: 60px;
+        padding: 8px;
+        border: 1px solid rgba(127,127,127,0.4);
+        border-radius: 4px;
+        background: transparent;
+        color: inherit;
+        font: 12px/1.4 ui-monospace, Menlo, monospace;
+        resize: vertical;
+        box-sizing: border-box;
+      }
+      .test-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 12px;
+      }
+    </style>
+  </head>
+  <body>
+    <h1 data-i18n="optionsPageTitle"></h1>
+    <p class="desc" data-i18n="optionsDescription"></p>
+
+    <h2 data-i18n="settingsGeneralHeading"></h2>
+    <div class="card">
+      <label style="display:flex; align-items:center; gap:8px; cursor:pointer;">
+        <input type="checkbox" id="show-result-alert" />
+        <span data-i18n="optionShowResultAlert"></span>
+      </label>
+      <p class="hint" style="margin-top:6px" data-i18n="optionShowResultAlertHint"></p>
+    </div>
+
+    <h2 data-i18n="settingsShortcutsHeading"></h2>
+    <div class="card">
+      <p style="margin:0 0 8px" data-i18n="shortcutsDescription"></p>
+      <button id="open-shortcuts" class="secondary" data-i18n="shortcutsOpenButton"></button>
+      <p class="hint" data-i18n="shortcutsHint"></p>
+    </div>
+
+    <h2 data-i18n="cleaningRulesHeading"></h2>
+    <p class="desc" data-i18n="cleaningRulesDescription"></p>
+
+    <div class="card">
+      <div id="rules"></div>
+      <div class="row">
+        <button id="add" data-i18n="addRuleButton"></button>
+        <button id="export" class="secondary" data-i18n="exportRulesButton"></button>
+        <button id="import" class="secondary" data-i18n="importRulesButton"></button>
+        <input type="file" id="import-file" accept=".json" style="display:none" />
+      </div>
+    </div>
+
+    <h2 data-i18n="testingHeading"></h2>
+    <div class="card">
+      <p class="desc" style="margin-bottom:8px" data-i18n="testingDescription"></p>
+      <div class="test-grid">
+        <div>
+          <label for="test-input"><strong data-i18n="testInputLabel"></strong></label>
+          <textarea id="test-input" data-i18n-placeholder="testInputPlaceholder"></textarea>
+        </div>
+        <div>
+          <label for="test-output"><strong data-i18n="testOutputLabel"></strong></label>
+          <textarea id="test-output" readonly></textarea>
+        </div>
+      </div>
+      <div class="row">
+        <button id="run-test" class="secondary" data-i18n="runTestButton"></button>
+      </div>
+    </div>
+
+    <h2 data-i18n="rulesHowToHeading"></h2>
+    <div class="card">
+      <p style="margin:0 0 8px" data-i18n="rulesHowToDescription"></p>
+      <p style="margin:0 0 8px"><strong data-i18n="rulesExampleLabel"></strong></p>
+      <ul style="margin:0; padding-left:20px; font-size:12px">
+        <li><code>Pattern: \s+</code>  <code>Flags: g</code>  <code>Replace: (empty)</code></li>
+        <li><code>Pattern: ([ぁ-んァ-ヶ一-龥]) ([ぁ-んァ-ヶ一-龥])</code>  <code>Flags: g</code>  <code>Replace: $1$2</code></li>
+        <li><code>Pattern: ー+</code>  <code>Flags: g</code>  <code>Replace: ー</code></li>
+        <li><code>Pattern: ^\d+\s*</code>  <code>Flags: gm</code>  <code>Replace: (empty)</code></li>
+      </ul>
+    </div>
+
+    <script type="module" src="./options.ts"></script>
+  </body>
+</html>

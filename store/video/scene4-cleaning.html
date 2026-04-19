@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<title>Scene 4: クリーニングルール</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;700;900&display=swap');
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  :root {
+    --primary: #5B9BD5;
+    --bg-gradient: linear-gradient(135deg, #1E3A5F 0%, #2C5F8A 50%, #5B9BD5 100%);
+  }
+
+  body {
+    font-family: 'Noto Sans JP', sans-serif;
+    display: flex; justify-content: center; align-items: center;
+    min-height: 100vh; background: #111;
+  }
+
+  .slide {
+    width: 1920px; height: 1080px;
+    background: #fff;
+    display: flex; flex-direction: column;
+    padding: 60px 100px;
+    overflow: hidden;
+  }
+
+  .section-header {
+    display: flex; align-items: center; gap: 16px; margin-bottom: 10px;
+    opacity: 0; animation: fadeSlideDown 0.6s ease forwards 0.3s;
+  }
+  .bar { width: 6px; height: 40px; background: var(--primary); border-radius: 3px; }
+  h2 { font-size: 44px; font-weight: 900; color: #1a1a1a; }
+
+  .section-sub {
+    font-size: 20px; color: #888; margin-bottom: 40px; margin-left: 22px;
+    opacity: 0; animation: fadeSlideDown 0.5s ease forwards 0.6s;
+  }
+
+  .cleaning-layout {
+    display: flex; gap: 36px; flex: 1; align-items: stretch;
+  }
+
+  /* Mock settings */
+  .mock-settings {
+    flex: 1;
+    background: #F7FAFD; border: 1px solid #E4EEF7;
+    border-radius: 14px; padding: 24px;
+    display: flex; flex-direction: column; gap: 14px;
+    opacity: 0; animation: fadeSlideRight 0.8s ease forwards 5.2s;
+  }
+
+  .settings-title {
+    font-size: 18px; font-weight: 700; color: #1a1a1a;
+    padding-bottom: 10px; border-bottom: 1px solid #E4EEF7;
+  }
+
+  .mock-rule {
+    background: #fff; border: 1px solid #E4EEF7;
+    border-radius: 10px; padding: 14px 16px;
+    display: flex; flex-direction: column; gap: 8px;
+    opacity: 0; transform: translateX(-15px);
+  }
+  .mock-rule:nth-child(2) { animation: fadeSlideRight 0.5s ease forwards 6.5s; }
+  .mock-rule:nth-child(3) { animation: fadeSlideRight 0.5s ease forwards 9.5s; }
+  .mock-rule:nth-child(4) { animation: fadeSlideRight 0.5s ease forwards 12.5s; }
+  .mock-rule:nth-child(5) { animation: fadeSlideRight 0.5s ease forwards 15.5s; }
+
+  .rule-header { display: flex; align-items: center; gap: 10px; }
+
+  .rule-checkbox {
+    width: 16px; height: 16px; border-radius: 3px;
+    background: var(--primary); position: relative; flex-shrink: 0;
+  }
+  .rule-checkbox::after {
+    content: '✓'; color: #fff; font-size: 11px;
+    position: absolute; top: 0; left: 3px;
+  }
+  .rule-checkbox.off { background: #ccc; }
+  .rule-checkbox.off::after { display: none; }
+
+  .rule-name { font-size: 15px; font-weight: 700; color: #333; flex: 1; }
+
+  .rule-fields {
+    display: flex; gap: 8px;
+    font-size: 13px; font-family: ui-monospace, monospace; color: #666;
+  }
+  .rule-field {
+    background: #F0F4F8; border: 1px solid #dce4ed;
+    border-radius: 4px; padding: 4px 8px;
+    min-height: 32px; display: flex; align-items: center;
+  }
+  .rule-field-label { color: #999; font-size: 10px; margin-right: 4px; }
+
+  /* Before / After */
+  .cleaning-demo {
+    width: 520px;
+    display: flex; flex-direction: column; gap: 16px; flex-shrink: 0;
+  }
+
+  .cleaning-box {
+    flex: 1; border-radius: 12px; padding: 20px;
+    display: flex; flex-direction: column; gap: 8px;
+    opacity: 0;
+  }
+  .cleaning-box.before {
+    background: #FFF5F5; border: 1px solid #FFD4D4;
+    animation: fadeScale 0.6s ease forwards 20.6s;
+  }
+  .cleaning-box.after {
+    background: #F0FAF0; border: 1px solid #C8E6C8;
+    animation: fadeScale 0.6s ease forwards 29.9s;
+  }
+
+  .box-label { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; }
+  .cleaning-box.before .box-label { color: #D04848; }
+  .cleaning-box.after .box-label { color: #2E7D32; }
+
+  .box-text {
+    font-size: 15px; line-height: 2.0;
+    font-family: ui-monospace, monospace; color: #444; flex: 1;
+  }
+  .highlight { background: rgba(208,72,72,0.15); border-radius: 2px; padding: 0 2px; }
+
+  .cleaning-arrow {
+    display: flex; align-items: center; justify-content: center;
+    gap: 8px; color: var(--primary); font-weight: 700; font-size: 14px;
+    flex-shrink: 0;
+    opacity: 0;
+    animation: fadeIn 0.5s ease forwards 25.0s;
+  }
+  .down-arrow { font-size: 24px; }
+
+  /* Pulse glow on after box */
+  .cleaning-box.after {
+    box-shadow: 0 0 0 0 rgba(76, 175, 80, 0);
+    animation: fadeScale 0.6s ease forwards 29.9s, glowPulse 1.5s ease 31.0s 2;
+  }
+
+  @keyframes fadeSlideDown {
+    from { opacity: 0; transform: translateY(-15px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes fadeSlideRight {
+    from { opacity: 0; transform: translateX(-15px); }
+    to   { opacity: 1; transform: translateX(0); }
+  }
+  @keyframes fadeScale {
+    from { opacity: 0; transform: scale(0.95); }
+    to   { opacity: 1; transform: scale(1); }
+  }
+  @keyframes fadeIn {
+    to { opacity: 1; }
+  }
+  @keyframes glowPulse {
+    0%   { box-shadow: 0 0 0 0 rgba(76, 175, 80, 0.3); }
+    50%  { box-shadow: 0 0 0 8px rgba(76, 175, 80, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(76, 175, 80, 0); }
+  }
+</style>
+</head>
+<body>
+<div class="slide">
+  <div class="section-header">
+    <div class="bar"></div>
+    <h2>正規表現クリーニング</h2>
+  </div>
+  <p class="section-sub">OCR結果をコピー前に自動整形 — 自由にルールを追加・並べ替え</p>
+
+  <div class="cleaning-layout">
+    <div class="mock-settings">
+      <div class="settings-title">🧹 クリーニングルール</div>
+      <div class="mock-rule">
+        <div class="rule-header">
+          <div class="rule-checkbox"></div>
+          <div class="rule-name">日本語の間のスペース削除</div>
+        </div>
+        <div class="rule-fields">
+          <div class="rule-field"><span class="rule-field-label">Pattern</span>([ぁ-んァ-ヶ一-龥])\s+([ぁ-んァ-ヶ一-龥])</div>
+          <div class="rule-field"><span class="rule-field-label">Replace</span>$1$2</div>
+        </div>
+      </div>
+      <div class="mock-rule">
+        <div class="rule-header">
+          <div class="rule-checkbox"></div>
+          <div class="rule-name">カンマを削除</div>
+        </div>
+        <div class="rule-fields">
+          <div class="rule-field"><span class="rule-field-label">Pattern</span>[,，]</div>
+          <div class="rule-field"><span class="rule-field-label">Replace</span>(empty)</div>
+        </div>
+      </div>
+      <div class="mock-rule">
+        <div class="rule-header">
+          <div class="rule-checkbox"></div>
+          <div class="rule-name">連続改行を1つに</div>
+        </div>
+        <div class="rule-fields">
+          <div class="rule-field"><span class="rule-field-label">Pattern</span>\n{2,}</div>
+          <div class="rule-field"><span class="rule-field-label">Replace</span>\n</div>
+        </div>
+      </div>
+      <div class="mock-rule">
+        <div class="rule-header">
+          <div class="rule-checkbox off"></div>
+          <div class="rule-name">改行を削除</div>
+        </div>
+        <div class="rule-fields">
+          <div class="rule-field"><span class="rule-field-label">Pattern</span>\n</div>
+          <div class="rule-field"><span class="rule-field-label">Replace</span>(empty)</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="cleaning-demo">
+      <div class="cleaning-box before">
+        <div class="box-label">Before</div>
+        <div class="box-text">売 上 高　<span class="highlight">1,234,567</span>円<br><br>経 常 利 益　<span class="highlight">890,123</span>円<br><br>当 期 利 益　<span class="highlight">456,789</span>円</div>
+      </div>
+      <div class="cleaning-arrow">
+        <span class="down-arrow">↓</span>
+        ルール適用
+        <span class="down-arrow">↓</span>
+      </div>
+      <div class="cleaning-box after">
+        <div class="box-label">After</div>
+        <div class="box-text">売上高　1234567円<br>経常利益　890123円<br>当期利益　456789円</div>
+      </div>
+    </div>
+  </div>
+</div>
+</body>
+</html>

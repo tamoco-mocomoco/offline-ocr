@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<title>Scene 5: アーキテクチャ</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;700;900&display=swap');
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  :root {
+    --primary: #5B9BD5;
+    --primary-light: #A8D0F0;
+    --bg-gradient: linear-gradient(135deg, #1E3A5F 0%, #2C5F8A 50%, #5B9BD5 100%);
+  }
+
+  body {
+    font-family: 'Noto Sans JP', sans-serif;
+    display: flex; justify-content: center; align-items: center;
+    min-height: 100vh; background: #111;
+  }
+
+  .slide {
+    width: 1920px; height: 1080px;
+    background: var(--bg-gradient);
+    color: #fff;
+    display: flex; flex-direction: column;
+    padding: 68px 100px;
+    overflow: hidden;
+  }
+
+  .section-header {
+    display: flex; align-items: center; gap: 16px; margin-bottom: 8px;
+    opacity: 0; animation: fadeSlideDown 0.6s ease forwards 0.3s;
+  }
+  .bar { width: 6px; height: 40px; background: var(--primary-light); border-radius: 3px; }
+  h2 { font-size: 44px; font-weight: 900; }
+
+  .section-sub {
+    font-size: 20px; color: rgba(255,255,255,0.85);
+    margin-bottom: 48px; margin-left: 22px;
+    opacity: 0; animation: fadeSlideDown 0.5s ease forwards 0.6s;
+  }
+
+  /* Flow */
+  .arch-flow {
+    display: flex; align-items: stretch; gap: 0;
+    flex: 1; justify-content: center;
+  }
+
+  .arch-block {
+    flex: 1; max-width: 400px;
+    background: rgba(255,255,255,0.08);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255,255,255,0.15);
+    border-radius: 20px; padding: 36px 32px;
+    display: flex; flex-direction: column; gap: 16px;
+    opacity: 0;
+  }
+  .arch-block:nth-child(1) { animation: fadeSlideUp 0.8s ease forwards 5.0s; }
+  .arch-block:nth-child(3) { animation: fadeSlideUp 0.8s ease forwards 14.5s; }
+  .arch-block:nth-child(5) { animation: fadeSlideUp 0.8s ease forwards 22.2s; }
+
+  .arch-label { display: flex; align-items: center; gap: 10px; }
+  .arch-icon {
+    width: 44px; height: 44px;
+    background: rgba(255,255,255,0.15); border-radius: 12px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 22px;
+  }
+  .arch-name { font-size: 22px; font-weight: 700; }
+  .arch-file { font-size: 14px; color: rgba(255,255,255,0.6); font-family: ui-monospace, monospace; }
+
+  .arch-block ul {
+    list-style: none; padding: 0;
+    display: flex; flex-direction: column; gap: 10px;
+  }
+  .arch-block li {
+    display: flex; align-items: center; gap: 10px;
+    font-size: 16px; color: rgba(255,255,255,0.85);
+  }
+  .dot {
+    width: 8px; height: 8px; background: var(--primary-light);
+    border-radius: 50%; flex-shrink: 0;
+  }
+
+  /* Arrows */
+  .arch-arrow {
+    display: flex; flex-direction: column; align-items: center;
+    justify-content: center; width: 60px; gap: 8px; flex-shrink: 0;
+    opacity: 0;
+  }
+  .arch-arrow:nth-child(2) { animation: fadeIn 0.5s ease forwards 10.0s; }
+  .arch-arrow:nth-child(4) { animation: fadeIn 0.5s ease forwards 19.0s; }
+
+  .arrow-line {
+    width: 40px; height: 2px; background: var(--primary-light);
+    position: relative;
+  }
+  .arrow-line::after {
+    content: ''; position: absolute; right: -2px; top: -5px;
+    border: 6px solid transparent;
+    border-left: 8px solid var(--primary-light);
+  }
+  .arrow-label {
+    font-size: 11px; color: rgba(255,255,255,0.6);
+    text-align: center; white-space: nowrap;
+  }
+
+  /* Animated data flow pulse */
+  .arch-arrow .arrow-line {
+    overflow: visible;
+  }
+  .arch-arrow:nth-child(2) .arrow-line:first-of-type {
+    animation: pulseFlow 1.5s ease 29.0s 3;
+  }
+  .arch-arrow:nth-child(4) .arrow-line:first-of-type {
+    animation: pulseFlow 1.5s ease 29.3s 3;
+  }
+
+  /* Tech badges */
+  .tech-row {
+    display: flex; gap: 12px; margin-top: 32px;
+    justify-content: center; flex-wrap: wrap;
+    opacity: 0;
+    animation: fadeIn 0.6s ease forwards 24.0s;
+  }
+  .tech-badge {
+    background: rgba(255,255,255,0.1);
+    border: 1px solid rgba(255,255,255,0.15);
+    border-radius: 8px; padding: 8px 16px;
+    font-size: 15px; color: rgba(255,255,255,0.85);
+    font-family: ui-monospace, monospace;
+  }
+
+  @keyframes fadeSlideDown {
+    from { opacity: 0; transform: translateY(-15px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes fadeSlideUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes fadeIn {
+    to { opacity: 1; }
+  }
+  @keyframes pulseFlow {
+    0%   { box-shadow: -20px 0 8px 2px rgba(168,208,240,0.6); }
+    50%  { box-shadow: 20px 0 8px 2px rgba(168,208,240,0.6); }
+    100% { box-shadow: 40px 0 8px 2px rgba(168,208,240,0); }
+  }
+</style>
+</head>
+<body>
+<div class="slide">
+  <div class="section-header">
+    <div class="bar"></div>
+    <h2>技術アーキテクチャ</h2>
+  </div>
+  <p class="section-sub">Manifest V3 ベースの3コンテキスト構成で安全にローカル推論</p>
+
+  <div class="arch-flow">
+    <div class="arch-block">
+      <div class="arch-label">
+        <div class="arch-icon">📄</div>
+        <div>
+          <div class="arch-name">Content Script</div>
+          <div class="arch-file">content.ts</div>
+        </div>
+      </div>
+      <ul>
+        <li><span class="dot"></span>範囲選択オーバーレイ</li>
+        <li><span class="dot"></span>進捗トースト表示</li>
+        <li><span class="dot"></span>クリップボード書き込み</li>
+        <li><span class="dot"></span>クリーニングルール適用</li>
+      </ul>
+    </div>
+
+    <div class="arch-arrow">
+      <div class="arrow-label">選択座標</div>
+      <div class="arrow-line"></div>
+      <div style="height: 24px"></div>
+      <div class="arrow-line" style="transform: scaleX(-1)"></div>
+      <div class="arrow-label">認識結果</div>
+    </div>
+
+    <div class="arch-block">
+      <div class="arch-label">
+        <div class="arch-icon">⚙️</div>
+        <div>
+          <div class="arch-name">Service Worker</div>
+          <div class="arch-file">service-worker.ts</div>
+        </div>
+      </div>
+      <ul>
+        <li><span class="dot"></span>コマンド受信・ルーティング</li>
+        <li><span class="dot"></span>captureVisibleTab</li>
+        <li><span class="dot"></span>スクリーンショット転送</li>
+        <li><span class="dot"></span>モデルのプリウォーム</li>
+      </ul>
+    </div>
+
+    <div class="arch-arrow">
+      <div class="arrow-label">screenshot</div>
+      <div class="arrow-line"></div>
+      <div style="height: 24px"></div>
+      <div class="arrow-line" style="transform: scaleX(-1)"></div>
+      <div class="arrow-label">OCR結果</div>
+    </div>
+
+    <div class="arch-block">
+      <div class="arch-label">
+        <div class="arch-icon">🧠</div>
+        <div>
+          <div class="arch-name">OCR Worker</div>
+          <div class="arch-file">offscreen + worker</div>
+        </div>
+      </div>
+      <ul>
+        <li><span class="dot"></span>ONNX Runtime Web</li>
+        <li><span class="dot"></span>DEIM 検出モデル</li>
+        <li><span class="dot"></span>PARSeq 認識モデル</li>
+        <li><span class="dot"></span>XY-Cut 読み順解析</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="tech-row">
+    <div class="tech-badge">ONNX Runtime Web (WASM)</div>
+    <div class="tech-badge">DEIM FP32</div>
+    <div class="tech-badge">PARSeq FP32</div>
+    <div class="tech-badge">Manifest V3</div>
+    <div class="tech-badge">TypeScript + Vite</div>
+    <div class="tech-badge">Chrome 116+</div>
+  </div>
+</div>
+</body>
+</html>
