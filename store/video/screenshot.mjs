@@ -39,10 +39,10 @@ async function captureAll() {
     const page = await context.newPage();
     await page.goto(fileUrl, { waitUntil: "networkidle" });
 
-    // Hide the language toggle button
+    // Hide the top bar (language toggle + GitHub link)
     await page.evaluate(() => {
-      const toggle = document.querySelector(".lang-toggle");
-      if (toggle) toggle.style.display = "none";
+      const topBar = document.querySelector(".top-bar");
+      if (topBar) topBar.style.display = "none";
     });
 
     // Switch language
