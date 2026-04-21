@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Privacy Policy — Offline OCR</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;700&display=swap');
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Noto Sans JP', sans-serif;
+    background: #f8f9fa;
+    color: #333;
+    line-height: 1.8;
+    padding: 40px 20px;
+  }
+
+  .container {
+    max-width: 720px;
+    margin: 0 auto;
+    background: #fff;
+    border-radius: 12px;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+    padding: 48px 40px;
+  }
+
+  h1 {
+    font-size: 28px;
+    font-weight: 700;
+    margin-bottom: 8px;
+    color: #1a1a1a;
+  }
+
+  .last-updated {
+    font-size: 14px;
+    color: #888;
+    margin-bottom: 32px;
+  }
+
+  h2 {
+    font-size: 20px;
+    font-weight: 700;
+    color: #1a1a1a;
+    margin-top: 32px;
+    margin-bottom: 12px;
+    padding-bottom: 8px;
+    border-bottom: 2px solid #e8ecef;
+  }
+
+  p, li {
+    font-size: 15px;
+    margin-bottom: 12px;
+  }
+
+  ul {
+    padding-left: 24px;
+    margin-bottom: 16px;
+  }
+
+  li { margin-bottom: 8px; }
+
+  .highlight-box {
+    background: #f0f7f0;
+    border: 1px solid #c8e6c8;
+    border-radius: 8px;
+    padding: 16px 20px;
+    margin: 20px 0;
+    font-size: 15px;
+  }
+
+  .highlight-box strong {
+    color: #2e7d32;
+  }
+
+  a {
+    color: #5B9BD5;
+    text-decoration: none;
+  }
+  a:hover { text-decoration: underline; }
+
+  .footer {
+    margin-top: 40px;
+    padding-top: 20px;
+    border-top: 1px solid #e8ecef;
+    font-size: 13px;
+    color: #888;
+    text-align: center;
+  }
+
+  .lang-toggle {
+    display: flex;
+    justify-content: flex-end;
+    margin-bottom: 20px;
+    gap: 0;
+  }
+
+  .lang-toggle button {
+    padding: 6px 16px;
+    font-size: 13px;
+    font-weight: 700;
+    border: 1px solid #ddd;
+    background: #fff;
+    cursor: pointer;
+    color: #888;
+    font-family: 'Noto Sans JP', sans-serif;
+  }
+  .lang-toggle button:first-child { border-radius: 6px 0 0 6px; }
+  .lang-toggle button:last-child { border-radius: 0 6px 6px 0; border-left: none; }
+  .lang-toggle button.active { background: #5B9BD5; color: #fff; border-color: #5B9BD5; }
+
+  [data-lang-ja] { display: none; }
+  [data-lang-en] { display: block; }
+  body.lang-ja [data-lang-ja] { display: block; }
+  body.lang-ja [data-lang-en] { display: none; }
+</style>
+</head>
+<body>
+
+<div class="container">
+
+  <div class="lang-toggle">
+    <button id="btn-en" class="active" onclick="setLang('en')">English</button>
+    <button id="btn-ja" onclick="setLang('ja')">日本語</button>
+  </div>
+
+  <!-- ── English ── -->
+  <div data-lang-en>
+    <h1>Privacy Policy</h1>
+    <p class="last-updated">Last updated: April 21, 2026</p>
+
+    <div class="highlight-box">
+      <strong>Offline OCR does not collect, transmit, or store any user data.</strong>
+      All processing happens entirely within your browser.
+    </div>
+
+    <h2>Overview</h2>
+    <p>Offline OCR is a Chrome extension that performs Optical Character Recognition (OCR) entirely offline, within your browser. It is designed with privacy as a core principle.</p>
+
+    <h2>Data Collection</h2>
+    <p>This extension does <strong>not</strong> collect any data. Specifically:</p>
+    <ul>
+      <li>No personal information is collected</li>
+      <li>No images or screenshots are transmitted externally</li>
+      <li>No OCR results or recognized text are sent to any server</li>
+      <li>No usage analytics or telemetry are collected</li>
+      <li>No cookies or tracking mechanisms are used</li>
+    </ul>
+
+    <h2>How It Works</h2>
+    <p>All OCR processing is performed locally using ONNX Runtime Web (WebAssembly). The OCR models (DEIM and PARSeq) are bundled within the extension package and run entirely in your browser. No network requests are made during or after OCR processing.</p>
+
+    <h2>Permissions</h2>
+    <p>The extension requests the following permissions, all used exclusively for local OCR functionality:</p>
+    <ul>
+      <li><strong>scripting</strong> — To inject the selection overlay UI into the active tab</li>
+      <li><strong>offscreen</strong> — To run the OCR inference engine (ONNX Runtime Web cannot run in a service worker)</li>
+      <li><strong>clipboardWrite</strong> — To copy recognized text to your clipboard</li>
+      <li><strong>contextMenus</strong> — To add a right-click menu option for launching OCR</li>
+      <li><strong>storage</strong> — To save user-configured cleaning rules locally</li>
+      <li><strong>Host permissions</strong> — To capture screenshots and inject the selection UI on any page</li>
+    </ul>
+
+    <h2>Data Storage</h2>
+    <p>The extension stores the following data locally on your device only:</p>
+    <ul>
+      <li><strong>Cleaning rules</strong> — User-configured regex patterns, stored in <code>chrome.storage.sync</code></li>
+      <li><strong>Model cache</strong> — OCR model files cached in IndexedDB for faster loading</li>
+    </ul>
+    <p>This data never leaves your device and can be cleared by uninstalling the extension.</p>
+
+    <h2>Third-Party Services</h2>
+    <p>This extension does not use any third-party services, APIs, or analytics platforms.</p>
+
+    <h2>Changes to This Policy</h2>
+    <p>If this privacy policy is updated, the changes will be posted on this page with an updated date.</p>
+
+    <h2>Contact</h2>
+    <p>If you have questions about this privacy policy, please open an issue on our <a href="https://github.com/tamoco-mocomoco/offline-ocr" target="_blank">GitHub repository</a>.</p>
+  </div>
+
+  <!-- ── 日本語 ── -->
+  <div data-lang-ja>
+    <h1>プライバシーポリシー</h1>
+    <p class="last-updated">最終更新日: 2026年4月21日</p>
+
+    <div class="highlight-box">
+      <strong>オフラインOCR は、ユーザーデータの収集・送信・保存を一切行いません。</strong>
+      すべての処理はブラウザ内で完結します。
+    </div>
+
+    <h2>概要</h2>
+    <p>オフラインOCR は、ブラウザ内で完全にオフラインで動作する光学文字認識（OCR）Chrome拡張機能です。プライバシーを基本設計方針としています。</p>
+
+    <h2>データ収集について</h2>
+    <p>本拡張機能はデータを一切収集<strong>しません</strong>。具体的には：</p>
+    <ul>
+      <li>個人情報の収集はありません</li>
+      <li>画像やスクリーンショットの外部送信はありません</li>
+      <li>OCR結果や認識テキストのサーバー送信はありません</li>
+      <li>利用統計やテレメトリの収集はありません</li>
+      <li>Cookieやトラッキング機構は使用しません</li>
+    </ul>
+
+    <h2>動作の仕組み</h2>
+    <p>すべてのOCR処理は、ONNX Runtime Web（WebAssembly）を使用してローカルで実行されます。OCRモデル（DEIMおよびPARSeq）は拡張機能パッケージに内蔵されており、ブラウザ内でのみ動作します。OCR処理中および処理後にネットワークリクエストは行われません。</p>
+
+    <h2>権限について</h2>
+    <p>本拡張機能は以下の権限を要求します。すべてローカルOCR機能のためにのみ使用されます：</p>
+    <ul>
+      <li><strong>scripting</strong> — アクティブタブに選択オーバーレイUIを注入するため</li>
+      <li><strong>offscreen</strong> — OCR推論エンジンを実行するため（ONNX Runtime WebはService Workerでは動作不可）</li>
+      <li><strong>clipboardWrite</strong> — 認識テキストをクリップボードにコピーするため</li>
+      <li><strong>contextMenus</strong> — 右クリックメニューにOCR起動オプションを追加するため</li>
+      <li><strong>storage</strong> — ユーザーが設定したクリーニングルールをローカルに保存するため</li>
+      <li><strong>ホスト権限</strong> — 任意のページでスクリーンショット取得と選択UI注入を行うため</li>
+    </ul>
+
+    <h2>データの保存</h2>
+    <p>本拡張機能は、以下のデータをお使いのデバイスにのみローカル保存します：</p>
+    <ul>
+      <li><strong>クリーニングルール</strong> — ユーザーが設定した正規表現パターン（<code>chrome.storage.sync</code>に保存）</li>
+      <li><strong>モデルキャッシュ</strong> — OCRモデルファイル（IndexedDBにキャッシュ）</li>
+    </ul>
+    <p>これらのデータはデバイスの外に出ることはなく、拡張機能をアンインストールすることで削除できます。</p>
+
+    <h2>サードパーティサービス</h2>
+    <p>本拡張機能は、サードパーティのサービス、API、分析プラットフォームを一切使用しません。</p>
+
+    <h2>ポリシーの変更</h2>
+    <p>本プライバシーポリシーが更新された場合、このページに更新日とともに掲載されます。</p>
+
+    <h2>お問い合わせ</h2>
+    <p>本プライバシーポリシーに関するご質問は、<a href="https://github.com/tamoco-mocomoco/offline-ocr" target="_blank">GitHubリポジトリ</a>のIssueにてお問い合わせください。</p>
+  </div>
+
+  <div class="footer">
+    &copy; 2026 Offline OCR — <a href="https://github.com/tamoco-mocomoco/offline-ocr">GitHub</a>
+  </div>
+
+</div>
+
+<script>
+function setLang(lang) {
+  document.body.classList.toggle('lang-ja', lang === 'ja');
+  document.getElementById('btn-en').classList.toggle('active', lang === 'en');
+  document.getElementById('btn-ja').classList.toggle('active', lang === 'ja');
+}
+// Auto-detect language
+if (navigator.language.startsWith('ja')) setLang('ja');
+</script>
+
+</body>
+</html>

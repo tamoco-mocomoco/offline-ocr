@@ -28,6 +28,7 @@ jobs:
           mkdir -p _site/public/icons _site/store
           cp store/screenshots.html _site/store/screenshots.html
           cp store/screenshots.html _site/index.html
+          cp store/privacy-policy.html _site/privacy-policy.html
           cp -r public/icons/* _site/public/icons/
 
       - uses: actions/configure-pages@v5
