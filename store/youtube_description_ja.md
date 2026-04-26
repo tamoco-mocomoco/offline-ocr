@@ -4,7 +4,7 @@
 すべての処理がブラウザ内で完結し、データが外部に送信されることは一切ありません。
 
 ▼ Chrome Web Store
-https://chromewebstore.google.com/detail/offline-ocr/（公開後にURLを差し替え）
+https://chromewebstore.google.com/detail/offline-ocr/cfppiicaeemimcbodibggnnolckcpmpd
 
 ▼ GitHub
 https://github.com/tamoco-mocomoco/offline-ocr

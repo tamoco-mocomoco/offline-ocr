@@ -2,6 +2,8 @@
 
 [English version](README.md)
 
+[![Chrome Web Store](https://img.shields.io/chrome-web-store/v/cfppiicaeemimcbodibggnnolckcpmpd)](https://chromewebstore.google.com/detail/offline-ocr/cfppiicaeemimcbodibggnnolckcpmpd)
+
 [ndlocr-lite-wasm](https://github.com/tamoco-mocomoco/ndlocr-lite-wasm) を組み込み、
 ブラウザ内ローカルで完結する範囲選択OCRを行うChrome拡張機能です。
 画面をマウスで矩形選択 → ONNX Runtime Web で日本語OCR → 結果文字列を自動でクリップボードへコピー

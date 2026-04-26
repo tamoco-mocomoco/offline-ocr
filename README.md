@@ -2,6 +2,8 @@
 
 [日本語版はこちら](README_ja.md)
 
+[![Chrome Web Store](https://img.shields.io/chrome-web-store/v/cfppiicaeemimcbodibggnnolckcpmpd)](https://chromewebstore.google.com/detail/offline-ocr/cfppiicaeemimcbodibggnnolckcpmpd)
+
 A Chrome extension that runs fully offline, in-browser Japanese OCR using
 [ndlocr-lite-wasm](https://github.com/tamoco-mocomoco/ndlocr-lite-wasm).
 Select a region on any page with your mouse, and the recognized text is
