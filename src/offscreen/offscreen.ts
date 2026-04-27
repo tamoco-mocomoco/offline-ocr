@@ -19,9 +19,12 @@ import type {
   OffscreenToBackground,
   Rect,
 } from "../shared/messages";
+import { calcPadding } from "../ocr/engine/padding";
 
 /**
  * Crop a region out of the captured screenshot data URL and return a PNG Blob.
+ * Adds padding by stretching the edge pixels outward (adjacent-color padding)
+ * so that tightly selected text can still be detected by DEIM.
  *
  * `chrome.tabs.captureVisibleTab` returns physical-pixel image data already
  * scaled by devicePixelRatio. The selection rect is in CSS pixels, so we
@@ -35,14 +38,33 @@ async function cropScreenshot(
   const blob = await (await fetch(dataUrl)).blob();
   const bmp = await createImageBitmap(blob);
   const dpr = devicePixelRatio || 1;
+
+  // Crop the selected region in physical pixels
   const sx = Math.max(0, Math.round(rectCss.x * dpr));
   const sy = Math.max(0, Math.round(rectCss.y * dpr));
   const sw = Math.max(1, Math.min(bmp.width - sx, Math.round(rectCss.width * dpr)));
   const sh = Math.max(1, Math.min(bmp.height - sy, Math.round(rectCss.height * dpr)));
-  const canvas = new OffscreenCanvas(sw, sh);
+
+  const pad = calcPadding(sw, sh);
+  const outW = sw + pad * 2;
+  const outH = sh + pad * 2;
+  const canvas = new OffscreenCanvas(outW, outH);
   const ctx = canvas.getContext("2d");
   if (!ctx) throw new Error("OffscreenCanvas 2D context unavailable");
-  ctx.drawImage(bmp, sx, sy, sw, sh, 0, 0, sw, sh);
+
+  // Draw the cropped image in the center
+  ctx.drawImage(bmp, sx, sy, sw, sh, pad, pad, sw, sh);
+
+  // Stretch edge pixels to fill padding (adjacent-color padding)
+  // Top edge: stretch 1px strip upward
+  ctx.drawImage(canvas, pad, pad, sw, 1, pad, 0, sw, pad);
+  // Bottom edge: stretch 1px strip downward
+  ctx.drawImage(canvas, pad, pad + sh - 1, sw, 1, pad, pad + sh, sw, pad);
+  // Left edge: stretch 1px strip leftward (full height including top/bottom pad)
+  ctx.drawImage(canvas, pad, 0, 1, outH, 0, 0, pad, outH);
+  // Right edge: stretch 1px strip rightward (full height including top/bottom pad)
+  ctx.drawImage(canvas, pad + sw - 1, 0, 1, outH, pad + sw, 0, pad, outH);
+
   bmp.close();
   return canvas.convertToBlob({ type: "image/png" });
 }
