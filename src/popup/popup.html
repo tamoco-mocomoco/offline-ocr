@@ -25,6 +25,20 @@
         cursor: pointer;
       }
       button:hover { background: #3892ee; }
+      .separator {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin: 12px 0 6px;
+        font-size: 11px;
+        color: #999;
+      }
+      .separator::before, .separator::after {
+        content: '';
+        flex: 1;
+        height: 1px;
+        background: rgba(127,127,127,0.2);
+      }
       kbd {
         font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
         background: rgba(127,127,127,0.15);
@@ -38,7 +52,9 @@
     <h1 data-i18n="popupTitle"></h1>
     <p id="popup-desc"></p>
     <button id="start" data-i18n="popupStartButton"></button>
-    <button id="open-file" style="margin-top:6px; background:#6c757d;" data-i18n="popupOpenFileButton"></button>
+    <div class="separator" data-i18n="popupViewerSection"></div>
+    <button id="open-file" style="background:#6c757d;" data-i18n="popupOpenFileButton"></button>
+    <button id="paste-clipboard" style="margin-top:6px; background:#6c757d;" data-i18n="popupPasteButton"></button>
     <input type="file" id="file-input" accept="image/*" style="display:none;" />
     <p id="status" style="margin-top:8px; min-height:1.2em; font-size:11px; color:#c33;"></p>
     <p style="margin:12px 0 0; font-size:11px; text-align:right;">

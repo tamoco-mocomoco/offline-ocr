@@ -79,6 +79,32 @@ document.getElementById("open-options")?.addEventListener("click", (ev) => {
   window.close();
 });
 
+// ── Paste clipboard image for OCR ──
+
+document.getElementById("paste-clipboard")?.addEventListener("click", async () => {
+  try {
+    const items = await navigator.clipboard.read();
+    for (const item of items) {
+      const imageType = item.types.find((t) => t.startsWith("image/"));
+      if (imageType) {
+        setStatus(t("statusLoading"));
+        const blob = await item.getType(imageType);
+        const reader = new FileReader();
+        reader.onload = async () => {
+          await chrome.storage.session.set({ viewerImage: reader.result as string });
+          await chrome.tabs.create({ url: chrome.runtime.getURL("viewer.html") });
+          window.close();
+        };
+        reader.readAsDataURL(blob);
+        return;
+      }
+    }
+    setStatus(t("statusNoClipboardImage"));
+  } catch {
+    setStatus(t("statusNoClipboardImage"));
+  }
+});
+
 // ── Open local file for OCR ──
 
 const fileInput = document.getElementById("file-input") as HTMLInputElement;

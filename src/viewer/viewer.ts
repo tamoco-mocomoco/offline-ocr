@@ -19,6 +19,8 @@ const t = chrome.i18n.getMessage;
 // ── DOM elements ──
 
 const btnOpen = document.getElementById("btn-open") as HTMLButtonElement;
+const btnSelect = document.getElementById("btn-select") as HTMLButtonElement;
+const btnOcrAll = document.getElementById("btn-ocr-all") as HTMLButtonElement;
 const fileInput = document.getElementById("file-input") as HTMLInputElement;
 const canvasArea = document.getElementById("canvas-area")!;
 const dropzone = document.getElementById("dropzone")!;
@@ -37,7 +39,8 @@ document.querySelectorAll<HTMLElement>("[data-i18n]").forEach((el) => {
 
 let img: HTMLImageElement | null = null;
 let ctx: CanvasRenderingContext2D | null = null;
-let selecting = false;
+let selectMode = false; // whether selection mode is active
+let dragging = false;
 let startX = 0;
 let startY = 0;
 let selRect: { x: number; y: number; w: number; h: number } | null = null;
@@ -72,7 +75,11 @@ function loadFile(file: File): void {
     drawImage();
     dropzone.style.display = "none";
     canvas.style.display = "block";
-    statusEl.textContent = `${image.naturalWidth}×${image.naturalHeight} — ${t("viewerSelectHint")}`;
+    canvas.style.cursor = "default";
+    btnSelect.disabled = false;
+    btnOcrAll.disabled = false;
+    selectMode = false;
+    statusEl.textContent = `${image.naturalWidth}×${image.naturalHeight}`;
     URL.revokeObjectURL(url);
   };
   image.src = url;
@@ -112,16 +119,16 @@ function canvasCoords(e: MouseEvent): { cx: number; cy: number } {
 // ── Selection handlers ──
 
 canvas.addEventListener("mousedown", (e) => {
-  if (!img) return;
+  if (!img || !selectMode) return;
   const { cx, cy } = canvasCoords(e);
-  selecting = true;
+  dragging = true;
   startX = cx;
   startY = cy;
   selRect = null;
 });
 
 canvas.addEventListener("mousemove", (e) => {
-  if (!selecting) return;
+  if (!dragging) return;
   const { cx, cy } = canvasCoords(e);
   selRect = {
     x: Math.min(startX, cx),
@@ -133,8 +140,8 @@ canvas.addEventListener("mousemove", (e) => {
 });
 
 canvas.addEventListener("mouseup", (e) => {
-  if (!selecting) return;
-  selecting = false;
+  if (!dragging) return;
+  dragging = false;
   const { cx, cy } = canvasCoords(e);
   selRect = {
     x: Math.min(startX, cx),
@@ -144,6 +151,8 @@ canvas.addEventListener("mouseup", (e) => {
   };
   drawSelection();
   if (selRect.w > 5 && selRect.h > 5) {
+    selectMode = false;
+    canvas.style.cursor = "default";
     void runOcr();
   }
 });
@@ -151,7 +160,9 @@ canvas.addEventListener("mouseup", (e) => {
 // Esc to cancel selection
 document.addEventListener("keydown", (e) => {
   if (e.key === "Escape") {
-    selecting = false;
+    selectMode = false;
+    dragging = false;
+    canvas.style.cursor = "default";
     selRect = null;
     drawImage();
   }
@@ -272,9 +283,24 @@ chrome.runtime.onMessage.addListener((message) => {
   }
 });
 
-// ── File open button ──
+// ── Toolbar buttons ──
 
 btnOpen.addEventListener("click", () => fileInput.click());
+
+btnSelect.addEventListener("click", () => {
+  if (!img) return;
+  selectMode = true;
+  canvas.style.cursor = "crosshair";
+  selRect = null;
+  drawImage();
+  statusEl.textContent = t("viewerSelectHint") || "ドラッグでOCRしたい範囲を選択";
+});
+
+btnOcrAll.addEventListener("click", () => {
+  if (!img) return;
+  selRect = { x: 0, y: 0, w: canvas.width, h: canvas.height };
+  void runOcr();
+});
 fileInput.addEventListener("change", () => {
   const file = fileInput.files?.[0];
   if (file) loadFile(file);
@@ -296,6 +322,21 @@ canvasArea.addEventListener("drop", (e) => {
   canvasArea.style.outline = "";
   const file = e.dataTransfer?.files[0];
   if (file) loadFile(file);
+});
+
+// ── Paste from clipboard (Ctrl+V) ──
+
+document.addEventListener("paste", (e) => {
+  const items = e.clipboardData?.items;
+  if (!items) return;
+  for (const item of items) {
+    if (item.type.startsWith("image/")) {
+      e.preventDefault();
+      const blob = item.getAsFile();
+      if (blob) loadFile(blob);
+      return;
+    }
+  }
 });
 
 // ── Auto-load image from popup (via session storage) ──

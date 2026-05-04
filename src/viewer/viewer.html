@@ -37,6 +37,8 @@
         cursor: pointer;
       }
       .toolbar button:hover { background: #3892ee; }
+      .toolbar button:disabled { background: #444; color: #888; cursor: not-allowed; }
+      .toolbar button:disabled:hover { background: #444; }
       .toolbar button.secondary { background: #555; }
       .toolbar button.secondary:hover { background: #666; }
       .toolbar .status {
@@ -94,7 +96,9 @@
   </head>
   <body>
     <div class="toolbar">
-      <button id="btn-open" class="secondary" data-i18n="popupOpenFileButton"></button>
+      <button id="btn-open" class="secondary" data-i18n="viewerOpenButton"></button>
+      <button id="btn-select" disabled data-i18n="viewerSelectButton"></button>
+      <button id="btn-ocr-all" disabled data-i18n="viewerOcrAllButton"></button>
       <input type="file" id="file-input" accept="image/*" style="display:none;" />
       <span class="status" id="status" data-i18n="viewerDropHint"></span>
     </div>
