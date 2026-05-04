@@ -76,6 +76,7 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
     });
     return true; // async sendResponse
   }
+
   return false;
 });
 
@@ -103,8 +104,10 @@ chrome.runtime.onMessage.addListener((message: AnyMessage, sender) => {
   const target = (message as { target?: string }).target;
 
   if (target === "background") {
-    // Could come from either content script or offscreen document.
-    if ("type" in message && message.type === "selection-completed") {
+    // Viewer page notifies us before sending OCR to offscreen
+    if ("type" in message && message.type === "viewer-ocr-start") {
+      activeOcrTabId = (message as { tabId: number }).tabId;
+    } else if ("type" in message && message.type === "selection-completed") {
       const tabId = sender.tab?.id;
       if (tabId != null) {
         void handleSelectionCompleted(tabId, message);
@@ -211,9 +214,16 @@ function forwardOcrEventToContent(msg: OffscreenToBackground): void {
 }
 
 function sendToContent(tabId: number, msg: BackgroundToContent): void {
-  chrome.tabs.sendMessage(tabId, msg).catch(() => {
-    // Tab may have been closed; safe to ignore.
-  });
+  // Extension pages (viewer) listen via chrome.runtime.onMessage,
+  // while content scripts listen via chrome.tabs.sendMessage.
+  // Check if the tab is an extension page to avoid duplicate delivery.
+  chrome.tabs.get(tabId).then((tab) => {
+    if (tab.url?.startsWith("chrome-extension://")) {
+      chrome.runtime.sendMessage(msg).catch(() => {});
+    } else {
+      chrome.tabs.sendMessage(tabId, msg).catch(() => {});
+    }
+  }).catch(() => {});
 }
 
 // ---- Offscreen document management --------------------------------------

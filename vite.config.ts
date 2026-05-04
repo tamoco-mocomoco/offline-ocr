@@ -30,6 +30,7 @@ function postBuildLayout(): Plugin {
         ["src/offscreen/offscreen.html", "offscreen.html"],
         ["src/popup/popup.html", "popup.html"],
         ["src/options/options.html", "options.html"],
+        ["src/viewer/viewer.html", "viewer.html"],
       ];
       for (const [from, to] of moves) {
         const src = resolve(dist, from);
@@ -103,6 +104,7 @@ export default defineConfig({
         offscreen: resolve(__dirname, "src/offscreen/offscreen.html"),
         popup: resolve(__dirname, "src/popup/popup.html"),
         options: resolve(__dirname, "src/options/options.html"),
+        viewer: resolve(__dirname, "src/viewer/viewer.html"),
       },
       output: {
         // Stable, predictable filenames so manifest.json can reference them

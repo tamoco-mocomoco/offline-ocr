@@ -15,7 +15,7 @@ export type Rect = {
   height: number;
 };
 
-// content → background
+// content / viewer → background
 export type ContentToBackground =
   | {
       target: "background";
@@ -26,6 +26,11 @@ export type ContentToBackground =
   | {
       target: "background";
       type: "selection-cancelled";
+    }
+  | {
+      target: "background";
+      type: "viewer-ocr-start";
+      tabId: number;
     };
 
 // background → content

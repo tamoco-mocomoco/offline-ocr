@@ -1,0 +1,111 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <title>OCR Viewer</title>
+    <style>
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      body {
+        background: #1a1a1a;
+        min-height: 100vh;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+        color: #fff;
+      }
+      /* Toolbar */
+      .toolbar {
+        width: 100%;
+        background: #252525;
+        border-bottom: 1px solid #333;
+        padding: 8px 16px;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        flex-shrink: 0;
+      }
+      .toolbar button {
+        padding: 6px 16px;
+        font: inherit;
+        font-size: 13px;
+        font-weight: 600;
+        background: #4ea3ff;
+        color: #fff;
+        border: 0;
+        border-radius: 6px;
+        cursor: pointer;
+      }
+      .toolbar button:hover { background: #3892ee; }
+      .toolbar button.secondary { background: #555; }
+      .toolbar button.secondary:hover { background: #666; }
+      .toolbar .status {
+        font-size: 13px;
+        color: #aaa;
+        flex: 1;
+      }
+      /* Canvas area */
+      .canvas-area {
+        flex: 1;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        overflow: auto;
+        width: 100%;
+        position: relative;
+      }
+      canvas {
+        cursor: crosshair;
+        max-width: 100%;
+        max-height: calc(100vh - 50px);
+        object-fit: contain;
+      }
+      /* Toast */
+      .toast {
+        position: fixed;
+        bottom: 20px;
+        right: 20px;
+        background: #222;
+        color: #fff;
+        font-size: 14px;
+        padding: 12px 20px;
+        border-radius: 10px;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+        z-index: 2000;
+        max-width: 400px;
+        opacity: 0;
+        transition: opacity 0.3s;
+        pointer-events: none;
+      }
+      .toast.show { opacity: 1; pointer-events: auto; }
+      /* Drop zone */
+      .dropzone {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 16px;
+        color: #888;
+        font-size: 16px;
+        padding: 60px;
+      }
+      .dropzone-icon { font-size: 48px; }
+    </style>
+  </head>
+  <body>
+    <div class="toolbar">
+      <button id="btn-open" class="secondary" data-i18n="popupOpenFileButton"></button>
+      <input type="file" id="file-input" accept="image/*" style="display:none;" />
+      <span class="status" id="status" data-i18n="viewerDropHint"></span>
+    </div>
+    <div class="canvas-area" id="canvas-area">
+      <div class="dropzone" id="dropzone">
+        <span class="dropzone-icon">📂</span>
+        <span data-i18n="viewerDropHint"></span>
+      </div>
+      <canvas id="canvas" style="display:none;"></canvas>
+    </div>
+    <div class="toast" id="toast"></div>
+    <script type="module" src="./viewer.ts"></script>
+  </body>
+</html>

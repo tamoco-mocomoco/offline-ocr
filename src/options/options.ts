@@ -8,23 +8,9 @@ import {
   saveRules,
   type CleaningRule,
 } from "../shared/cleaning";
+import { loadSettings, saveSettings } from "../shared/settings";
 
 const t = chrome.i18n.getMessage;
-
-const SETTINGS_KEY = "settings";
-
-interface Settings {
-  showResultAlert?: boolean;
-}
-
-async function loadSettings(): Promise<Settings> {
-  const obj = await chrome.storage.sync.get(SETTINGS_KEY);
-  return (obj?.[SETTINGS_KEY] as Settings) ?? {};
-}
-
-async function saveSettings(settings: Settings): Promise<void> {
-  await chrome.storage.sync.set({ [SETTINGS_KEY]: settings });
-}
 
 let rules: CleaningRule[] = [];
 

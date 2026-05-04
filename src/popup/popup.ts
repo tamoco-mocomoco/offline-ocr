@@ -78,3 +78,25 @@ document.getElementById("open-options")?.addEventListener("click", (ev) => {
   chrome.runtime.openOptionsPage();
   window.close();
 });
+
+// ── Open local file for OCR ──
+
+const fileInput = document.getElementById("file-input") as HTMLInputElement;
+
+document.getElementById("open-file")?.addEventListener("click", () => {
+  fileInput.click();
+});
+
+fileInput.addEventListener("change", () => {
+  const file = fileInput.files?.[0];
+  if (!file) return;
+  setStatus(t("statusLoading"));
+  const reader = new FileReader();
+  reader.onload = async () => {
+    // session storage is in-memory only, cleared when browser closes
+    await chrome.storage.session.set({ viewerImage: reader.result as string });
+    await chrome.tabs.create({ url: chrome.runtime.getURL("viewer.html") });
+    window.close();
+  };
+  reader.readAsDataURL(file);
+});
