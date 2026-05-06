@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<title>Common Outro: Privacy + CTA</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;700;900&display=swap');
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Noto Sans JP', sans-serif;
+    display: flex; justify-content: center; align-items: center;
+    min-height: 100vh; background: #111;
+  }
+
+  .slide {
+    width: 1920px; height: 1080px;
+    background: linear-gradient(135deg, #1E3A5F 0%, #2C5F8A 50%, #5B9BD5 100%);
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    color: #fff;
+    overflow: hidden;
+    position: relative;
+  }
+
+  /* ── Privacy section ── */
+  .privacy {
+    display: flex; flex-direction: column;
+    align-items: center; gap: 24px;
+    opacity: 0;
+    animation: fadeScale 0.8s ease forwards 0.3s;
+  }
+
+  .lock-icon {
+    width: 100px; height: 100px;
+    background: rgba(255,255,255,0.12);
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 48px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+  }
+
+  .privacy-text {
+    font-size: 36px;
+    font-weight: 900;
+    text-align: center;
+    line-height: 1.5;
+  }
+
+  .privacy-sub {
+    font-size: 20px;
+    color: rgba(255,255,255,0.7);
+    text-align: center;
+  }
+
+  .privacy-badges {
+    display: flex; gap: 16px; margin-top: 8px;
+  }
+
+  .privacy-badge {
+    display: flex; align-items: center; gap: 8px;
+    background: rgba(255,255,255,0.1);
+    border: 1px solid rgba(255,255,255,0.2);
+    border-radius: 30px; padding: 10px 24px;
+    font-size: 16px; color: rgba(255,255,255,0.9);
+  }
+
+  /* ── CTA section ── */
+  .cta {
+    display: flex; flex-direction: column;
+    align-items: center; gap: 20px;
+    margin-top: 60px;
+    opacity: 0;
+    animation: fadeSlideUp 0.7s ease forwards 2.5s;
+  }
+
+  .cta-logo {
+    display: flex; align-items: center; gap: 16px;
+  }
+
+  .cta-icon {
+    width: 64px; height: 64px;
+    border-radius: 14px;
+    overflow: hidden;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+  }
+  .cta-icon img { width: 100%; height: 100%; }
+
+  .cta-name {
+    font-size: 40px;
+    font-weight: 900;
+    letter-spacing: 2px;
+  }
+
+  .cta-action {
+    font-size: 22px;
+    color: rgba(255,255,255,0.8);
+    background: rgba(255,255,255,0.12);
+    border: 1px solid rgba(255,255,255,0.25);
+    border-radius: 12px;
+    padding: 12px 36px;
+  }
+
+  @keyframes fadeScale {
+    from { opacity: 0; transform: scale(0.85); }
+    to   { opacity: 1; transform: scale(1); }
+  }
+  @keyframes fadeSlideUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+</style>
+</head>
+<body>
+<div class="slide">
+  <div class="privacy">
+    <div class="lock-icon">🔒</div>
+    <div class="privacy-text">通信ゼロ。<br>すべてブラウザ内で完結。</div>
+    <div class="privacy-sub">画像もテキストも外部に送信されません</div>
+    <div class="privacy-badges">
+      <span class="privacy-badge">🚫 ネットワーク通信なし</span>
+      <span class="privacy-badge">🛡️ データ収集なし</span>
+      <span class="privacy-badge">✈️ オフライン動作</span>
+    </div>
+  </div>
+
+  <div class="cta">
+    <div class="cta-logo">
+      <div class="cta-icon">
+        <img src="../public/icons/icon128.png" alt="icon">
+      </div>
+      <div class="cta-name">オフラインOCR</div>
+    </div>
+    <div class="cta-action">Chrome Web Store で無料公開中</div>
+  </div>
+</div>
+</body>
+</html>

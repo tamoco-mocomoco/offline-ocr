@@ -9,3 +9,12 @@ store/video/voice/
 store/video/recordings/
 store/video/promo-video-*.mp4
 store/video/screenshots/
+
+# Social video generated assets (re-creatable from scripts)
+social/frames/
+social/voice/
+social/*/tmp/
+social/*/voice/
+social/*/frames/
+social/*/*.wav
+social/*/*.mp4

@@ -1,0 +1,516 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<title>Scene 3: 請求書の数値 - Invoice OCR</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;700;900&display=swap');
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  :root {
+    --primary: #5B9BD5;
+    --bg-gradient: linear-gradient(135deg, #1E3A5F 0%, #2C5F8A 50%, #5B9BD5 100%);
+  }
+
+  body {
+    font-family: 'Noto Sans JP', sans-serif;
+    display: flex; justify-content: center; align-items: center;
+    min-height: 100vh; background: #111;
+  }
+
+  .slide {
+    width: 1920px; height: 1080px;
+    background: var(--bg-gradient);
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    color: #fff;
+    overflow: hidden;
+    position: relative;
+  }
+
+  /* ── Telop bar ── */
+  .telop {
+    position: absolute;
+    bottom: 60px; left: 0; right: 0;
+    text-align: center;
+    font-size: 34px;
+    font-weight: 700;
+    color: #fff;
+    text-shadow: 0 2px 12px rgba(0,0,0,0.6);
+    opacity: 0;
+    z-index: 100;
+  }
+
+  .telop-1 { animation: fadeIn 0.4s ease forwards 0.3s, fadeOut 0.4s ease forwards 1.4s; }
+  .telop-2 { animation: fadeIn 0.4s ease forwards 1.6s, fadeOut 0.4s ease forwards 2.8s; }
+  .telop-3 { animation: fadeIn 0.4s ease forwards 4.5s, fadeOut 0.4s ease forwards 5.3s; }
+  .telop-4 { animation: fadeIn 0.4s ease forwards 5.8s; }
+
+  /* ── Mock browser window ── */
+  .browser {
+    width: 900px;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 8px 40px rgba(0,0,0,0.4);
+    opacity: 0;
+    animation: fadeScale 0.5s ease forwards 0.1s, fadeOut 0.4s ease forwards 2.9s;
+    position: absolute;
+    top: 120px;
+    left: 200px;
+  }
+
+  .browser-toolbar {
+    background: #E8E8E8;
+    padding: 10px 16px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .browser-dots {
+    display: flex; gap: 6px;
+  }
+  .browser-dots span {
+    width: 12px; height: 12px; border-radius: 50%;
+  }
+  .browser-dots span:nth-child(1) { background: #FF5F57; }
+  .browser-dots span:nth-child(2) { background: #FFBD2E; }
+  .browser-dots span:nth-child(3) { background: #28C840; }
+
+  .browser-url {
+    flex: 1;
+    background: #fff;
+    border-radius: 6px;
+    padding: 6px 14px;
+    font-size: 13px;
+    color: #555;
+    font-family: monospace;
+  }
+
+  .browser-body {
+    background: #FAFAFA;
+    padding: 36px 40px;
+    position: relative;
+  }
+
+  /* ── Invoice styling ── */
+  .invoice {
+    background: #fff;
+    border: 1px solid #ccc;
+    padding: 30px 36px;
+    font-family: 'Noto Sans JP', sans-serif;
+    color: #222;
+  }
+
+  .invoice-header {
+    text-align: center;
+    border-bottom: 2px solid #333;
+    padding-bottom: 16px;
+    margin-bottom: 20px;
+  }
+
+  .invoice-title {
+    font-size: 28px;
+    font-weight: 900;
+    letter-spacing: 8px;
+    color: #111;
+  }
+
+  .invoice-company {
+    font-size: 14px;
+    color: #666;
+    margin-top: 6px;
+  }
+
+  .invoice-date {
+    text-align: right;
+    font-size: 13px;
+    color: #888;
+    margin-bottom: 16px;
+  }
+
+  .invoice-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 16px;
+  }
+
+  .invoice-table th {
+    background: #F0F0F0;
+    border: 1px solid #ccc;
+    padding: 10px 14px;
+    text-align: left;
+    font-weight: 700;
+    font-size: 14px;
+    color: #444;
+  }
+
+  .invoice-table td {
+    border: 1px solid #ccc;
+    padding: 10px 14px;
+  }
+
+  .invoice-table td.amount {
+    text-align: right;
+    font-family: 'Noto Sans JP', monospace;
+    font-weight: 700;
+    white-space: nowrap;
+  }
+
+  .invoice-table tr.total-row td {
+    background: #FAFAE8;
+    font-weight: 900;
+    font-size: 18px;
+    border-top: 2px solid #333;
+  }
+
+  /* ── Mouse cursor (fake) ── */
+  .fake-cursor {
+    position: absolute;
+    width: 18px; height: 22px;
+    z-index: 50;
+    opacity: 0;
+    /* SVG cursor shape */
+    background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='18' height='22' viewBox='0 0 18 22'%3E%3Cpath d='M1 1 L1 18 L5.5 13.5 L9 21 L12 19.5 L8.5 12.5 L14 12 Z' fill='white' stroke='black' stroke-width='1.2'/%3E%3C/svg%3E") no-repeat;
+    animation:
+      fadeIn 0.3s ease forwards 0.3s,
+      cursorMove 1.0s ease-in-out forwards 0.5s,
+      fadeOut 0.3s ease forwards 1.4s;
+  }
+
+  /* Cursor tries to drag-select over amounts */
+  @keyframes cursorMove {
+    0%   { top: 340px; left: 620px; }
+    30%  { top: 340px; left: 700px; }
+    100% { top: 440px; left: 800px; }
+  }
+
+  /* Failed selection highlight that flickers and fails */
+  .failed-select {
+    position: absolute;
+    top: 336px; left: 660px;
+    width: 0; height: 0;
+    background: rgba(51, 102, 204, 0.15);
+    border: 1px dashed rgba(51, 102, 204, 0.3);
+    opacity: 0;
+    animation:
+      failSelect 0.8s ease-in-out forwards 0.7s;
+    pointer-events: none;
+  }
+
+  @keyframes failSelect {
+    0%   { width: 0; height: 0; opacity: 0; }
+    40%  { width: 140px; height: 50px; opacity: 1; }
+    60%  { width: 140px; height: 50px; opacity: 0.6; }
+    80%  { width: 0; height: 0; opacity: 0.3; }
+    100% { width: 0; height: 0; opacity: 0; }
+  }
+
+  /* ── Shortcut badge ── */
+  .shortcut-badge {
+    position: absolute;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%) scale(0);
+    display: flex; align-items: center; gap: 16px;
+    z-index: 80;
+    opacity: 0;
+    animation:
+      popIn 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) forwards 1.6s,
+      fadeOut 0.4s ease forwards 2.9s;
+  }
+
+  .key-cap {
+    display: inline-flex;
+    align-items: center; justify-content: center;
+    min-width: 64px; height: 64px;
+    padding: 0 18px;
+    background: linear-gradient(180deg, #FAFAFA 0%, #E0E0E0 100%);
+    border: 2px solid #BBB;
+    border-bottom-width: 4px;
+    border-radius: 10px;
+    font-size: 24px;
+    font-weight: 900;
+    color: #333;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.25), inset 0 1px 0 rgba(255,255,255,0.8);
+    text-shadow: 0 1px 0 rgba(255,255,255,0.6);
+  }
+
+  .key-plus {
+    font-size: 28px;
+    font-weight: 700;
+    color: rgba(255,255,255,0.7);
+  }
+
+  @keyframes popIn {
+    0%   { opacity: 0; transform: translate(-50%, -50%) scale(0.3); }
+    60%  { opacity: 1; transform: translate(-50%, -50%) scale(1.08); }
+    100% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+  }
+
+  /* ── OCR selection rectangle ── */
+  .ocr-select {
+    position: absolute;
+    border: 2.5px solid #5B9BD5;
+    background: rgba(91, 155, 213, 0.08);
+    opacity: 0;
+    z-index: 60;
+    /* positioned over the amount area of the invoice */
+    top: 328px; left: 255px;
+    width: 0; height: 0;
+    animation:
+      selectExpand 0.8s ease-out forwards 3.2s;
+  }
+
+  .ocr-select::before,
+  .ocr-select::after {
+    content: '';
+    position: absolute;
+    background: #5B9BD5;
+  }
+  /* Crosshair horizontal */
+  .ocr-select::before {
+    width: 20px; height: 2px;
+    top: -1px; left: -10px;
+  }
+  /* Crosshair vertical */
+  .ocr-select::after {
+    width: 2px; height: 20px;
+    top: -10px; left: -1px;
+  }
+
+  @keyframes selectExpand {
+    0%   { width: 0; height: 0; opacity: 1; }
+    100% { width: 600px; height: 145px; opacity: 1; }
+  }
+
+  /* ── Toast notification ── */
+  .toast {
+    position: absolute;
+    top: 80px; right: 80px;
+    background: rgba(20, 20, 20, 0.92);
+    border: 1px solid rgba(91, 155, 213, 0.4);
+    border-radius: 12px;
+    padding: 16px 28px;
+    display: flex; align-items: center; gap: 12px;
+    font-size: 20px;
+    font-weight: 700;
+    color: #fff;
+    box-shadow: 0 4px 24px rgba(0,0,0,0.4);
+    opacity: 0;
+    z-index: 90;
+    animation: toastIn 0.4s ease forwards 4.2s, fadeOut 0.4s ease forwards 5.3s;
+  }
+
+  .toast-check {
+    color: #4CAF50;
+    font-size: 24px;
+  }
+
+  @keyframes toastIn {
+    from { opacity: 0; transform: translateY(-10px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  /* ── Before / After comparison ── */
+  .comparison {
+    position: absolute;
+    top: 160px; right: 120px;
+    display: flex; flex-direction: column;
+    align-items: center; gap: 14px;
+    opacity: 0;
+    animation: fadeSlideLeft 0.6s ease forwards 5.6s;
+    z-index: 70;
+  }
+
+  .compare-label {
+    font-size: 16px;
+    font-weight: 700;
+    color: rgba(255,255,255,0.7);
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    align-self: flex-start;
+    margin-bottom: 2px;
+  }
+
+  .compare-box {
+    border-radius: 10px;
+    padding: 18px 28px;
+    font-family: 'Noto Sans JP', monospace;
+    font-size: 22px;
+    font-weight: 700;
+    line-height: 1.8;
+    white-space: pre;
+    min-width: 340px;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.15);
+  }
+
+  .compare-before {
+    background: #FFF5F5;
+    color: #333;
+    border: 1px solid #FFCDD2;
+  }
+
+  .compare-before .comma {
+    color: #E53935;
+    background: rgba(229, 57, 53, 0.12);
+    border-radius: 3px;
+    padding: 0 2px;
+  }
+
+  .compare-before .yen {
+    color: #E53935;
+    background: rgba(229, 57, 53, 0.12);
+    border-radius: 3px;
+    padding: 0 2px;
+  }
+
+  .compare-arrow {
+    display: flex; align-items: center; gap: 10px;
+    font-size: 20px;
+    font-weight: 700;
+    color: rgba(255,255,255,0.85);
+  }
+
+  .compare-arrow-icon {
+    font-size: 28px;
+  }
+
+  .compare-after {
+    background: #F0FAF0;
+    color: #2E7D32;
+    border: 1px solid #A5D6A7;
+    animation: greenGlow 1.5s ease-in-out infinite 6.2s;
+  }
+
+  @keyframes greenGlow {
+    0%, 100% { box-shadow: 0 2px 12px rgba(0,0,0,0.15); }
+    50%      { box-shadow: 0 2px 20px rgba(76, 175, 80, 0.35), 0 0 40px rgba(76, 175, 80, 0.15); }
+  }
+
+  @keyframes fadeSlideLeft {
+    from { opacity: 0; transform: translateX(30px); }
+    to   { opacity: 1; transform: translateX(0); }
+  }
+
+  /* ── Invoice shifts left when comparison appears ── */
+  .browser-shift {
+    animation:
+      fadeScale 0.5s ease forwards 0.1s,
+      shiftLeft 0.5s ease forwards 5.5s;
+  }
+
+  @keyframes shiftLeft {
+    from { left: 200px; }
+    to   { left: 120px; }
+  }
+
+  /* ── Common keyframes ── */
+  @keyframes fadeIn {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+  }
+
+  @keyframes fadeOut {
+    from { opacity: 1; }
+    to   { opacity: 0; }
+  }
+
+  @keyframes fadeScale {
+    from { opacity: 0; transform: scale(0.92); }
+    to   { opacity: 1; transform: scale(1); }
+  }
+</style>
+</head>
+<body>
+<div class="slide">
+
+  <!-- ===== Mock browser window ===== -->
+  <div class="browser browser-shift">
+    <div class="browser-toolbar">
+      <div class="browser-dots">
+        <span></span><span></span><span></span>
+      </div>
+      <div class="browser-url">invoice-2026-04.pdf</div>
+    </div>
+    <div class="browser-body">
+      <div class="invoice">
+        <div class="invoice-header">
+          <div class="invoice-title">請 求 書</div>
+          <div class="invoice-company">株式会社サンプル</div>
+        </div>
+        <div class="invoice-date">発行日: 2026年4月15日</div>
+        <table class="invoice-table">
+          <thead>
+            <tr>
+              <th style="width:65%;">項目</th>
+              <th style="width:35%;">金額（税込）</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>コンサルティング費用</td>
+              <td class="amount">¥1,234,567</td>
+            </tr>
+            <tr>
+              <td>システム開発費</td>
+              <td class="amount">¥2,890,000</td>
+            </tr>
+            <tr class="total-row">
+              <td>合計</td>
+              <td class="amount">¥4,124,567</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Failed selection overlay -->
+      <div class="failed-select"></div>
+    </div>
+
+    <!-- Fake mouse cursor -->
+    <div class="fake-cursor"></div>
+
+    <!-- OCR selection rectangle (phase 3) -->
+    <div class="ocr-select"></div>
+  </div>
+
+  <!-- ===== Shortcut badge ===== -->
+  <div class="shortcut-badge">
+    <span class="key-cap">Alt</span>
+    <span class="key-plus">+</span>
+    <span class="key-cap">Shift</span>
+    <span class="key-plus">+</span>
+    <span class="key-cap">O</span>
+  </div>
+
+  <!-- ===== Toast ===== -->
+  <div class="toast">
+    <span class="toast-check">&#10003;</span>
+    コピーしました (32文字)
+  </div>
+
+  <!-- ===== Before / After comparison ===== -->
+  <div class="comparison">
+    <div class="compare-label">Before</div>
+    <div class="compare-box compare-before"><span class="yen">¥</span>1<span class="comma">,</span>234<span class="comma">,</span>567
+<span class="yen">¥</span>2<span class="comma">,</span>890<span class="comma">,</span>000
+<span class="yen">¥</span>4<span class="comma">,</span>124<span class="comma">,</span>567</div>
+    <div class="compare-arrow">
+      <span class="compare-arrow-icon">&#8595;</span>
+      ルール適用
+    </div>
+    <div class="compare-label">After</div>
+    <div class="compare-box compare-after">1234567
+2890000
+4124567</div>
+  </div>
+
+  <!-- ===== Telops ===== -->
+  <div class="telop telop-1">PDFの数字、手入力するしかない...？</div>
+  <div class="telop telop-2">ショートカットで即起動</div>
+  <div class="telop telop-3">&#10003; コピーしました</div>
+  <div class="telop telop-4">カンマも自動除去。そのまま貼り付け</div>
+
+</div>
+</body>
+</html>

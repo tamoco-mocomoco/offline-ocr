@@ -1,0 +1,523 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<title>Scene 1: コピーできない画像テキスト</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;700;900&display=swap');
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  :root {
+    --primary: #5B9BD5;
+    --bg-gradient: linear-gradient(135deg, #1E3A5F 0%, #2C5F8A 50%, #5B9BD5 100%);
+  }
+
+  body {
+    font-family: 'Noto Sans JP', sans-serif;
+    display: flex; justify-content: center; align-items: center;
+    min-height: 100vh; background: #111;
+  }
+
+  .slide {
+    width: 1920px; height: 1080px;
+    background: var(--bg-gradient);
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    color: #fff;
+    overflow: hidden;
+    position: relative;
+  }
+
+  /* ── Mock browser window ── */
+  .browser {
+    width: 1400px; height: 820px;
+    background: #fff;
+    border-radius: 12px;
+    box-shadow: 0 20px 80px rgba(0,0,0,0.4);
+    overflow: hidden;
+    position: relative;
+  }
+
+  .browser-toolbar {
+    height: 48px;
+    background: #E8ECEF;
+    display: flex;
+    align-items: center;
+    padding: 0 16px;
+    gap: 10px;
+    position: relative;
+  }
+
+  .toolbar-dot {
+    width: 12px; height: 12px;
+    border-radius: 50%;
+  }
+  .toolbar-dot.red { background: #FF5F57; }
+  .toolbar-dot.yellow { background: #FFBD2E; }
+  .toolbar-dot.green { background: #28C840; }
+
+  .toolbar-url {
+    flex: 1;
+    height: 28px;
+    background: #fff;
+    border-radius: 6px;
+    margin-left: 12px;
+    display: flex;
+    align-items: center;
+    padding: 0 12px;
+    font-size: 13px;
+    color: #666;
+  }
+
+  .toolbar-extensions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-left: 12px;
+    position: relative;
+  }
+
+  .ext-icon {
+    width: 24px; height: 24px;
+    border-radius: 4px;
+    overflow: hidden;
+    opacity: 0.6;
+    transition: opacity 0.3s;
+  }
+  .ext-icon img { width: 100%; height: 100%; }
+
+  /* Extension pulse animation */
+  .ext-icon-ocr {
+    position: relative;
+    opacity: 0;
+    animation: extAppear 0.3s ease forwards 1.5s;
+  }
+  .ext-icon-ocr::after {
+    content: '';
+    position: absolute;
+    inset: -6px;
+    border-radius: 8px;
+    border: 2px solid var(--primary);
+    opacity: 0;
+    animation: extPulse 0.6s ease 1.7s 3;
+  }
+
+  @keyframes extAppear {
+    from { opacity: 0.6; }
+    to   { opacity: 1; }
+  }
+  @keyframes extPulse {
+    0%   { opacity: 0; transform: scale(0.8); }
+    50%  { opacity: 1; transform: scale(1.3); }
+    100% { opacity: 0; transform: scale(1.5); }
+  }
+
+  /* ── Browser content area ── */
+  .browser-content {
+    height: calc(100% - 48px);
+    background: #F5F5F5;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    padding: 40px;
+  }
+
+  /* Card wrapper for positioning OCR elements relative to card */
+  .card-wrapper {
+    position: relative;
+  }
+
+  /* ── Trading card ── */
+  .card {
+    width: 480px;
+    background: #1a1a2e;
+    border: 3px solid #c9a84c;
+    border-radius: 12px;
+    padding: 0;
+    overflow: hidden;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+    position: relative;
+  }
+
+  .card-header {
+    background: linear-gradient(135deg, #c9a84c, #e8d48b, #c9a84c);
+    padding: 14px 20px;
+    text-align: center;
+  }
+
+  .card-title {
+    font-size: 26px;
+    font-weight: 900;
+    color: #1a1a2e;
+    letter-spacing: 3px;
+  }
+
+  .card-image-area {
+    height: 240px;
+    background: linear-gradient(180deg, #2a1a3e 0%, #4a1a2e 50%, #6a2a1e 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    overflow: hidden;
+  }
+
+  /* Fire dragon silhouette */
+  .card-image-area::before {
+    content: '🐉';
+    font-size: 120px;
+    filter: brightness(0.7) saturate(1.5);
+    opacity: 0.7;
+  }
+  .card-image-area::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(ellipse at center bottom, rgba(255,100,0,0.4) 0%, transparent 70%);
+  }
+
+  .card-stats {
+    background: linear-gradient(135deg, #c9a84c, #e8d48b);
+    padding: 8px 20px;
+    text-align: center;
+    font-size: 20px;
+    font-weight: 700;
+    color: #1a1a2e;
+    letter-spacing: 2px;
+  }
+
+  .card-effect {
+    padding: 16px 20px;
+    background: #12122a;
+    border-top: 2px solid #c9a84c;
+  }
+
+  .card-effect-text {
+    font-size: 16px;
+    color: #ddd;
+    line-height: 1.6;
+  }
+
+  /* ── Image selection overlay (can't-copy effect) ── */
+  .image-select-overlay {
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(51, 102, 204, 0.35);
+    border-radius: 12px;
+    opacity: 0;
+    animation: imageSelect 1.5s ease forwards 0.3s;
+    pointer-events: none;
+  }
+
+  @keyframes imageSelect {
+    0%   { opacity: 0; }
+    20%  { opacity: 0; }
+    40%  { opacity: 1; }
+    80%  { opacity: 1; }
+    100% { opacity: 0; }
+  }
+
+  /* ── Mouse cursor (CSS-drawn) ── */
+  .cursor {
+    position: absolute;
+    width: 20px; height: 28px;
+    z-index: 100;
+    pointer-events: none;
+    opacity: 0;
+    animation: cursorDrag 1.5s ease forwards 0.2s;
+  }
+
+  .cursor::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0;
+    border-style: solid;
+    border-width: 0 8px 24px 8px;
+    border-color: transparent transparent #fff transparent;
+    transform: rotate(-30deg);
+    transform-origin: top left;
+    filter: drop-shadow(1px 1px 2px rgba(0,0,0,0.5));
+  }
+
+  @keyframes cursorDrag {
+    0%   { opacity: 0; top: 60px; left: 40px; }
+    10%  { opacity: 1; top: 60px; left: 40px; }
+    30%  { opacity: 1; top: 10px; left: 20px; }
+    70%  { opacity: 1; top: 460px; left: 460px; }
+    90%  { opacity: 1; top: 460px; left: 460px; }
+    100% { opacity: 0; top: 460px; left: 460px; }
+  }
+
+  /* ── Crosshair cursor (child of ocr-selection, always at bottom-right) ── */
+  .crosshair {
+    position: absolute;
+    bottom: -14px; right: -14px;
+    width: 28px; height: 28px;
+    z-index: 100;
+    pointer-events: none;
+  }
+  .crosshair::before,
+  .crosshair::after {
+    content: '';
+    position: absolute;
+    background: #333;
+    border-radius: 1px;
+  }
+  .crosshair::before {
+    width: 28px; height: 2.5px;
+    top: 50%; left: 0;
+    transform: translateY(-50%);
+  }
+  .crosshair::after {
+    width: 2.5px; height: 28px;
+    left: 50%; top: 0;
+    transform: translateX(-50%);
+  }
+
+  /* ── OCR selection rectangle ── */
+  .ocr-selection {
+    position: absolute;
+    border: 2px solid var(--primary);
+    background: rgba(91, 155, 213, 0.15);
+    border-radius: 2px;
+    z-index: 50;
+    pointer-events: none;
+    opacity: 0;
+    top: 0;
+    left: 0;
+    width: 0;
+    height: 0;
+    animation: ocrSelect 3s ease forwards 3s;
+  }
+
+  @keyframes ocrSelect {
+    0%   { opacity: 0; width: 0; height: 0; }
+    5%   { opacity: 1; width: 0; height: 0; }
+    50%  { opacity: 1; width: 480px; height: 100%; }
+    90%  { opacity: 1; width: 480px; height: 100%; }
+    95%  { opacity: 0; width: 480px; height: 100%; }
+    100% { opacity: 0; width: 480px; height: 100%; }
+  }
+
+  /* ── Toast notification ── */
+  .toast {
+    position: absolute;
+    bottom: 24px;
+    right: 24px;
+    background: #222;
+    color: #fff;
+    padding: 14px 24px;
+    border-radius: 10px;
+    font-size: 16px;
+    font-weight: 700;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    z-index: 200;
+    opacity: 0;
+    transform: translateY(20px);
+    animation: toastIn 0.5s ease forwards 5.2s;
+  }
+
+  .toast-check {
+    color: #28C840;
+    font-size: 20px;
+  }
+
+  @keyframes toastIn {
+    from { opacity: 0; transform: translateY(20px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  /* ── Text editor panel (result) ── */
+  .editor-panel {
+    position: absolute;
+    top: 48px;
+    right: 0;
+    width: 520px;
+    height: calc(100% - 48px);
+    background: #1e1e1e;
+    border-left: 2px solid #333;
+    z-index: 150;
+    transform: translateX(100%);
+    animation: editorSlideIn 0.6s ease forwards 6s;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .editor-tab {
+    height: 36px;
+    background: #2d2d2d;
+    display: flex;
+    align-items: center;
+    padding: 0 16px;
+    gap: 8px;
+    font-size: 13px;
+    color: #ccc;
+    border-bottom: 1px solid #444;
+  }
+
+  .editor-tab-dot {
+    width: 8px; height: 8px;
+    background: #888;
+    border-radius: 50%;
+  }
+
+  .editor-body {
+    padding: 20px;
+    flex: 1;
+    overflow: hidden;
+  }
+
+  .editor-line {
+    font-size: 17px;
+    color: #d4d4d4;
+    line-height: 2;
+    font-family: 'Noto Sans JP', monospace;
+    opacity: 0;
+  }
+  .editor-line:nth-child(1) { animation: lineAppear 0.3s ease forwards 6.4s; }
+  .editor-line:nth-child(2) { animation: lineAppear 0.3s ease forwards 6.6s; }
+  .editor-line:nth-child(3) { animation: lineAppear 0.3s ease forwards 6.8s; }
+
+  .editor-line .highlight {
+    color: #9CDCFE;
+  }
+
+  @keyframes editorSlideIn {
+    from { transform: translateX(100%); }
+    to   { transform: translateX(0); }
+  }
+  @keyframes lineAppear {
+    from { opacity: 0; transform: translateX(10px); }
+    to   { opacity: 1; transform: translateX(0); }
+  }
+
+  /* ── Telop (bottom caption) ── */
+  .telop {
+    position: absolute;
+    bottom: 40px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 300;
+  }
+
+  .telop-text {
+    font-size: 38px;
+    font-weight: 900;
+    color: #fff;
+    background: rgba(0, 0, 0, 0.65);
+    padding: 14px 48px;
+    border-radius: 60px;
+    white-space: nowrap;
+    letter-spacing: 2px;
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    opacity: 0;
+  }
+
+  .telop-1 {
+    animation: telopShow 1.5s ease forwards 0s;
+  }
+  .telop-2 {
+    animation: telopShow 1.5s ease forwards 1.5s;
+  }
+  .telop-3 {
+    animation: telopShow 2s ease forwards 3s;
+  }
+  .telop-4 {
+    animation: telopShow 2s ease forwards 6s;
+  }
+
+  @keyframes telopShow {
+    0%   { opacity: 0; transform: translateX(-50%) translateY(10px); }
+    15%  { opacity: 1; transform: translateX(-50%) translateY(0); }
+    85%  { opacity: 1; transform: translateX(-50%) translateY(0); }
+    100% { opacity: 0; transform: translateX(-50%) translateY(-10px); }
+  }
+
+</style>
+</head>
+<body>
+<div class="slide">
+
+  <!-- Mock browser window -->
+  <div class="browser">
+    <div class="browser-toolbar">
+      <div class="toolbar-dot red"></div>
+      <div class="toolbar-dot yellow"></div>
+      <div class="toolbar-dot green"></div>
+      <div class="toolbar-url">card-collection.example.com/detail/burn-flare</div>
+      <div class="toolbar-extensions">
+        <div class="ext-icon" style="background:#ddd;"></div>
+        <div class="ext-icon" style="background:#ddd;"></div>
+        <div class="ext-icon ext-icon-ocr">
+          <img src="../public/icons/icon128.png" alt="OCR">
+        </div>
+      </div>
+    </div>
+
+    <div class="browser-content">
+
+      <!-- Card wrapper: cursors & selection positioned relative to this -->
+      <div class="card-wrapper">
+        <!-- Trading card -->
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">炎龍王バーンフレア</div>
+          </div>
+          <div class="card-image-area"></div>
+          <div class="card-stats">攻撃力 3500</div>
+          <div class="card-effect">
+            <div class="card-effect-text">このカードが場に出た時、相手フィールドのカードを全て破壊する。</div>
+          </div>
+
+          <!-- Failed image selection overlay -->
+          <div class="image-select-overlay"></div>
+        </div>
+
+        <!-- Mouse cursor for drag selection -->
+        <div class="cursor"></div>
+
+        <!-- OCR selection rectangle with crosshair at corner -->
+        <div class="ocr-selection">
+          <div class="crosshair"></div>
+        </div>
+      </div>
+
+      <!-- Toast notification -->
+      <div class="toast">
+        <span class="toast-check">&#x2713;</span>
+        <span>コピーしました (48文字)</span>
+      </div>
+
+      <!-- Text editor panel -->
+      <div class="editor-panel">
+        <div class="editor-tab">
+          <div class="editor-tab-dot"></div>
+          <span>clipboard-paste.txt</span>
+        </div>
+        <div class="editor-body">
+          <div class="editor-line"><span class="highlight">炎龍王バーンフレア</span></div>
+          <div class="editor-line">攻撃力 3500</div>
+          <div class="editor-line">このカードが場に出た時、相手フィールドのカードを全て破壊する。</div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Telop captions -->
+  <div class="telop">
+    <div class="telop-text telop-1">画像の文字、コピーできない…</div>
+    <div class="telop-text telop-2">オフラインOCR を起動</div>
+    <div class="telop-text telop-3">テキストを範囲選択…</div>
+    <div class="telop-text telop-4">画像からテキストを一発コピー</div>
+  </div>
+
+</div>
+</body>
+</html>

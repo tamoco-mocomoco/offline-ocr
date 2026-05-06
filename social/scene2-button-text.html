@@ -1,0 +1,718 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=1920, height=1080">
+<title>Pattern 2: ボタン・リンクの文字列</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700;900&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --primary: #5B9BD5;
+    --bg-gradient: linear-gradient(135deg, #1E3A5F 0%, #2C5F8A 50%, #5B9BD5 100%);
+  }
+
+  *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: #111;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 1920px;
+    height: 1080px;
+    overflow: hidden;
+    font-family: 'Noto Sans JP', sans-serif;
+  }
+
+  .slide {
+    position: relative;
+    width: 1920px;
+    height: 1080px;
+    background: var(--bg-gradient);
+    overflow: hidden;
+  }
+
+  /* ===== Browser Window ===== */
+  .browser {
+    position: absolute;
+    top: 120px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 1100px;
+    height: 650px;
+    background: #fff;
+    border-radius: 12px;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.4);
+    overflow: hidden;
+  }
+
+  .browser-toolbar {
+    height: 48px;
+    background: #e8e8e8;
+    display: flex;
+    align-items: center;
+    padding: 0 16px;
+    gap: 8px;
+    position: relative;
+  }
+
+  .browser-dot {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+  }
+  .browser-dot.red { background: #FF5F57; }
+  .browser-dot.yellow { background: #FEBC2E; }
+  .browser-dot.green { background: #28C840; }
+
+  .browser-url {
+    margin-left: 20px;
+    flex: 1;
+    height: 28px;
+    background: #fff;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    padding: 0 12px;
+    font-size: 13px;
+    color: #555;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .url-text {
+    position: absolute;
+    white-space: nowrap;
+  }
+
+  .url-text.url-1 {
+    animation: urlSwitch1 8s linear forwards;
+  }
+  .url-text.url-2 {
+    opacity: 0;
+    animation: urlSwitch2 8s linear forwards;
+  }
+
+  @keyframes urlSwitch1 {
+    0%, 14% { opacity: 1; }
+    16% { opacity: 0; }
+    100% { opacity: 0; }
+  }
+  @keyframes urlSwitch2 {
+    0%, 14% { opacity: 0; }
+    16% { opacity: 1; }
+    20% { opacity: 1; }
+    22% { opacity: 0; }
+    100% { opacity: 0; }
+  }
+
+  /* ===== Dashboard Content ===== */
+  .dashboard {
+    padding: 30px 40px;
+    position: relative;
+  }
+
+  .dashboard-header {
+    font-size: 22px;
+    font-weight: 700;
+    color: #333;
+    margin-bottom: 8px;
+  }
+
+  .dashboard-sub {
+    font-size: 14px;
+    color: #888;
+    margin-bottom: 30px;
+  }
+
+  .dashboard-section {
+    margin-bottom: 24px;
+  }
+
+  .dashboard-section h3 {
+    font-size: 15px;
+    font-weight: 700;
+    color: #444;
+    margin-bottom: 12px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid #eee;
+  }
+
+  .btn-row {
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+    align-items: center;
+  }
+
+  .mock-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 10px 24px;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 500;
+    font-family: 'Noto Sans JP', sans-serif;
+    cursor: default;
+    transition: transform 0.1s;
+  }
+
+  .mock-btn.link {
+    background: transparent;
+    color: #2563EB;
+    text-decoration: underline;
+    text-underline-offset: 3px;
+    padding: 10px 8px;
+  }
+
+  .mock-btn.primary {
+    background: #2563EB;
+    color: #fff;
+    box-shadow: 0 2px 8px rgba(37,99,235,0.3);
+  }
+
+  .mock-btn.danger {
+    background: #DC2626;
+    color: #fff;
+    box-shadow: 0 2px 8px rgba(220,38,38,0.3);
+  }
+
+  .mock-btn.secondary {
+    background: #f3f4f6;
+    color: #374151;
+    border: 1px solid #d1d5db;
+  }
+
+  /* ===== Page Flash ===== */
+  .page-flash {
+    position: absolute;
+    top: 48px;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: #fff;
+    opacity: 0;
+    pointer-events: none;
+    animation: pageFlash 8s linear forwards;
+  }
+
+  @keyframes pageFlash {
+    0%, 14% { opacity: 0; }
+    15% { opacity: 1; }
+    17% { opacity: 1; }
+    19% { opacity: 0; }
+    100% { opacity: 0; }
+  }
+
+  /* ===== Mouse Cursor ===== */
+  .cursor {
+    position: absolute;
+    width: 24px;
+    height: 24px;
+    z-index: 100;
+    pointer-events: none;
+    opacity: 0;
+    animation: cursorMove 8s linear forwards;
+  }
+
+  .cursor svg { width: 24px; height: 24px; filter: drop-shadow(1px 2px 2px rgba(0,0,0,0.3)); }
+
+  @keyframes cursorMove {
+    0%    { left: 900px; top: 500px; opacity: 0; }
+    2%    { left: 900px; top: 500px; opacity: 1; }
+    10%   { left: 580px; top: 428px; opacity: 1; }
+    12%   { left: 578px; top: 426px; opacity: 1; }
+    13%   { left: 578px; top: 426px; opacity: 1; }
+    14%   { left: 578px; top: 430px; opacity: 1; }
+    15%   { left: 578px; top: 426px; opacity: 1; }
+    18%   { left: 578px; top: 426px; opacity: 0; }
+    100%  { left: 578px; top: 426px; opacity: 0; }
+  }
+
+  /* cursor click effect */
+  .click-ring {
+    position: absolute;
+    left: 568px;
+    top: 418px;
+    width: 20px;
+    height: 20px;
+    border: 2px solid rgba(37,99,235,0.6);
+    border-radius: 50%;
+    opacity: 0;
+    pointer-events: none;
+    animation: clickRing 8s linear forwards;
+  }
+  @keyframes clickRing {
+    0%, 13% { opacity: 0; transform: scale(0.5); }
+    13.5% { opacity: 1; transform: scale(1); }
+    15% { opacity: 0; transform: scale(2.5); }
+    100% { opacity: 0; }
+  }
+
+  /* ===== Telop ===== */
+  .telop {
+    position: absolute;
+    bottom: 60px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 32px;
+    font-weight: 700;
+    color: #fff;
+    text-shadow: 0 2px 12px rgba(0,0,0,0.5);
+    white-space: nowrap;
+    opacity: 0;
+    z-index: 50;
+  }
+
+  .telop-bg {
+    position: absolute;
+    bottom: 40px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(0,0,0,0.55);
+    border-radius: 12px;
+    padding: 14px 40px;
+    z-index: 49;
+    opacity: 0;
+  }
+
+  .telop-1 { animation: telop1 8s linear forwards; }
+  .telop-bg-1 { animation: telop1 8s linear forwards; }
+  @keyframes telop1 {
+    0%, 2% { opacity: 0; }
+    4% { opacity: 1; }
+    18% { opacity: 1; }
+    20% { opacity: 0; }
+    100% { opacity: 0; }
+  }
+
+  .telop-2 { animation: telop2 8s linear forwards; }
+  .telop-bg-2 { animation: telop2 8s linear forwards; }
+  @keyframes telop2 {
+    0%, 20% { opacity: 0; }
+    22% { opacity: 1; }
+    36% { opacity: 1; }
+    38% { opacity: 0; }
+    100% { opacity: 0; }
+  }
+
+  .telop-4 { animation: telop4 8s linear forwards; }
+  .telop-bg-4 { animation: telop4 8s linear forwards; }
+  @keyframes telop4 {
+    0%, 76% { opacity: 0; }
+    78% { opacity: 1; }
+    98% { opacity: 1; }
+    100% { opacity: 0; }
+  }
+
+  /* ===== Context Menu (1.5s-3s = 18.75%-37.5%) ===== */
+  .context-menu {
+    position: absolute;
+    top: 340px;
+    left: 480px;
+    width: 280px;
+    background: #fff;
+    border-radius: 8px;
+    box-shadow: 0 8px 30px rgba(0,0,0,0.25);
+    padding: 6px 0;
+    z-index: 80;
+    opacity: 0;
+    transform: scale(0.9);
+    animation: ctxMenu 8s linear forwards;
+  }
+
+  @keyframes ctxMenu {
+    0%, 19% { opacity: 0; transform: scale(0.9); }
+    20% { opacity: 1; transform: scale(1); }
+    36% { opacity: 1; transform: scale(1); }
+    38% { opacity: 0; transform: scale(1); }
+    100% { opacity: 0; }
+  }
+
+  .ctx-item {
+    padding: 8px 16px;
+    font-size: 13px;
+    color: #333;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .ctx-item.disabled {
+    color: #aaa;
+  }
+
+  .ctx-divider {
+    height: 1px;
+    background: #e5e5e5;
+    margin: 4px 0;
+  }
+
+  .ctx-item.highlight {
+    background: #EBF3FB;
+    color: var(--primary);
+    font-weight: 700;
+    border-radius: 4px;
+    margin: 0 4px;
+    padding: 10px 12px;
+  }
+
+  .ctx-icon {
+    width: 18px;
+    height: 18px;
+    background: var(--primary);
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    color: #fff;
+    flex-shrink: 0;
+  }
+
+  /* Cursor for context menu phase */
+  .cursor-ctx {
+    position: absolute;
+    width: 24px;
+    height: 24px;
+    z-index: 100;
+    pointer-events: none;
+    opacity: 0;
+    animation: cursorCtx 8s linear forwards;
+  }
+  .cursor-ctx svg { width: 24px; height: 24px; filter: drop-shadow(1px 2px 2px rgba(0,0,0,0.3)); }
+
+  @keyframes cursorCtx {
+    0%, 19% { opacity: 0; left: 540px; top: 420px; }
+    20% { opacity: 1; left: 540px; top: 420px; }
+    26% { opacity: 1; left: 620px; top: 535px; }
+    36% { opacity: 1; left: 620px; top: 535px; }
+    37% { opacity: 0; left: 620px; top: 535px; }
+    100% { opacity: 0; }
+  }
+
+  /* ===== Selection Rectangle (3s-6s = 37.5%-75%) ===== */
+  .selection-rect {
+    position: absolute;
+    border: 2.5px solid var(--primary);
+    background: rgba(91, 155, 213, 0.12);
+    z-index: 60;
+    opacity: 0;
+    pointer-events: none;
+    animation: selRect 8s linear forwards;
+  }
+
+  @keyframes selRect {
+    0%, 37% { opacity: 0; top: 420px; left: 460px; width: 0; height: 0; }
+    38% { opacity: 1; top: 420px; left: 460px; width: 0; height: 0; }
+    48% { opacity: 1; top: 385px; left: 440px; width: 680px; height: 90px; }
+    70% { opacity: 1; top: 385px; left: 440px; width: 680px; height: 90px; }
+    73% { opacity: 0; top: 385px; left: 440px; width: 680px; height: 90px; }
+    100% { opacity: 0; }
+  }
+
+  /* Crosshair cursor */
+  .crosshair {
+    position: absolute;
+    width: 24px;
+    height: 24px;
+    z-index: 100;
+    pointer-events: none;
+    opacity: 0;
+    animation: crosshairMove 8s linear forwards;
+  }
+
+  @keyframes crosshairMove {
+    0%, 37% { opacity: 0; left: 448px; top: 408px; }
+    38% { opacity: 1; left: 448px; top: 408px; }
+    48% { opacity: 1; left: 1108px; top: 463px; }
+    58% { opacity: 1; left: 1108px; top: 463px; }
+    60% { opacity: 0; }
+    100% { opacity: 0; }
+  }
+
+  .crosshair::before, .crosshair::after {
+    content: '';
+    position: absolute;
+    background: var(--primary);
+  }
+  .crosshair::before {
+    width: 2px;
+    height: 24px;
+    left: 11px;
+    top: 0;
+  }
+  .crosshair::after {
+    width: 24px;
+    height: 2px;
+    top: 11px;
+    left: 0;
+  }
+
+  /* corner markers on selection */
+  .selection-rect::before {
+    content: '';
+    position: absolute;
+    top: -5px; left: -5px;
+    width: 10px; height: 10px;
+    border: 2px solid var(--primary);
+    background: #fff;
+    border-radius: 2px;
+  }
+  .selection-rect::after {
+    content: '';
+    position: absolute;
+    bottom: -5px; right: -5px;
+    width: 10px; height: 10px;
+    border: 2px solid var(--primary);
+    background: #fff;
+    border-radius: 2px;
+  }
+
+  /* ===== Toast ===== */
+  .toast {
+    position: absolute;
+    top: 180px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #1a1a2e;
+    color: #4ADE80;
+    padding: 14px 32px;
+    border-radius: 10px;
+    font-size: 18px;
+    font-weight: 700;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+    z-index: 90;
+    opacity: 0;
+    animation: toast 8s linear forwards;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  @keyframes toast {
+    0%, 58% { opacity: 0; transform: translateX(-50%) translateY(-10px); }
+    60% { opacity: 1; transform: translateX(-50%) translateY(0); }
+    72% { opacity: 1; transform: translateX(-50%) translateY(0); }
+    75% { opacity: 0; transform: translateX(-50%) translateY(0); }
+    100% { opacity: 0; }
+  }
+
+  /* ===== Result Panel (6s-8s = 75%-100%) ===== */
+  .result-panel {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%) scale(0.9);
+    width: 600px;
+    background: #fff;
+    border-radius: 16px;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.4);
+    z-index: 70;
+    opacity: 0;
+    overflow: hidden;
+    animation: resultPanel 8s linear forwards;
+  }
+
+  @keyframes resultPanel {
+    0%, 74% { opacity: 0; transform: translate(-50%, -50%) scale(0.9); }
+    77% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+    98% { opacity: 1; }
+    100% { opacity: 0; }
+  }
+
+  .result-header {
+    background: #f8f9fa;
+    padding: 16px 24px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    border-bottom: 1px solid #e5e7eb;
+  }
+
+  .result-header-icon {
+    width: 28px;
+    height: 28px;
+    background: var(--primary);
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    font-size: 15px;
+  }
+
+  .result-header-title {
+    font-size: 15px;
+    font-weight: 700;
+    color: #333;
+  }
+
+  .result-body {
+    padding: 32px 24px;
+    text-align: center;
+  }
+
+  .result-text {
+    font-size: 32px;
+    font-weight: 700;
+    color: #1E3A5F;
+    background: #f0f7ff;
+    border: 2px dashed var(--primary);
+    border-radius: 10px;
+    padding: 20px 28px;
+    display: inline-block;
+    letter-spacing: 0.5px;
+  }
+
+  .result-label {
+    margin-top: 16px;
+    font-size: 13px;
+    color: #888;
+  }
+
+  /* ===== Browser dims during result ===== */
+  .browser {
+    animation: browserDim 8s linear forwards;
+  }
+  @keyframes browserDim {
+    0%, 74% { opacity: 1; filter: brightness(1); }
+    77% { opacity: 0.3; filter: brightness(0.6); }
+    98% { opacity: 0.3; }
+    100% { opacity: 0; }
+  }
+
+  /* ===== Scanning line effect ===== */
+  .scan-line {
+    position: absolute;
+    top: 385px;
+    left: 440px;
+    width: 680px;
+    height: 3px;
+    background: linear-gradient(90deg, transparent 0%, var(--primary) 30%, #fff 50%, var(--primary) 70%, transparent 100%);
+    z-index: 65;
+    opacity: 0;
+    pointer-events: none;
+    animation: scanLine 8s linear forwards;
+  }
+
+  @keyframes scanLine {
+    0%, 50% { opacity: 0; top: 385px; }
+    52% { opacity: 1; top: 385px; }
+    58% { opacity: 1; top: 475px; }
+    59% { opacity: 0; top: 475px; }
+    100% { opacity: 0; }
+  }
+</style>
+</head>
+<body>
+<div class="slide">
+
+  <!-- Browser Window -->
+  <div class="browser">
+    <div class="browser-toolbar">
+      <div class="browser-dot red"></div>
+      <div class="browser-dot yellow"></div>
+      <div class="browser-dot green"></div>
+      <div class="browser-url">
+        <span class="url-text url-1">app.example.com/dashboard</span>
+        <span class="url-text url-2">app.example.com/terms</span>
+      </div>
+    </div>
+    <div class="dashboard">
+      <div class="dashboard-header">ダッシュボード</div>
+      <div class="dashboard-sub">アカウント設定と管理</div>
+
+      <div class="dashboard-section">
+        <h3>契約・プラン</h3>
+        <div class="btn-row">
+          <span class="mock-btn link">利用規約を確認する</span>
+          <span class="mock-btn primary">プランを変更する</span>
+          <span class="mock-btn secondary">請求履歴を見る</span>
+        </div>
+      </div>
+
+      <div class="dashboard-section">
+        <h3>アカウント操作</h3>
+        <div class="btn-row">
+          <span class="mock-btn secondary">パスワードを変更</span>
+          <span class="mock-btn secondary">通知設定</span>
+          <span class="mock-btn danger">アカウントを削除</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Page flash overlay -->
+    <div class="page-flash"></div>
+  </div>
+
+  <!-- Mouse Cursor (problem phase) -->
+  <div class="cursor">
+    <svg viewBox="0 0 24 24" fill="none">
+      <path d="M5 3l14 10-6.5 1.5L9 21z" fill="#fff" stroke="#000" stroke-width="1.5"/>
+    </svg>
+  </div>
+  <div class="click-ring"></div>
+
+  <!-- Context Menu (solution trigger) -->
+  <div class="context-menu">
+    <div class="ctx-item disabled">戻る</div>
+    <div class="ctx-item disabled">進む</div>
+    <div class="ctx-item">再読み込み</div>
+    <div class="ctx-divider"></div>
+    <div class="ctx-item">ページのソースを表示</div>
+    <div class="ctx-item">検証</div>
+    <div class="ctx-divider"></div>
+    <div class="ctx-item highlight">
+      <span class="ctx-icon">O</span>
+      範囲選択OCR (NDLOCR-Lite)
+    </div>
+  </div>
+
+  <!-- Cursor for context menu phase -->
+  <div class="cursor-ctx">
+    <svg viewBox="0 0 24 24" fill="none">
+      <path d="M5 3l14 10-6.5 1.5L9 21z" fill="#fff" stroke="#000" stroke-width="1.5"/>
+    </svg>
+  </div>
+
+  <!-- Selection Rectangle -->
+  <div class="selection-rect"></div>
+  <div class="crosshair"></div>
+
+  <!-- Scan line -->
+  <div class="scan-line"></div>
+
+  <!-- Toast -->
+  <div class="toast">
+    <span>&#10003;</span> コピーしました (8文字)
+  </div>
+
+  <!-- Result Panel -->
+  <div class="result-panel">
+    <div class="result-header">
+      <div class="result-header-icon">&#128203;</div>
+      <div class="result-header-title">OCR 取得結果</div>
+    </div>
+    <div class="result-body">
+      <div class="result-text">利用規約を確認する</div>
+      <div class="result-label">クリップボードにコピー済み</div>
+    </div>
+  </div>
+
+  <!-- Telops -->
+  <div class="telop-bg telop-bg-1"></div>
+  <div class="telop telop-1">ボタンのテキスト、コピーしたいだけなのに…</div>
+
+  <div class="telop-bg telop-bg-2"></div>
+  <div class="telop telop-2">右クリックから起動</div>
+
+  <div class="telop-bg telop-bg-4"></div>
+  <div class="telop telop-4">触れずにテキストだけ取得</div>
+
+</div>
+</body>
+</html>

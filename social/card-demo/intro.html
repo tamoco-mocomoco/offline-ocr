@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<title>Intro</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;700;900&display=swap');
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Noto Sans JP', sans-serif;
+    display: flex; justify-content: center; align-items: center;
+    min-height: 100vh; background: #111;
+  }
+
+  .slide {
+    width: 1080px; height: 1920px;
+    background: linear-gradient(135deg, #1E3A5F 0%, #2C5F8A 50%, #5B9BD5 100%);
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    color: #fff;
+    overflow: hidden;
+    position: relative;
+    gap: 40px;
+  }
+
+  /* Animated background particles */
+  .slide::before, .slide::after {
+    content: '';
+    position: absolute;
+    border-radius: 50%;
+    opacity: 0;
+  }
+  .slide::before {
+    top: 15%; left: -10%;
+    width: 500px; height: 500px;
+    background: radial-gradient(circle, rgba(255,255,255,0.08) 0%, transparent 70%);
+    animation: glowFloat 3s ease-in-out infinite 0.3s;
+  }
+  .slide::after {
+    bottom: 10%; right: -15%;
+    width: 400px; height: 400px;
+    background: radial-gradient(circle, rgba(91,155,213,0.15) 0%, transparent 70%);
+    animation: glowFloat 3s ease-in-out infinite 0.8s;
+  }
+
+  /* Radial burst lines */
+  .burst {
+    position: absolute;
+    width: 100%; height: 100%;
+    opacity: 0;
+    animation: burstIn 0.4s ease forwards 0.1s;
+  }
+  .burst::before, .burst::after {
+    content: '';
+    position: absolute;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    border-radius: 50%;
+    border: 3px solid rgba(255,255,255,0.08);
+  }
+  .burst::before {
+    width: 600px; height: 600px;
+    animation: ringExpand 1.5s ease-out forwards 0.2s;
+  }
+  .burst::after {
+    width: 900px; height: 900px;
+    animation: ringExpand 1.5s ease-out forwards 0.5s;
+  }
+
+  .icon {
+    width: 180px; height: 180px;
+    border-radius: 40px;
+    overflow: hidden;
+    box-shadow: 0 8px 40px rgba(0,0,0,0.4), 0 0 60px rgba(91,155,213,0.3);
+    opacity: 0;
+    transform: scale(0.3) rotate(-10deg);
+    animation: iconBounce 0.7s cubic-bezier(0.34, 1.56, 0.64, 1) forwards 0.2s;
+    position: relative;
+    z-index: 10;
+  }
+  .icon img { width: 100%; height: 100%; }
+
+  /* Icon shine effect */
+  .icon::after {
+    content: '';
+    position: absolute;
+    top: -50%; left: -50%;
+    width: 200%; height: 200%;
+    background: linear-gradient(135deg, transparent 40%, rgba(255,255,255,0.3) 50%, transparent 60%);
+    animation: iconShine 0.6s ease forwards 0.9s;
+    opacity: 0;
+  }
+
+  h1 {
+    font-size: 76px;
+    font-weight: 900;
+    text-align: center;
+    line-height: 1.3;
+    letter-spacing: 3px;
+    opacity: 0;
+    position: relative;
+    z-index: 10;
+    text-shadow: 0 4px 20px rgba(0,0,0,0.3);
+    animation: titleSlam 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) forwards 0.7s;
+  }
+
+  .subtitle {
+    font-size: 38px;
+    color: rgba(255,255,255,0.9);
+    text-align: center;
+    line-height: 1.5;
+    opacity: 0;
+    z-index: 10;
+    position: relative;
+    animation: fadeSlideUp 0.4s ease forwards 1.2s;
+  }
+
+  .tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    background: rgba(255,255,255,0.15);
+    border: 2px solid rgba(255,255,255,0.3);
+    border-radius: 40px;
+    padding: 14px 36px;
+    font-size: 30px;
+    font-weight: 700;
+    color: #fff;
+    opacity: 0;
+    z-index: 10;
+    position: relative;
+    animation: tagPop 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) forwards 1.6s;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+  }
+
+  @keyframes iconBounce {
+    0%   { opacity: 0; transform: scale(0.3) rotate(-10deg); }
+    60%  { opacity: 1; transform: scale(1.1) rotate(2deg); }
+    100% { opacity: 1; transform: scale(1) rotate(0deg); }
+  }
+  @keyframes iconShine {
+    from { opacity: 0; transform: translateX(-30%) translateY(-30%); }
+    50%  { opacity: 1; }
+    to   { opacity: 0; transform: translateX(30%) translateY(30%); }
+  }
+  @keyframes titleSlam {
+    0%   { opacity: 0; transform: scale(1.5) translateY(-20px); }
+    60%  { opacity: 1; transform: scale(0.95) translateY(5px); }
+    100% { opacity: 1; transform: scale(1) translateY(0); }
+  }
+  @keyframes fadeSlideUp {
+    from { opacity: 0; transform: translateY(30px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes tagPop {
+    0%   { opacity: 0; transform: scale(0.5); }
+    70%  { opacity: 1; transform: scale(1.1); }
+    100% { opacity: 1; transform: scale(1); }
+  }
+  @keyframes glowFloat {
+    0%, 100% { opacity: 0.5; transform: translateY(0); }
+    50%      { opacity: 1; transform: translateY(-20px); }
+  }
+  @keyframes ringExpand {
+    from { opacity: 0.5; transform: translate(-50%,-50%) scale(0.3); }
+    to   { opacity: 0; transform: translate(-50%,-50%) scale(1); }
+  }
+  @keyframes burstIn {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+  }
+</style>
+</head>
+<body>
+<div class="slide">
+  <div class="burst"></div>
+  <div class="icon">
+    <img src="../../public/icons/icon128.png" alt="icon">
+  </div>
+  <h1>Chrome拡張で<br>OCR作ってみた！</h1>
+  <p class="subtitle">画像の文字、コピーできるよ</p>
+  <span class="tag">🔒 完全オフライン</span>
+</div>
+</body>
+</html>
