@@ -23,6 +23,7 @@ import type {
 } from "../shared/messages";
 const OFFSCREEN_PATH = "offscreen.html";
 const CONTEXT_MENU_ID = "ndlocr-lite-start";
+const CONTEXT_MENU_IMAGE_ID = "ndlocr-lite-open-image";
 
 // Tracks which tab is currently mid-OCR so we can route results back to it.
 // Only one job runs at a time across the whole extension.
@@ -34,7 +35,12 @@ chrome.runtime.onInstalled.addListener(() => {
   chrome.contextMenus.create({
     id: CONTEXT_MENU_ID,
     title: chrome.i18n.getMessage("contextMenuTitle"),
-    contexts: ["page", "selection", "image", "frame"],
+    contexts: ["page", "selection", "frame"],
+  });
+  chrome.contextMenus.create({
+    id: CONTEXT_MENU_IMAGE_ID,
+    title: chrome.i18n.getMessage("contextMenuOpenImageTitle"),
+    contexts: ["image"],
   });
   // Pre-warm: create the offscreen document so the OCR worker starts loading
   // models immediately. By the time the user triggers OCR, the models are
@@ -63,9 +69,29 @@ chrome.commands.onCommand.addListener(async (command) => {
 });
 
 chrome.contextMenus.onClicked.addListener((info, tab) => {
-  if (info.menuItemId !== CONTEXT_MENU_ID) return;
-  if (tab?.id != null) startSelection(tab.id);
+  if (info.menuItemId === CONTEXT_MENU_ID) {
+    if (tab?.id != null) startSelection(tab.id);
+  } else if (info.menuItemId === CONTEXT_MENU_IMAGE_ID) {
+    if (info.srcUrl) void openImageInViewer(info.srcUrl);
+  }
 });
+
+async function openImageInViewer(srcUrl: string): Promise<void> {
+  try {
+    const res = await fetch(srcUrl);
+    const blob = await res.blob();
+    const dataUrl = await new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = () => reject(reader.error);
+      reader.readAsDataURL(blob);
+    });
+    await chrome.storage.session.set({ viewerImage: dataUrl });
+    await chrome.tabs.create({ url: chrome.runtime.getURL("viewer.html") });
+  } catch (e) {
+    console.warn("[ndlocr-lite] failed to open image in viewer", e);
+  }
+}
 
 // Allow the popup to trigger a selection without inheriting the action click.
 chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {

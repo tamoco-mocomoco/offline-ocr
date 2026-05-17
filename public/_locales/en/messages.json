@@ -4,6 +4,7 @@
   "actionTitle": { "message": "Region Select OCR" },
   "commandDescription": { "message": "Start region select OCR" },
   "contextMenuTitle": { "message": "Region Select OCR (NDLOCR-Lite)" },
+  "contextMenuOpenImageTitle": { "message": "Open Image in Viewer" },
 
   "popupTitle": { "message": "🔎 Offline OCR" },
   "popupDescription": { "message": "Click the button or press $KEY$ to select a region on the page for OCR.", "placeholders": { "key": { "content": "$1" } } },

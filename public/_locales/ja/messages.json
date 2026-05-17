@@ -4,6 +4,7 @@
   "actionTitle": { "message": "範囲選択OCR" },
   "commandDescription": { "message": "範囲選択OCRを開始" },
   "contextMenuTitle": { "message": "範囲選択OCR (NDLOCR-Lite)" },
+  "contextMenuOpenImageTitle": { "message": "ビューアーで画像を開く" },
 
   "popupTitle": { "message": "🔎 オフラインOCR" },
   "popupDescription": { "message": "ボタンをクリックするか、$KEY$ でページ上の範囲を選択してOCRします。", "placeholders": { "key": { "content": "$1" } } },

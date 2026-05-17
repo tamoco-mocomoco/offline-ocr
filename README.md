@@ -105,6 +105,10 @@ The lightweight web port
 [ndlocr-lite-wasm](https://github.com/tamoco-mocomoco/ndlocr-lite-wasm)
 serves as the foundation of this extension's OCR pipeline.
 
+## Changelog
+
+See [CHANGELOG.md](CHANGELOG.md) for the version history.
+
 ## License
 
 - This repository: CC-BY-4.0 (inherited from ndlocr-lite-wasm)

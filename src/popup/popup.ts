@@ -10,6 +10,12 @@ document.querySelectorAll<HTMLElement>("[data-i18n]").forEach((el) => {
   el.textContent = t(key);
 });
 
+// Show extension version
+const versionEl = document.getElementById("version");
+if (versionEl) {
+  versionEl.textContent = `v${chrome.runtime.getManifest().version}`;
+}
+
 function setStatus(text: string): void {
   const el = document.getElementById("status");
   if (el) el.textContent = text;

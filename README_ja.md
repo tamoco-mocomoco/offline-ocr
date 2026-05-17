@@ -101,6 +101,10 @@ Chrome Web Store のアップロード上限 (2GB) に十分収まります。
 
 また、NDLOCR の軽量 Web 版である [ndlocr-lite-wasm](https://github.com/tamoco-mocomoco/ndlocr-lite-wasm) を本拡張の OCR パイプラインの基盤として使用しています。
 
+## バージョン履歴
+
+バージョン履歴は [CHANGELOG_ja.md](CHANGELOG_ja.md) を参照してください。
+
 ## ライセンス
 
 - 本リポジトリ: ndlocr-lite-wasm を継承し CC-BY-4.0

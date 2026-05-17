@@ -11,6 +11,7 @@ All processing happens entirely in your browser. No internet connection required
 - Optimized for Japanese — powered by the National Diet Library's OCR technology
 - 3 ways to launch — toolbar icon / keyboard shortcut / right-click menu
 - Regex cleaning rules — auto-remove commas, spaces, or line breaks before copying. Create your own custom rules to fit your workflow, such as stripping digit separators from invoice amounts
+- Image viewer — open local images or clipboard images for OCR, with zoom and region selection
 - Multilingual UI — automatically switches between Japanese and English
 
 ■ How to Use
@@ -19,8 +20,11 @@ All processing happens entirely in your browser. No internet connection required
 2. Drag to select the area you want to OCR
 3. Wait a few seconds — the result is automatically copied to your clipboard
 
-💡 You can also open image or PDF files directly in Chrome and scan them.
-   Just drag and drop a local file into Chrome, then select the region.
+💡 Image viewer
+   You can also OCR local image files and clipboard images.
+   - From the extension popup: "Open Image" / "Open Clipboard Image"
+   - Right-click an image on any web page → "Open Image in Viewer"
+   In the viewer you can zoom in to select a region, or OCR the entire image at once.
 
 ■ Great For
 
@@ -31,7 +35,7 @@ All processing happens entirely in your browser. No internet connection required
 
 ■ Privacy
 
-SnapOCR Offline makes absolutely no network requests.
+Offline OCR makes absolutely no network requests.
 The OCR engine (ONNX Runtime Web) and models are fully bundled within the extension and run entirely inside your browser.
 No personal data or images are ever collected or transmitted.
 
@@ -48,3 +52,18 @@ No personal data or images are ever collected or transmitted.
 
 The OCR engine and models used in this extension are based on NDLOCR, researched, developed, and published by the National Diet Library of Japan (NDL).
 We sincerely thank the National Diet Library for making their high-accuracy Japanese OCR technology openly available.
+
+■ Changelog
+
+v0.4.0
+- Added "Open Image in Viewer" to the image right-click menu
+
+v0.3.0
+- Added the image viewer (OCR for local images and clipboard images)
+- Supports file selection / drag & drop / Ctrl+V paste
+
+v0.2.0
+- Improved recognition accuracy so OCR works even with tight region selections
+
+v0.1.0
+- Initial release

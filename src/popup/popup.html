@@ -57,7 +57,8 @@
     <button id="paste-clipboard" style="margin-top:6px; background:#6c757d;" data-i18n="popupPasteButton"></button>
     <input type="file" id="file-input" accept="image/*" style="display:none;" />
     <p id="status" style="margin-top:8px; min-height:1.2em; font-size:11px; color:#c33;"></p>
-    <p style="margin:12px 0 0; font-size:11px; text-align:right;">
+    <p style="margin:12px 0 0; font-size:11px; display:flex; justify-content:space-between; align-items:center;">
+      <span id="version" style="color:#999;"></span>
       <a href="#" id="open-options" style="color:#4ea3ff; text-decoration:none;" data-i18n="popupSettingsLink"></a>
     </p>
     <script type="module" src="./popup.ts"></script>
