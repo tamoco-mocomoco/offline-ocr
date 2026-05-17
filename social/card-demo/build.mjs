@@ -22,7 +22,7 @@ const tmpDir = resolve(__dirname, "tmp");
 mkdirSync(tmpDir, { recursive: true });
 
 const INTRO_DURATION = 4000;
-const OUTRO_DURATION = 15000; // アウトロのアニメーション + ナレーション余裕
+const OUTRO_DURATION = 18000; // アウトロのアニメーション + ナレーション余裕
 
 // ── Step 1: Record HTML scenes ──
 

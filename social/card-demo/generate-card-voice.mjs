@@ -17,7 +17,7 @@ const VOICEVOX_URL = "http://localhost:50021";
 const SPEAKER_ID = 68; // あいえるたん
 const SAMPLE_RATE = 24000;
 const BYTES_PER_SAMPLE = 2;
-const TOTAL_DURATION = 32; // イントロ4s + デモ12.9s + アウトロ15s
+const TOTAL_DURATION = 35; // イントロ5s + デモ13s + アウトロ18s
 
 const narrations = [
   // イントロ (0〜4s)
@@ -26,12 +26,13 @@ const narrations = [
   { start: 3.0,  file: "card-02", text: "画像の文字、コピーできるようにしたよ" },  // イントロ終盤〜デモ冒頭にかけて
   { start: 7.0,  file: "card-03", text: "右クリックからOCR起動して" },             // 右クリックメニュー表示(1.5s+4=5.5, 前が6.5で終わるので7.0)
   { start: 9.5,  file: "card-04", text: "コピーしたいとこ囲むだけ" },             // ドラッグ中(4.5s+4=8.5, 前が9.2で終わるので9.5)
-  { start: 13.0, file: "card-05", text: "ちょっと待つと…" },                     // 選択完了、処理待ち(9s+4=13)
-  { start: 16.5, file: "card-06", text: "はい、コピーできた！" },                 // アラート表示(12.5s+4=16.5)
+  { start: 13.5, file: "card-05", text: "ちょっと待つと…" },                     // 選択完了、処理待ち +0.5s
+  { start: 17.5, file: "card-06", text: "はい、コピーできた！" },                 // アラート表示 +1秒余裕
   // アウトロ — 16.9sからアウトロ開始、HTML演出に合わせる
-  { start: 18.5, file: "card-07", text: "しかも通信ゼロ。データは外に出ないよ" },   // shield + テキスト(+1.0s)
-  { start: 22.0, file: "card-08", text: "アプリじゃなくて、ブラウザの拡張機能ね" },  // note badge(+4.0s)
-  { start: 25.5, file: "card-09", text: "Chromeストアでオフラインオーシーアールって検索してね" }, // CTA(+7.0s)
+  // アウトロ — 映像は22秒でシーン切替
+  { start: 22.5, file: "card-07", text: "しかも通信ゼロ。データは外に出ないよ" },
+  { start: 25.5, file: "card-08", text: "アプリじゃなくて、ブラウザの拡張機能ね" },
+  { start: 28.5, file: "card-09", text: "Chromeストアでオフラインオーシーアールって検索してね" },
 ];
 
 function buildWavHeader(pcmLength) {
