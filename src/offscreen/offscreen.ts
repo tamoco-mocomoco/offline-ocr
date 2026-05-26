@@ -71,6 +71,37 @@ async function cropScreenshot(
 
 const PRESET_ID = "standard";
 
+// Offscreen documents cannot use chrome.storage. We delegate the actual
+// persistence to the service worker via chrome.runtime.sendMessage. The SW
+// also checks the debugMode setting; we always send the crop and let the SW
+// decide whether to persist it.
+async function sendDebugCropToBackground(blob: Blob): Promise<void> {
+  console.log("[ndlocr-lite][debug] sendDebugCropToBackground start, blob size=", blob.size);
+  try {
+    const bmp = await createImageBitmap(blob);
+    const width = bmp.width;
+    const height = bmp.height;
+    bmp.close();
+    const dataUrl = await new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = () => reject(reader.error);
+      reader.readAsDataURL(blob);
+    });
+    console.log("[ndlocr-lite][debug] dataUrl length=", dataUrl.length, "size=", width, "x", height);
+    await chrome.runtime.sendMessage({
+      target: "background",
+      type: "debug-crop-save",
+      dataUrl,
+      width,
+      height,
+    });
+    console.log("[ndlocr-lite][debug] forwarded crop to background");
+  } catch (e) {
+    console.warn("[ndlocr-lite][debug] failed to forward debug crop", e);
+  }
+}
+
 const worker = new OcrWorker();
 
 // Resolve absolute extension URLs (chrome-extension://<id>/...) for the
@@ -185,6 +216,10 @@ chrome.runtime.onMessage.addListener((message: AnyMessage) => {
           msg.rect,
           msg.devicePixelRatio,
         );
+        // Fire-and-forget: never block the OCR pipeline on debug save.
+        // We also slice() the blob to give the save path its own buffer view,
+        // so any concurrent read can't interact with the worker's decode.
+        void sendDebugCropToBackground(blob.slice(0, blob.size, blob.type));
         worker.postMessage({ type: "run", imageBlob: blob, presetId: PRESET_ID });
       } catch (e) {
         sendToBackground({

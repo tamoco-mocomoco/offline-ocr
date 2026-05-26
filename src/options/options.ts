@@ -8,7 +8,12 @@ import {
   saveRules,
   type CleaningRule,
 } from "../shared/cleaning";
-import { loadSettings, saveSettings } from "../shared/settings";
+import {
+  DEBUG_LAST_CROP_KEY,
+  loadSettings,
+  saveSettings,
+  type DebugLastCrop,
+} from "../shared/settings";
 
 const t = chrome.i18n.getMessage;
 
@@ -290,12 +295,50 @@ async function init(): Promise<void> {
   });
 
   const alertCheckbox = document.getElementById("show-result-alert") as HTMLInputElement;
+  const debugCheckbox = document.getElementById("debug-mode") as HTMLInputElement;
   const settings = await loadSettings();
   alertCheckbox.checked = settings.showResultAlert ?? true;
+  debugCheckbox.checked = settings.debugMode ?? false;
   alertCheckbox.addEventListener("change", async () => {
     const s = await loadSettings();
     s.showResultAlert = alertCheckbox.checked;
     await saveSettings(s);
+  });
+  debugCheckbox.addEventListener("change", async () => {
+    const s = await loadSettings();
+    s.debugMode = debugCheckbox.checked;
+    await saveSettings(s);
+  });
+
+  const previewEl = document.getElementById("debug-crop-preview") as HTMLElement;
+  const imageEl = document.getElementById("debug-crop-image") as HTMLImageElement;
+  const metaEl = document.getElementById("debug-crop-meta") as HTMLElement;
+
+  document.getElementById("show-debug-crop")!.addEventListener("click", async () => {
+    console.log("[ndlocr-lite][debug] show button clicked");
+    const obj = await chrome.storage.local.get(DEBUG_LAST_CROP_KEY);
+    const crop = obj?.[DEBUG_LAST_CROP_KEY] as DebugLastCrop | undefined;
+    console.log("[ndlocr-lite][debug] crop found?", !!crop, crop && `${crop.width}x${crop.height}`);
+    if (!crop) {
+      previewEl.style.display = "none";
+      metaEl.textContent = t("debugCropEmpty");
+      return;
+    }
+    imageEl.src = crop.dataUrl;
+    previewEl.style.display = "block";
+    const elapsedSec = Math.round((Date.now() - crop.timestamp) / 1000);
+    metaEl.textContent = t("debugCropMeta", [
+      String(crop.width),
+      String(crop.height),
+      String(elapsedSec),
+    ]);
+  });
+
+  document.getElementById("clear-debug-crop")!.addEventListener("click", async () => {
+    await chrome.storage.local.remove(DEBUG_LAST_CROP_KEY);
+    imageEl.removeAttribute("src");
+    previewEl.style.display = "none";
+    metaEl.textContent = t("debugCropCleared");
   });
 }
 

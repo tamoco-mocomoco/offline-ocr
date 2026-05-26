@@ -205,17 +205,25 @@ type BackgroundToContent =
         sendCancelled();
         return;
       }
-      chrome.runtime
-        .sendMessage({
-          target: "background",
-          type: "selection-completed",
-          rect,
-          devicePixelRatio: window.devicePixelRatio || 1,
-        })
-        .catch(() => {
-          showToast(t("toastCommunicationError"), { autoHideMs: 3000 });
+      // Wait for the browser to paint without the selection overlay before
+      // requesting the capture. Otherwise captureVisibleTab races with the
+      // overlay teardown and the blue selection rectangle ends up baked into
+      // the screenshot, leaking into the adjacent-color padding.
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          chrome.runtime
+            .sendMessage({
+              target: "background",
+              type: "selection-completed",
+              rect,
+              devicePixelRatio: window.devicePixelRatio || 1,
+            })
+            .catch(() => {
+              showToast(t("toastCommunicationError"), { autoHideMs: 3000 });
+            });
+          showToast(t("toastCapturing"));
         });
-      showToast(t("toastCapturing"));
+      });
     }
     function onKeyDown(ev: KeyboardEvent) {
       if (ev.key === "Escape") {

@@ -182,6 +182,23 @@
       </ul>
     </div>
 
+    <h2 data-i18n="settingsDebugHeading"></h2>
+    <div class="card">
+      <label style="display:flex; align-items:center; gap:8px; cursor:pointer;">
+        <input type="checkbox" id="debug-mode" />
+        <span data-i18n="optionDebugMode"></span>
+      </label>
+      <p class="hint" style="margin-top:6px" data-i18n="optionDebugModeHint"></p>
+      <div class="row">
+        <button id="show-debug-crop" class="secondary" data-i18n="showDebugCropButton"></button>
+        <button id="clear-debug-crop" class="secondary" data-i18n="clearDebugCropButton"></button>
+      </div>
+      <div id="debug-crop-meta" class="hint" style="margin-top:8px"></div>
+      <div id="debug-crop-preview" style="margin-top:8px; display:none;">
+        <img id="debug-crop-image" alt="last crop" style="max-width:100%; border:1px solid rgba(127,127,127,0.3); border-radius:4px; background:#222;" />
+      </div>
+    </div>
+
     <script type="module" src="./options.ts"></script>
   </body>
 </html>

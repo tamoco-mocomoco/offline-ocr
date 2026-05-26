@@ -21,6 +21,11 @@ import type {
   ContentToBackground,
   OffscreenToBackground,
 } from "../shared/messages";
+import {
+  DEBUG_LAST_CROP_KEY,
+  loadSettings,
+  type DebugLastCrop,
+} from "../shared/settings";
 const OFFSCREEN_PATH = "offscreen.html";
 const CONTEXT_MENU_ID = "ndlocr-lite-start";
 const CONTEXT_MENU_IMAGE_ID = "ndlocr-lite-open-image";
@@ -147,9 +152,37 @@ chrome.runtime.onMessage.addListener((message: AnyMessage, sender) => {
         message.type === "ocr-error")
     ) {
       forwardOcrEventToContent(message as OffscreenToBackground);
+    } else if ("type" in message && message.type === "debug-crop-save") {
+      void handleDebugCropSave(
+        message as Extract<OffscreenToBackground, { type: "debug-crop-save" }>,
+      );
     }
   }
 });
+
+async function handleDebugCropSave(
+  msg: Extract<OffscreenToBackground, { type: "debug-crop-save" }>,
+): Promise<void> {
+  try {
+    const settings = await loadSettings();
+    if (!settings.debugMode) {
+      console.log("[ndlocr-lite][debug] debugMode is off, skipping save");
+      return;
+    }
+    const payload: DebugLastCrop = {
+      dataUrl: msg.dataUrl,
+      width: msg.width,
+      height: msg.height,
+      timestamp: Date.now(),
+    };
+    await chrome.storage.local.set({ [DEBUG_LAST_CROP_KEY]: payload });
+    console.log(
+      `[ndlocr-lite][debug] saved crop: ${msg.width}x${msg.height}, ${Math.round(msg.dataUrl.length / 1024)} KB (base64)`,
+    );
+  } catch (e) {
+    console.warn("[ndlocr-lite][debug] failed to persist debug crop", e);
+  }
+}
 
 async function handleSelectionCompleted(
   tabId: number,

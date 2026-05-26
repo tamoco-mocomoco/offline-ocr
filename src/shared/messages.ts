@@ -60,6 +60,9 @@ export type BackgroundToOffscreen = {
 // messages carry a `progressKey` and raw data instead of pre-localized strings.
 // The background service worker translates them into localized `phase` strings
 // before forwarding to the content script.
+//
+// The offscreen document also does NOT have access to chrome.storage, so debug
+// crop persistence is delegated to the background via `debug-crop-save`.
 export type OffscreenToBackground =
   | {
       target: "background";
@@ -84,7 +87,14 @@ export type OffscreenToBackground =
       total: number;
     }
   | { target: "background"; type: "ocr-result"; text: string }
-  | { target: "background"; type: "ocr-error"; message: string };
+  | { target: "background"; type: "ocr-error"; message: string }
+  | {
+      target: "background";
+      type: "debug-crop-save";
+      dataUrl: string;
+      width: number;
+      height: number;
+    };
 
 export type AnyMessage =
   | ContentToBackground

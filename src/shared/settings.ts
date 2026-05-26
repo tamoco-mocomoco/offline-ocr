@@ -4,6 +4,16 @@
 
 export interface Settings {
   showResultAlert?: boolean;
+  debugMode?: boolean;
+}
+
+export const DEBUG_LAST_CROP_KEY = "debugLastCrop";
+
+export interface DebugLastCrop {
+  dataUrl: string;
+  width: number;
+  height: number;
+  timestamp: number;
 }
 
 const STORAGE_KEY = "settings";
