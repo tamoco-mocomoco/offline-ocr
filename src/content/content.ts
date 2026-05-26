@@ -46,13 +46,33 @@ async function loadSettings(): Promise<Settings> {
   return (obj?.[SETTINGS_STORAGE_KEY] as Settings) ?? {};
 }
 
+// Inline copy of unescapeReplacement from shared/cleaning.ts. Kept in sync by
+// hand because content scripts can't import ES modules.
+function unescapeReplacement(s: string): string {
+  let out = "";
+  for (let i = 0; i < s.length; i++) {
+    if (s[i] === "\\" && i + 1 < s.length) {
+      const next = s[i + 1];
+      switch (next) {
+        case "n": out += "\n"; i++; continue;
+        case "r": out += "\r"; i++; continue;
+        case "t": out += "\t"; i++; continue;
+        case "\\": out += "\\"; i++; continue;
+        case "0": out += "\0"; i++; continue;
+      }
+    }
+    out += s[i];
+  }
+  return out;
+}
+
 function applyCleaningRules(text: string, rules: CleaningRule[]): string {
   let out = text;
   for (const rule of rules) {
     if (!rule.enabled || !rule.pattern) continue;
     try {
       const re = new RegExp(rule.pattern, rule.flags || "");
-      out = out.replace(re, rule.replacement);
+      out = out.replace(re, unescapeReplacement(rule.replacement));
     } catch {
       // skip invalid regex
     }

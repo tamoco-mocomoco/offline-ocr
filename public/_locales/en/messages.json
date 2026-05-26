@@ -75,7 +75,7 @@
   "runTestButton": { "message": "Run Test" },
 
   "rulesHowToHeading": { "message": "How to Write Rules" },
-  "rulesHowToDescription": { "message": "Rules use JavaScript RegExp syntax. Flags: g (global), i (case-insensitive), m (multiline), s (dot matches newline), etc." },
+  "rulesHowToDescription": { "message": "Rules use JavaScript RegExp syntax. Flags: g (global), i (case-insensitive), m (multiline), s (dot matches newline), etc. The replacement field supports escape sequences \\t (tab), \\n (newline), \\r, \\\\ and capture group back-references like $1." },
   "rulesExampleLabel": { "message": "Examples:" },
 
   "seedRuleSpaceName": { "message": "Remove spaces between Japanese chars" },

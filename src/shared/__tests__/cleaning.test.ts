@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { applyCleaningRules, type CleaningRule } from "../cleaning";
+import { applyCleaningRules, unescapeReplacement, type CleaningRule } from "../cleaning";
 
 function rule(
   pattern: string,
@@ -79,5 +79,44 @@ describe("applyCleaningRules", () => {
   it("handles full-width and half-width comma removal", () => {
     const rules = [rule("[,，]", "", "g")];
     expect(applyCleaningRules("1,234，567", rules)).toBe("1234567");
+  });
+
+  it("interprets backslash escapes in replacement (\\t \\n \\r)", () => {
+    expect(applyCleaningRules("a,b,c", [rule(",", "\\t")])).toBe("a\tb\tc");
+    expect(applyCleaningRules("ab", [rule("b", "\\n")])).toBe("a\n");
+    expect(applyCleaningRules("ab", [rule("b", "\\r")])).toBe("a\r");
+  });
+
+  it("preserves $-substitutions alongside escapes", () => {
+    const rules = [rule("(\\w+)=(\\w+)", "$1\\t$2")];
+    expect(applyCleaningRules("key=value", rules)).toBe("key\tvalue");
+  });
+
+  it("treats double backslash as a single literal backslash", () => {
+    expect(applyCleaningRules("ab", [rule("b", "\\\\")])).toBe("a\\");
+  });
+
+  it("leaves unknown escapes verbatim", () => {
+    // \q is not a recognized escape; keep the backslash and the q.
+    expect(applyCleaningRules("ab", [rule("b", "\\q")])).toBe("a\\q");
+  });
+});
+
+describe("unescapeReplacement", () => {
+  it("decodes basic escape sequences", () => {
+    expect(unescapeReplacement("\\t")).toBe("\t");
+    expect(unescapeReplacement("\\n")).toBe("\n");
+    expect(unescapeReplacement("\\r")).toBe("\r");
+    expect(unescapeReplacement("\\\\")).toBe("\\");
+    expect(unescapeReplacement("\\0")).toBe("\0");
+  });
+
+  it("leaves unknown escapes alone", () => {
+    expect(unescapeReplacement("\\q")).toBe("\\q");
+  });
+
+  it("returns plain text unchanged", () => {
+    expect(unescapeReplacement("plain")).toBe("plain");
+    expect(unescapeReplacement("$1")).toBe("$1");
   });
 });

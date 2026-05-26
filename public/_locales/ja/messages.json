@@ -75,7 +75,7 @@
   "runTestButton": { "message": "テスト実行" },
 
   "rulesHowToHeading": { "message": "ルールの書き方" },
-  "rulesHowToDescription": { "message": "各ルールは JavaScript の RegExp 構文で書きます。フラグは g (全置換)、i (大文字小文字無視)、m (複数行)、s (.が改行を含む) などが使えます。" },
+  "rulesHowToDescription": { "message": "各ルールは JavaScript の RegExp 構文で書きます。フラグは g (全置換)、i (大文字小文字無視)、m (複数行)、s (.が改行を含む) などが使えます。置換文字列では \\t (タブ)、\\n (改行)、\\r、\\\\ のエスケープと $1 などの後方参照が利用できます。" },
   "rulesExampleLabel": { "message": "例:" },
 
   "seedRuleSpaceName": { "message": "日本語の間のスペース削除" },

@@ -27,6 +27,33 @@ export async function saveRules(rules: CleaningRule[]): Promise<void> {
 }
 
 /**
+ * Interpret backslash escape sequences in a replacement string.
+ *
+ * String.prototype.replace recognizes `$1`/`$&` substitution patterns but does
+ * NOT interpret `\n`/`\t`/`\\` etc. — those would be inserted verbatim. Users
+ * who type `\t` in the replacement field expect a tab, so we pre-process the
+ * string. Unknown escapes are left alone (the backslash is preserved) so the
+ * behavior is conservative.
+ */
+export function unescapeReplacement(s: string): string {
+  let out = "";
+  for (let i = 0; i < s.length; i++) {
+    if (s[i] === "\\" && i + 1 < s.length) {
+      const next = s[i + 1];
+      switch (next) {
+        case "n": out += "\n"; i++; continue;
+        case "r": out += "\r"; i++; continue;
+        case "t": out += "\t"; i++; continue;
+        case "\\": out += "\\"; i++; continue;
+        case "0": out += "\0"; i++; continue;
+      }
+    }
+    out += s[i];
+  }
+  return out;
+}
+
+/**
  * Apply enabled rules sequentially. Bad regex patterns are skipped (not
  * thrown) so that one broken rule doesn't break the whole pipeline.
  */
@@ -39,7 +66,7 @@ export function applyCleaningRules(
     if (!rule.enabled || !rule.pattern) continue;
     try {
       const re = new RegExp(rule.pattern, rule.flags || "");
-      out = out.replace(re, rule.replacement);
+      out = out.replace(re, unescapeReplacement(rule.replacement));
     } catch (e) {
       console.warn(
         `[ndlocr-lite] skipping invalid rule "${rule.name}":`,
