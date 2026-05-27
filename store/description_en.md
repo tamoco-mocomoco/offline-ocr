@@ -55,6 +55,12 @@ We sincerely thank the National Diet Library for making their high-accuracy Japa
 
 ■ Changelog
 
+v0.5.0
+- OCR output for tables and receipts is now tab-separated (paste into Excel / Google Sheets and each cell lands in its own column)
+- Cleaning rule replacement strings now support escape sequences (\t \n \r \\ \0)
+- Fixed a bug where the blue selection rectangle bled into the captured image; detection accuracy benefits as a side effect
+- Added Debug mode — save and inspect the cropped + padded image fed to the detector
+
 v0.4.0
 - Added "Open Image in Viewer" to the image right-click menu
 

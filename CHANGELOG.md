@@ -2,6 +2,13 @@
 
 [日本語版はこちら](CHANGELOG_ja.md)
 
+## v0.5.0 (2026-05-27)
+
+- OCR output for tables and receipts is now **tab-separated**. When multiple cells are detected on the same row they are joined with `\t`, so pasting into Excel / Google Sheets places each cell in its own column
+- Cleaning rule replacement strings now support **escape sequences**: `\t` (tab), `\n` (newline), `\r`, `\\`, `\0` are interpreted as the literal characters (`$1`-style back-references still work)
+- Fixed a long-standing bug where the **blue selection rectangle bled into the captured image**, tinting the adjacent-color padding blue. The selection overlay is now removed and the browser is given a frame to repaint before `captureVisibleTab` runs. Detection accuracy benefits as a side effect
+- Added **Debug mode** (Options page > Debug). When enabled, the cropped + padded image fed to the detector is saved and can be inspected from the options page
+
 ## v0.4.0 (2026-05-17)
 
 - Added "Open Image in Viewer" to the image right-click menu
