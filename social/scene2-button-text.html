@@ -223,20 +223,20 @@
   @keyframes cursorMove {
     0%    { left: 900px; top: 500px; opacity: 0; }
     2%    { left: 900px; top: 500px; opacity: 1; }
-    10%   { left: 580px; top: 428px; opacity: 1; }
-    12%   { left: 578px; top: 426px; opacity: 1; }
-    13%   { left: 578px; top: 426px; opacity: 1; }
-    14%   { left: 578px; top: 430px; opacity: 1; }
-    15%   { left: 578px; top: 426px; opacity: 1; }
-    18%   { left: 578px; top: 426px; opacity: 0; }
-    100%  { left: 578px; top: 426px; opacity: 0; }
+    10%   { left: 516px; top: 348px; opacity: 1; }
+    12%   { left: 514px; top: 346px; opacity: 1; }
+    13%   { left: 514px; top: 346px; opacity: 1; }
+    14%   { left: 514px; top: 350px; opacity: 1; }
+    15%   { left: 514px; top: 346px; opacity: 1; }
+    18%   { left: 514px; top: 346px; opacity: 0; }
+    100%  { left: 514px; top: 346px; opacity: 0; }
   }
 
   /* cursor click effect */
   .click-ring {
     position: absolute;
-    left: 568px;
-    top: 418px;
+    left: 511px;
+    top: 341px;
     width: 20px;
     height: 20px;
     border: 2px solid rgba(37,99,235,0.6);
@@ -311,8 +311,8 @@
   /* ===== Context Menu (1.5s-3s = 18.75%-37.5%) ===== */
   .context-menu {
     position: absolute;
-    top: 340px;
-    left: 480px;
+    top: 360px;
+    left: 512px;
     width: 280px;
     background: #fff;
     border-radius: 8px;
@@ -386,11 +386,11 @@
   .cursor-ctx svg { width: 24px; height: 24px; filter: drop-shadow(1px 2px 2px rgba(0,0,0,0.3)); }
 
   @keyframes cursorCtx {
-    0%, 19% { opacity: 0; left: 540px; top: 420px; }
-    20% { opacity: 1; left: 540px; top: 420px; }
-    26% { opacity: 1; left: 620px; top: 535px; }
-    36% { opacity: 1; left: 620px; top: 535px; }
-    37% { opacity: 0; left: 620px; top: 535px; }
+    0%, 19% { opacity: 0; left: 516px; top: 348px; }
+    20% { opacity: 1; left: 516px; top: 348px; }
+    26% { opacity: 1; left: 647px; top: 576px; }
+    36% { opacity: 1; left: 647px; top: 576px; }
+    37% { opacity: 0; left: 647px; top: 576px; }
     100% { opacity: 0; }
   }
 
@@ -406,11 +406,11 @@
   }
 
   @keyframes selRect {
-    0%, 37% { opacity: 0; top: 420px; left: 460px; width: 0; height: 0; }
-    38% { opacity: 1; top: 420px; left: 460px; width: 0; height: 0; }
-    48% { opacity: 1; top: 385px; left: 440px; width: 680px; height: 90px; }
-    70% { opacity: 1; top: 385px; left: 440px; width: 680px; height: 90px; }
-    73% { opacity: 0; top: 385px; left: 440px; width: 680px; height: 90px; }
+    0%, 37% { opacity: 0; top: 322px; left: 442px; width: 0; height: 0; }
+    38% { opacity: 1; top: 322px; left: 442px; width: 0; height: 0; }
+    48% { opacity: 1; top: 322px; left: 442px; width: 158px; height: 58px; }
+    70% { opacity: 1; top: 322px; left: 442px; width: 158px; height: 58px; }
+    73% { opacity: 0; top: 322px; left: 442px; width: 158px; height: 58px; }
     100% { opacity: 0; }
   }
 
@@ -426,10 +426,10 @@
   }
 
   @keyframes crosshairMove {
-    0%, 37% { opacity: 0; left: 448px; top: 408px; }
-    38% { opacity: 1; left: 448px; top: 408px; }
-    48% { opacity: 1; left: 1108px; top: 463px; }
-    58% { opacity: 1; left: 1108px; top: 463px; }
+    0%, 37% { opacity: 0; left: 430px; top: 310px; }
+    38% { opacity: 1; left: 430px; top: 310px; }
+    48% { opacity: 1; left: 588px; top: 368px; }
+    58% { opacity: 1; left: 588px; top: 368px; }
     60% { opacity: 0; }
     100% { opacity: 0; }
   }
@@ -588,9 +588,9 @@
   /* ===== Scanning line effect ===== */
   .scan-line {
     position: absolute;
-    top: 385px;
-    left: 440px;
-    width: 680px;
+    top: 322px;
+    left: 442px;
+    width: 158px;
     height: 3px;
     background: linear-gradient(90deg, transparent 0%, var(--primary) 30%, #fff 50%, var(--primary) 70%, transparent 100%);
     z-index: 65;
@@ -600,10 +600,10 @@
   }
 
   @keyframes scanLine {
-    0%, 50% { opacity: 0; top: 385px; }
-    52% { opacity: 1; top: 385px; }
-    58% { opacity: 1; top: 475px; }
-    59% { opacity: 0; top: 475px; }
+    0%, 50% { opacity: 0; top: 322px; }
+    52% { opacity: 1; top: 322px; }
+    58% { opacity: 1; top: 377px; }
+    59% { opacity: 0; top: 377px; }
     100% { opacity: 0; }
   }
 </style>
@@ -688,7 +688,7 @@
 
   <!-- Toast -->
   <div class="toast">
-    <span>&#10003;</span> コピーしました (8文字)
+    <span>&#10003;</span> コピーしました (9文字)
   </div>
 
   <!-- Result Panel -->

@@ -1,0 +1,726 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=1080, height=1920">
+<title>Button Demo (vertical)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700;900&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --primary: #5B9BD5;
+    --bg-gradient: linear-gradient(160deg, #1E3A5F 0%, #2C5F8A 50%, #5B9BD5 100%);
+  }
+
+  *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: #111;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 1080px;
+    height: 1920px;
+    overflow: hidden;
+    font-family: 'Noto Sans JP', sans-serif;
+  }
+
+  .slide {
+    position: relative;
+    width: 1080px;
+    height: 1920px;
+    background: var(--bg-gradient);
+    overflow: hidden;
+  }
+
+  /* ===== Browser Window ===== */
+  .browser {
+    position: absolute;
+    top: 380px;
+    left: 50px;
+    width: 980px;
+    height: 760px;
+    background: #fff;
+    border-radius: 18px;
+    box-shadow: 0 24px 70px rgba(0,0,0,0.45);
+    overflow: hidden;
+    animation: browserDim 8s linear 4s forwards;
+  }
+
+  @keyframes browserDim {
+    0%, 74% { opacity: 1; filter: brightness(1); }
+    77%, 100% { opacity: 0.3; filter: brightness(0.6); }
+  }
+
+  .browser-toolbar {
+    height: 64px;
+    background: #e8e8e8;
+    display: flex;
+    align-items: center;
+    padding: 0 22px;
+    gap: 11px;
+  }
+
+  .browser-dot {
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+  }
+  .browser-dot.red { background: #FF5F57; }
+  .browser-dot.yellow { background: #FEBC2E; }
+  .browser-dot.green { background: #28C840; }
+
+  .browser-url {
+    margin-left: 24px;
+    flex: 1;
+    height: 38px;
+    background: #fff;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    padding: 0 16px;
+    font-size: 17px;
+    color: #555;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .url-text {
+    position: absolute;
+    white-space: nowrap;
+  }
+  .url-text.url-1 { animation: urlSwitch1 8s linear 4s forwards; }
+  .url-text.url-2 { opacity: 0; animation: urlSwitch2 8s linear 4s forwards; }
+
+  @keyframes urlSwitch1 {
+    0%, 14% { opacity: 1; }
+    16% { opacity: 0; }
+    100% { opacity: 0; }
+  }
+  @keyframes urlSwitch2 {
+    0%, 14% { opacity: 0; }
+    16% { opacity: 1; }
+    20% { opacity: 1; }
+    22% { opacity: 0; }
+    100% { opacity: 0; }
+  }
+
+  /* ===== Dashboard ===== */
+  .dashboard {
+    padding: 48px 52px;
+    position: relative;
+  }
+
+  .dashboard-header {
+    font-size: 36px;
+    font-weight: 700;
+    color: #333;
+    margin-bottom: 10px;
+  }
+
+  .dashboard-sub {
+    font-size: 22px;
+    color: #888;
+    margin-bottom: 48px;
+  }
+
+  .dashboard-section {
+    margin-bottom: 44px;
+  }
+
+  .dashboard-section h3 {
+    font-size: 24px;
+    font-weight: 700;
+    color: #444;
+    margin-bottom: 22px;
+    padding-bottom: 14px;
+    border-bottom: 1px solid #eee;
+  }
+
+  .btn-row {
+    display: flex;
+    gap: 22px;
+    flex-wrap: wrap;
+    align-items: center;
+  }
+
+  .mock-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 18px 36px;
+    border-radius: 12px;
+    font-size: 24px;
+    font-weight: 500;
+    font-family: 'Noto Sans JP', sans-serif;
+    cursor: default;
+  }
+
+  .mock-btn.link {
+    background: transparent;
+    color: #2563EB;
+    text-decoration: underline;
+    text-underline-offset: 4px;
+    padding: 18px 14px;
+  }
+  .mock-btn.primary {
+    background: #2563EB;
+    color: #fff;
+    box-shadow: 0 3px 12px rgba(37,99,235,0.3);
+  }
+  .mock-btn.danger {
+    background: #DC2626;
+    color: #fff;
+    box-shadow: 0 3px 12px rgba(220,38,38,0.3);
+  }
+  .mock-btn.secondary {
+    background: #f3f4f6;
+    color: #374151;
+    border: 1px solid #d1d5db;
+  }
+
+  /* ===== Page Flash ===== */
+  .page-flash {
+    position: absolute;
+    top: 64px;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: #fff;
+    opacity: 0;
+    pointer-events: none;
+    animation: pageFlash 8s linear 4s forwards;
+  }
+  @keyframes pageFlash {
+    0%, 14% { opacity: 0; }
+    15% { opacity: 1; }
+    17% { opacity: 1; }
+    19% { opacity: 0; }
+    100% { opacity: 0; }
+  }
+
+  /* ===== Drag-Fail Phase (0-2s, before existing animations start) ===== */
+  .drag-attempt {
+    position: absolute;
+    top: 720px;
+    left: 102px;
+    width: 0;
+    height: 50px;
+    background: rgba(37, 99, 235, 0.3);
+    border-radius: 4px;
+    opacity: 0;
+    z-index: 55;
+    pointer-events: none;
+    animation: dragAttempt 3s linear 1s forwards;
+  }
+  @keyframes dragAttempt {
+    0%, 10% { opacity: 0; width: 0; }
+    15% { opacity: 1; width: 0; }
+    40% { opacity: 1; width: 244px; }
+    45% { opacity: 0.3; }
+    50% { opacity: 1; }
+    55% { opacity: 0.3; }
+    60% { opacity: 1; }
+    70% { opacity: 0; width: 0; }
+    100% { opacity: 0; }
+  }
+
+  .cursor-drag {
+    position: absolute;
+    width: 38px;
+    height: 38px;
+    z-index: 100;
+    opacity: 0;
+    animation: cursorDrag 3s linear 1s forwards;
+  }
+  .cursor-drag svg { width: 38px; height: 38px; filter: drop-shadow(1px 3px 3px rgba(0,0,0,0.35)); }
+  @keyframes cursorDrag {
+    0%, 5% { opacity: 0; left: 760px; top: 900px; }
+    10% { opacity: 1; left: 760px; top: 900px; }
+    35% { opacity: 1; left: 95px; top: 738px; }
+    60% { opacity: 1; left: 340px; top: 738px; }
+    70% { opacity: 1; left: 340px; top: 738px; }
+    75% { opacity: 0; left: 340px; top: 738px; }
+    100% { opacity: 0; }
+  }
+
+  .question-mark {
+    position: absolute;
+    top: 640px;
+    left: 360px;
+    font-size: 96px;
+    font-weight: 900;
+    color: #FFC107;
+    text-shadow: 0 4px 16px rgba(0,0,0,0.4);
+    opacity: 0;
+    z-index: 101;
+    animation: questionMark 3s linear 1s forwards;
+  }
+  @keyframes questionMark {
+    0%, 40% { opacity: 0; transform: scale(0.5); }
+    45% { opacity: 1; transform: scale(1.2); }
+    50% { opacity: 1; transform: scale(1); }
+    93% { opacity: 1; transform: scale(1); }
+    100% { opacity: 0; transform: scale(1); }
+  }
+
+  .drag-telop {
+    position: absolute;
+    bottom: 210px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(0,0,0,0.65);
+    color: #fff;
+    font-size: 42px;
+    font-weight: 700;
+    padding: 22px 50px;
+    border-radius: 16px;
+    white-space: nowrap;
+    z-index: 95;
+    opacity: 0;
+    animation: dragTelop 3s linear 1s forwards;
+  }
+  @keyframes dragTelop {
+    0%, 5% { opacity: 0; }
+    10% { opacity: 1; }
+    90% { opacity: 1; }
+    100% { opacity: 0; }
+  }
+
+  /* ===== Cursors ===== */
+  .cursor, .cursor-ctx {
+    position: absolute;
+    width: 38px;
+    height: 38px;
+    z-index: 100;
+    pointer-events: none;
+    opacity: 0;
+  }
+  .cursor svg, .cursor-ctx svg {
+    width: 38px; height: 38px;
+    filter: drop-shadow(1px 3px 3px rgba(0,0,0,0.35));
+  }
+  .cursor { animation: cursorMove 8s linear 4s forwards; }
+  .cursor-ctx { animation: cursorCtx 8s linear 4s forwards; }
+
+  /* problem-phase cursor: click the link button */
+  @keyframes cursorMove {
+    0%    { left: 760px; top: 900px; opacity: 0; }
+    2%    { left: 760px; top: 900px; opacity: 1; }
+    10%   { left: 216px; top: 737px; opacity: 1; }
+    12%   { left: 214px; top: 735px; opacity: 1; }
+    13%   { left: 214px; top: 735px; opacity: 1; }
+    14%   { left: 214px; top: 739px; opacity: 1; }
+    15%   { left: 214px; top: 735px; opacity: 1; }
+    18%   { left: 214px; top: 735px; opacity: 0; }
+    100%  { left: 214px; top: 735px; opacity: 0; }
+  }
+
+  .click-ring {
+    position: absolute;
+    left: 209px;
+    top: 727px;
+    width: 30px;
+    height: 30px;
+    border: 3px solid rgba(37,99,235,0.6);
+    border-radius: 50%;
+    opacity: 0;
+    pointer-events: none;
+    animation: clickRing 8s linear 4s forwards;
+  }
+  @keyframes clickRing {
+    0%, 13% { opacity: 0; transform: scale(0.5); }
+    13.5% { opacity: 1; transform: scale(1); }
+    15% { opacity: 0; transform: scale(2.5); }
+    100% { opacity: 0; }
+  }
+
+  /* context-menu phase cursor */
+  @keyframes cursorCtx {
+    0%, 19% { opacity: 0; left: 216px; top: 737px; }
+    20% { opacity: 1; left: 216px; top: 737px; }
+    26% { opacity: 1; left: 426px; top: 1086px; }
+    36% { opacity: 1; left: 426px; top: 1086px; }
+    37% { opacity: 0; left: 426px; top: 1086px; }
+    100% { opacity: 0; }
+  }
+
+  /* ===== Context Menu ===== */
+  .context-menu {
+    position: absolute;
+    top: 745px;
+    left: 224px;
+    width: 420px;
+    background: #fff;
+    border-radius: 12px;
+    box-shadow: 0 12px 40px rgba(0,0,0,0.3);
+    padding: 10px 0;
+    z-index: 80;
+    opacity: 0;
+    transform: scale(0.9);
+    animation: ctxMenu 8s linear 4s forwards;
+  }
+  @keyframes ctxMenu {
+    0%, 19% { opacity: 0; transform: scale(0.9); }
+    20% { opacity: 1; transform: scale(1); }
+    36% { opacity: 1; transform: scale(1); }
+    38% { opacity: 0; transform: scale(1); }
+    100% { opacity: 0; }
+  }
+
+  .ctx-item {
+    padding: 13px 24px;
+    font-size: 21px;
+    color: #333;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+  .ctx-item.disabled { color: #aaa; }
+  .ctx-divider { height: 1px; background: #e5e5e5; margin: 6px 0; }
+  .ctx-item.highlight {
+    background: #EBF3FB;
+    color: var(--primary);
+    font-weight: 700;
+    border-radius: 6px;
+    margin: 0 6px;
+    padding: 15px 18px;
+  }
+  .ctx-icon {
+    width: 28px;
+    height: 28px;
+    background: var(--primary);
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+    color: #fff;
+    flex-shrink: 0;
+  }
+
+  /* ===== Selection Rectangle ===== */
+  .selection-rect {
+    position: absolute;
+    border: 3px solid var(--primary);
+    background: rgba(91, 155, 213, 0.12);
+    z-index: 60;
+    opacity: 0;
+    pointer-events: none;
+    animation: selRect 8s linear 4s forwards;
+  }
+  @keyframes selRect {
+    0%, 37% { opacity: 0; top: 694px; left: 90px; width: 0; height: 0; }
+    38% { opacity: 1; top: 694px; left: 90px; width: 0; height: 0; }
+    48% { opacity: 1; top: 694px; left: 90px; width: 268px; height: 95px; }
+    70% { opacity: 1; top: 694px; left: 90px; width: 268px; height: 95px; }
+    73% { opacity: 0; top: 694px; left: 90px; width: 268px; height: 95px; }
+    100% { opacity: 0; }
+  }
+  .selection-rect::before {
+    content: '';
+    position: absolute;
+    top: -7px; left: -7px;
+    width: 14px; height: 14px;
+    border: 3px solid var(--primary);
+    background: #fff;
+    border-radius: 3px;
+  }
+  .selection-rect::after {
+    content: '';
+    position: absolute;
+    bottom: -7px; right: -7px;
+    width: 14px; height: 14px;
+    border: 3px solid var(--primary);
+    background: #fff;
+    border-radius: 3px;
+  }
+
+  /* Crosshair cursor */
+  .crosshair {
+    position: absolute;
+    width: 36px;
+    height: 36px;
+    z-index: 100;
+    pointer-events: none;
+    opacity: 0;
+    animation: crosshairMove 8s linear 4s forwards;
+  }
+  @keyframes crosshairMove {
+    0%, 37% { opacity: 0; left: 73px; top: 677px; }
+    38% { opacity: 1; left: 73px; top: 677px; }
+    48% { opacity: 1; left: 340px; top: 771px; }
+    58% { opacity: 1; left: 340px; top: 771px; }
+    60% { opacity: 0; }
+    100% { opacity: 0; }
+  }
+  .crosshair::before, .crosshair::after {
+    content: '';
+    position: absolute;
+    background: var(--primary);
+  }
+  .crosshair::before { width: 3px; height: 36px; left: 16px; top: 0; }
+  .crosshair::after { width: 36px; height: 3px; top: 16px; left: 0; }
+
+  /* Scan line */
+  .scan-line {
+    position: absolute;
+    top: 694px;
+    left: 90px;
+    width: 268px;
+    height: 4px;
+    background: linear-gradient(90deg, transparent 0%, var(--primary) 30%, #fff 50%, var(--primary) 70%, transparent 100%);
+    z-index: 65;
+    opacity: 0;
+    pointer-events: none;
+    animation: scanLine 8s linear 4s forwards;
+  }
+  @keyframes scanLine {
+    0%, 50% { opacity: 0; top: 694px; }
+    52% { opacity: 1; top: 694px; }
+    58% { opacity: 1; top: 789px; }
+    59% { opacity: 0; top: 789px; }
+    100% { opacity: 0; }
+  }
+
+  /* ===== Toast ===== */
+  .toast {
+    position: absolute;
+    top: 260px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #1a1a2e;
+    color: #4ADE80;
+    padding: 22px 48px;
+    border-radius: 14px;
+    font-size: 30px;
+    font-weight: 700;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.35);
+    z-index: 90;
+    opacity: 0;
+    animation: toast 8s linear 4s forwards;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    white-space: nowrap;
+  }
+  @keyframes toast {
+    0%, 58% { opacity: 0; transform: translateX(-50%) translateY(-12px); }
+    60% { opacity: 1; transform: translateX(-50%) translateY(0); }
+    72% { opacity: 1; transform: translateX(-50%) translateY(0); }
+    75% { opacity: 0; transform: translateX(-50%) translateY(0); }
+    100% { opacity: 0; }
+  }
+
+  /* ===== Result Panel ===== */
+  .result-panel {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%) scale(0.9);
+    width: 880px;
+    background: #fff;
+    border-radius: 22px;
+    box-shadow: 0 24px 70px rgba(0,0,0,0.45);
+    z-index: 70;
+    opacity: 0;
+    overflow: hidden;
+    animation: resultPanel 8s linear 4s forwards;
+  }
+  @keyframes resultPanel {
+    0%, 74% { opacity: 0; transform: translate(-50%, -50%) scale(0.9); }
+    77%, 100% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+  }
+  .result-header {
+    background: #f8f9fa;
+    padding: 26px 36px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    border-bottom: 1px solid #e5e7eb;
+  }
+  .result-header-icon {
+    width: 44px;
+    height: 44px;
+    background: var(--primary);
+    border-radius: 9px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    font-size: 24px;
+  }
+  .result-header-title {
+    font-size: 24px;
+    font-weight: 700;
+    color: #333;
+  }
+  .result-body {
+    padding: 52px 36px;
+    text-align: center;
+  }
+  .result-text {
+    font-size: 46px;
+    font-weight: 700;
+    color: #1E3A5F;
+    background: #f0f7ff;
+    border: 3px dashed var(--primary);
+    border-radius: 14px;
+    padding: 32px 40px;
+    display: inline-block;
+  }
+  .result-label {
+    margin-top: 26px;
+    font-size: 20px;
+    color: #888;
+  }
+
+  /* ===== Telop ===== */
+  .telop {
+    position: absolute;
+    bottom: 210px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 46px;
+    font-weight: 700;
+    color: #fff;
+    background: rgba(0,0,0,0.55);
+    border-radius: 16px;
+    padding: 22px 56px;
+    white-space: nowrap;
+    opacity: 0;
+    z-index: 50;
+    text-align: center;
+  }
+  .telop-1 { animation: telop1 8s linear 4s forwards; }
+  @keyframes telop1 {
+    0%, 2% { opacity: 0; }
+    4% { opacity: 1; }
+    18% { opacity: 1; }
+    20% { opacity: 0; }
+    100% { opacity: 0; }
+  }
+  .telop-2 { animation: telop2 8s linear 4s forwards; }
+  @keyframes telop2 {
+    0%, 20% { opacity: 0; }
+    22% { opacity: 1; }
+    36% { opacity: 1; }
+    38% { opacity: 0; }
+    100% { opacity: 0; }
+  }
+  .telop-4 { animation: telop4 8s linear 4s forwards; }
+  @keyframes telop4 {
+    0%, 76% { opacity: 0; }
+    78%, 100% { opacity: 1; }
+  }
+</style>
+</head>
+<body>
+<div class="slide">
+
+  <!-- Browser Window -->
+  <div class="browser">
+    <div class="browser-toolbar">
+      <div class="browser-dot red"></div>
+      <div class="browser-dot yellow"></div>
+      <div class="browser-dot green"></div>
+      <div class="browser-url">
+        <span class="url-text url-1">app.example.com/dashboard</span>
+        <span class="url-text url-2">app.example.com/terms</span>
+      </div>
+    </div>
+    <div class="dashboard">
+      <div class="dashboard-header">ダッシュボード</div>
+      <div class="dashboard-sub">アカウント設定と管理</div>
+
+      <div class="dashboard-section">
+        <h3>契約・プラン</h3>
+        <div class="btn-row">
+          <span class="mock-btn link">利用規約を確認する</span>
+          <span class="mock-btn primary">プランを変更する</span>
+        </div>
+      </div>
+
+      <div class="dashboard-section">
+        <h3>アカウント操作</h3>
+        <div class="btn-row">
+          <span class="mock-btn secondary">パスワードを変更</span>
+          <span class="mock-btn danger">アカウントを削除</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="page-flash"></div>
+  </div>
+
+  <!-- Drag-fail phase (0-2s) -->
+  <div class="drag-attempt"></div>
+  <div class="cursor-drag">
+    <svg viewBox="0 0 24 24" fill="none">
+      <path d="M5 3l14 10-6.5 1.5L9 21z" fill="#fff" stroke="#000" stroke-width="1.5"/>
+    </svg>
+  </div>
+  <div class="question-mark">?</div>
+  <div class="drag-telop">選択しづらいし、押すと飛んじゃう…</div>
+
+  <!-- Problem-phase cursor (click phase, after 2s) -->
+  <div class="cursor">
+    <svg viewBox="0 0 24 24" fill="none">
+      <path d="M5 3l14 10-6.5 1.5L9 21z" fill="#fff" stroke="#000" stroke-width="1.5"/>
+    </svg>
+  </div>
+  <div class="click-ring"></div>
+
+  <!-- Context Menu -->
+  <div class="context-menu">
+    <div class="ctx-item disabled">戻る</div>
+    <div class="ctx-item disabled">進む</div>
+    <div class="ctx-item">再読み込み</div>
+    <div class="ctx-divider"></div>
+    <div class="ctx-item">ページのソースを表示</div>
+    <div class="ctx-item">検証</div>
+    <div class="ctx-divider"></div>
+    <div class="ctx-item highlight">
+      <span class="ctx-icon">O</span>
+      範囲選択OCR (NDLOCR-Lite)
+    </div>
+  </div>
+
+  <!-- Context-menu phase cursor -->
+  <div class="cursor-ctx">
+    <svg viewBox="0 0 24 24" fill="none">
+      <path d="M5 3l14 10-6.5 1.5L9 21z" fill="#fff" stroke="#000" stroke-width="1.5"/>
+    </svg>
+  </div>
+
+  <!-- Selection Rectangle -->
+  <div class="selection-rect"></div>
+  <div class="crosshair"></div>
+  <div class="scan-line"></div>
+
+  <!-- Toast -->
+  <div class="toast">
+    <span>&#10003;</span> コピーしました (9文字)
+  </div>
+
+  <!-- Result Panel -->
+  <div class="result-panel">
+    <div class="result-header">
+      <div class="result-header-icon">&#128203;</div>
+      <div class="result-header-title">OCR 取得結果</div>
+    </div>
+    <div class="result-body">
+      <div class="result-text">利用規約を確認する</div>
+      <div class="result-label">クリップボードにコピー済み</div>
+    </div>
+  </div>
+
+  <!-- Telops -->
+  <div class="telop telop-1">ボタンの文字、コピーできない…</div>
+  <div class="telop telop-2">右クリックから起動</div>
+  <div class="telop telop-4">触れずにテキストだけ取得</div>
+
+</div>
+</body>
+</html>
