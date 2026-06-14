@@ -23,15 +23,18 @@ export class PARSeqRecognizer {
    * Recognize text from a line image (ImageData).
    * Follows src/parseq.py: rotate if vertical, resize, BGR flip, [-1,1] normalize, CHW.
    */
-  async read(lineImage: ImageData): Promise<string> {
+  async read(lineImage: ImageData, preserveAspect: boolean = false): Promise<string> {
     if (!this.session) throw new Error("PARSeq session not initialized");
 
-    // Preprocess: rotate if h>w, resize to (768, 32)
+    // Preprocess: rotate if h>w, resize to (inputW, inputH).
+    // preserveAspect is used by the small-image DEIM-bypass path so the text
+    // isn't stretched horizontally beyond recognition.
     const resized = resizeForParseq(
       lineImage,
       this.inputW,
       this.inputH,
       true,
+      preserveAspect,
     );
 
     // BGR flip + normalize to [-1, 1]

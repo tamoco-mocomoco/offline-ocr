@@ -2,6 +2,11 @@
 
 [日本語版はこちら](CHANGELOG_ja.md)
 
+## v0.6.0 (2026-06-14)
+
+- **Furigana (ruby text) is now automatically filtered out** in manga and ruby-annotated text. Previously the output mixed body and ruby (e.g. `いちばんかのうせい / 一番可能性を / も / 持ってるんだよ / げんや / 玄弥`); now only the main text is returned. Detection boxes that are much smaller than an adjacent larger box are treated as ruby and dropped between detection (DEIM) and recognition (PARSeq), so they're never even read
+- **Small selections like button or link text are now recognized**. Tightly-cropped images (max side ≤ 200px) used to make DEIM's detection score fall under the threshold and return an empty string. For those images the detector is now bypassed: the adjacent-color padding is trimmed and the whole crop is sent to PARSeq as a single text line, with aspect-preserving resize
+
 ## v0.5.0 (2026-05-27)
 
 - OCR output for tables and receipts is now **tab-separated**. When multiple cells are detected on the same row they are joined with `\t`, so pasting into Excel / Google Sheets places each cell in its own column

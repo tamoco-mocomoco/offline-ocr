@@ -8,13 +8,14 @@
 import * as ort from "onnxruntime-web/wasm";
 import { DEIMDetector, type Detection } from "../engine/deim";
 import { PARSeqRecognizer } from "../engine/parseq";
-import { cropImageData, decodeImage } from "../engine/image-utils";
+import { cropImageData, decodeImage, trimEdgeColor } from "../engine/image-utils";
 import {
   detectionsToPage,
   findAll,
   createElement,
   type Element,
 } from "../parser/ndl-parser";
+import { filterFurigana } from "../parser/furigana-filter";
 import { evalPage } from "../reading-order/eval";
 import { fetchModel } from "../storage/model-cache";
 import {
@@ -161,6 +162,25 @@ async function runOcr(imageBlob: Blob, presetId: string): Promise<void> {
     const imgW = imageData.width;
     const imgH = imageData.height;
 
+    // タイトに切り取られた小さなキャプチャ (例: コミットハッシュ) は DEIM の
+    // 検出スコアがしきい値を下回るため、検出をスキップして PARSeq に直接渡す。
+    const SMALL_IMAGE_BYPASS_MAX_SIDE = 200;
+    if (Math.max(imgW, imgH) <= SMALL_IMAGE_BYPASS_MAX_SIDE) {
+      const trimmed = trimEdgeColor(imageData);
+      const text = await recognizer!.read(trimmed, true);
+      post({ type: "detect-done", numDetections: 1 });
+      post({
+        type: "result",
+        lines: [{ text, x: 0, y: 0, w: imgW, h: imgH, conf: 1 }],
+        detections: [],
+        page: createElement("PAGE", {
+          WIDTH: String(imgW),
+          HEIGHT: String(imgH),
+        }),
+      });
+      return;
+    }
+
     const detections = await detector!.detect(imageData);
     post({ type: "detect-done", numDetections: detections.length });
 
@@ -168,7 +188,15 @@ async function runOcr(imageBlob: Blob, presetId: string): Promise<void> {
     const root = createElement("OCRDATASET", {}, [page]);
     evalPage(root, true);
 
-    const lines = findAll(page, "LINE");
+    const allLines = findAll(page, "LINE");
+    const lineBoxes = allLines.map((line) => ({
+      x: parseInt(line.attrs.X ?? "0"),
+      y: parseInt(line.attrs.Y ?? "0"),
+      width: parseInt(line.attrs.WIDTH ?? "0"),
+      height: parseInt(line.attrs.HEIGHT ?? "0"),
+      line,
+    }));
+    const lines = filterFurigana(lineBoxes).map((b) => b.line);
     const total = lines.length;
 
     const resultLines: {

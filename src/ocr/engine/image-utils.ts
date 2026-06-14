@@ -64,14 +64,47 @@ export function cropImageData(
 }
 
 /**
+ * Trim uniform edge-color padding from an ImageData. Used to strip the
+ * adjacent-color padding added before detection when we bypass DEIM for
+ * small images, so PARSeq sees mostly text instead of mostly padding.
+ */
+export function trimEdgeColor(src: ImageData, threshold: number = 30): ImageData {
+  const { width: w, height: h, data } = src;
+  if (w <= 1 || h <= 1) return src;
+  const cr = data[0], cg = data[1], cb = data[2];
+  let minX = w, minY = h, maxX = -1, maxY = -1;
+  for (let y = 0; y < h; y++) {
+    for (let x = 0; x < w; x++) {
+      const i = (y * w + x) * 4;
+      if (
+        Math.abs(data[i] - cr) > threshold ||
+        Math.abs(data[i + 1] - cg) > threshold ||
+        Math.abs(data[i + 2] - cb) > threshold
+      ) {
+        if (x < minX) minX = x;
+        if (y < minY) minY = y;
+        if (x > maxX) maxX = x;
+        if (y > maxY) maxY = y;
+      }
+    }
+  }
+  if (maxX < 0) return src;
+  return cropImageData(src, minX, minY, maxX - minX + 1, maxY - minY + 1);
+}
+
+/**
  * Resize an ImageData to target width/height.
  * If height > width, rotates 90 degrees first (for PARSeq).
+ * When preserveAspect is true, fits the image to the target height while
+ * preserving aspect ratio and pads the remaining width with the edge color
+ * (used by the small-image bypass so characters aren't horizontally stretched).
  */
 export function resizeForParseq(
   src: ImageData,
   targetW: number,
   targetH: number,
   rotateIfVertical: boolean = true,
+  preserveAspect: boolean = false,
 ): ImageData {
   let sourceCanvas = new OffscreenCanvas(src.width, src.height);
   let sourceCtx = sourceCanvas.getContext("2d")!;
@@ -93,6 +126,24 @@ export function resizeForParseq(
 
   const outCanvas = new OffscreenCanvas(targetW, targetH);
   const outCtx = outCanvas.getContext("2d")!;
-  outCtx.drawImage(drawSource, 0, 0, targetW, targetH);
+
+  if (preserveAspect) {
+    const srcW = drawSource.width;
+    const srcH = drawSource.height;
+    const scaledW = Math.min(
+      targetW,
+      Math.max(1, Math.round((srcW * targetH) / srcH)),
+    );
+    // Sample edge color from the source bottom-right corner for the pad.
+    const sampleCanvas = new OffscreenCanvas(1, 1);
+    const sampleCtx = sampleCanvas.getContext("2d")!;
+    sampleCtx.drawImage(drawSource, srcW - 1, srcH - 1, 1, 1, 0, 0, 1, 1);
+    const [r, g, b] = sampleCtx.getImageData(0, 0, 1, 1).data;
+    outCtx.fillStyle = `rgb(${r}, ${g}, ${b})`;
+    outCtx.fillRect(0, 0, targetW, targetH);
+    outCtx.drawImage(drawSource, 0, 0, scaledW, targetH);
+  } else {
+    outCtx.drawImage(drawSource, 0, 0, targetW, targetH);
+  }
   return outCtx.getImageData(0, 0, targetW, targetH);
 }

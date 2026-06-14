@@ -9,6 +9,7 @@ import { describe, it, expect, beforeAll } from "vitest";
 import * as ort from "onnxruntime-node";
 import sharp from "sharp";
 import { resolve } from "path";
+import { readFileSync } from "fs";
 import { normalizeImageNet, hwcToChw, normalizeBgr, argmaxAxis2 } from "../engine/tensor-utils";
 import { CHARSET_TRAIN } from "../config/charset";
 import { NDL_CLASSES } from "../config/ndl-classes";
@@ -149,6 +150,7 @@ async function runParseq(
   session: ort.InferenceSession,
   imgData: { data: Uint8ClampedArray; width: number; height: number },
   x: number, y: number, w: number, h: number,
+  preserveAspect: boolean = false,
 ): Promise<string> {
   // Crop the line region
   const cropped = await sharp(Buffer.from(imgData.data.buffer), {
@@ -179,12 +181,29 @@ async function runParseq(
     srcBuf = rotated.data;
   }
 
-  // Resize to PARSeq input
-  const resized = await sharp(srcBuf, { raw: { width: srcW, height: srcH, channels: 4 } })
-    .resize(PARSEQ_W, PARSEQ_H)
-    .ensureAlpha()
-    .raw()
-    .toBuffer();
+  let resized: Buffer;
+  if (preserveAspect) {
+    const scaledW = Math.min(
+      PARSEQ_W,
+      Math.max(1, Math.round((srcW * PARSEQ_H) / srcH)),
+    );
+    const idx = (srcH - 1) * srcW * 4 + (srcW - 1) * 4;
+    const r = srcBuf[idx] ?? 0;
+    const g = srcBuf[idx + 1] ?? 0;
+    const b = srcBuf[idx + 2] ?? 0;
+    resized = await sharp(srcBuf, { raw: { width: srcW, height: srcH, channels: 4 } })
+      .resize(scaledW, PARSEQ_H, { fit: "fill" })
+      .extend({ right: PARSEQ_W - scaledW, background: { r, g, b, alpha: 255 } })
+      .ensureAlpha()
+      .raw()
+      .toBuffer();
+  } else {
+    resized = await sharp(srcBuf, { raw: { width: srcW, height: srcH, channels: 4 } })
+      .resize(PARSEQ_W, PARSEQ_H)
+      .ensureAlpha()
+      .raw()
+      .toBuffer();
+  }
 
   const pixels = new Uint8ClampedArray(resized.buffer);
   const normalized = normalizeBgr(pixels, PARSEQ_H, PARSEQ_W);
@@ -207,6 +226,8 @@ async function runParseq(
   return result;
 }
 
+const SMALL_IMAGE_BYPASS_MAX_SIDE = 200;
+
 /** Full OCR pipeline: detect → parse → reading order → recognize */
 async function runFullOcr(
   deimSession: ort.InferenceSession,
@@ -214,6 +235,28 @@ async function runFullOcr(
   pngBuffer: Buffer,
 ): Promise<string> {
   const imgData = await loadImageData(pngBuffer);
+
+  if (Math.max(imgData.width, imgData.height) <= SMALL_IMAGE_BYPASS_MAX_SIDE) {
+    const trimmed = await sharp(Buffer.from(imgData.data.buffer), {
+      raw: { width: imgData.width, height: imgData.height, channels: 4 },
+    })
+      .trim({ threshold: 30 })
+      .ensureAlpha()
+      .raw()
+      .toBuffer({ resolveWithObject: true });
+    const trimmedImg = {
+      data: new Uint8ClampedArray(trimmed.data.buffer),
+      width: trimmed.info.width,
+      height: trimmed.info.height,
+    };
+    return runParseq(
+      parseqSession,
+      trimmedImg,
+      0, 0, trimmedImg.width, trimmedImg.height,
+      true, // preserveAspect
+    );
+  }
+
   const paddedSize = Math.max(imgData.width, imgData.height);
   const chw = await preprocessForDeim(imgData, DEIM_INPUT_SIZE);
 
@@ -306,6 +349,13 @@ describe("OCR pipeline integration", () => {
     const largeImage = await generateTextImage("国立国会図書館", 400, 40, 100);
     const result = await runFullOcr(deimSession, parseqSession, largeImage);
     expect(result.length).toBeGreaterThan(0);
+  }, 30_000);
+
+  it("デバッグモード相当の小サイズ画像（コミットハッシュチップ）でも認識される", async () => {
+    const fixturePath = resolve(__dirname, "fixtures/small-commit-hash.png");
+    const debugDump = readFileSync(fixturePath);
+    const result = await runFullOcr(deimSession, parseqSession, debugDump);
+    expect(result).toMatch(/62be994/);
   }, 30_000);
 
   it("複数行テキストの認識がパディングで劣化しない", async () => {

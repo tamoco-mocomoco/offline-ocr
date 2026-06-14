@@ -55,6 +55,10 @@ We sincerely thank the National Diet Library for making their high-accuracy Japa
 
 ■ Changelog
 
+v0.6.0
+- Automatically filter out furigana (ruby text) in manga and annotated text — only the main body text is returned
+- Small selections like button or link text are now recognized
+
 v0.5.0
 - OCR output for tables and receipts is now tab-separated (paste into Excel / Google Sheets and each cell lands in its own column)
 - Cleaning rule replacement strings now support escape sequences (\t \n \r \\ \0)
