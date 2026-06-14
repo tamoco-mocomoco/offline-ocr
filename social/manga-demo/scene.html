@@ -1,0 +1,597 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=1080, height=1920">
+<title>Manga OCR Demo (vertical)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700;900&family=Noto+Serif+JP:wght@700;900&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --primary: #5B9BD5;
+    --ink: #111;
+    --bg-gradient: linear-gradient(160deg, #1E3A5F 0%, #2C5F8A 50%, #5B9BD5 100%);
+  }
+
+  *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: #111;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 1080px;
+    height: 1920px;
+    overflow: hidden;
+    font-family: 'Noto Sans JP', sans-serif;
+  }
+
+  .slide {
+    position: relative;
+    width: 1080px;
+    height: 1920px;
+    background: var(--bg-gradient);
+    overflow: hidden;
+  }
+
+  /* ===== Manga page ===== */
+  .manga-page {
+    position: absolute;
+    top: 280px;
+    left: 60px;
+    width: 960px;
+    height: 1180px;
+    background: #fafafa;
+    border-radius: 8px;
+    box-shadow: 0 24px 70px rgba(0,0,0,0.5);
+    padding: 22px;
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+    animation: pageDim 8s linear 4s forwards;
+  }
+  @keyframes pageDim {
+    0%, 74% { opacity: 1; filter: brightness(1); }
+    77%, 100% { opacity: 0.3; filter: brightness(0.55); }
+  }
+
+  /* Top panel (small): atmosphere */
+  .panel-top {
+    height: 360px;
+    background: #fff;
+    border: 4px solid var(--ink);
+    position: relative;
+    overflow: hidden;
+    border-radius: 2px;
+  }
+
+  /* Diagonal speed lines (atmosphere) */
+  .panel-top::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background:
+      repeating-linear-gradient(
+        72deg,
+        transparent 0,
+        transparent 14px,
+        rgba(0,0,0,0.55) 14px,
+        rgba(0,0,0,0.55) 16px
+      );
+    opacity: 0.5;
+  }
+
+  .panel-top-narration {
+    position: absolute;
+    top: 22px;
+    left: 22px;
+    background: #fff;
+    border: 3px solid var(--ink);
+    padding: 14px 22px;
+    font-family: 'Noto Serif JP', serif;
+    font-weight: 900;
+    font-size: 30px;
+    color: var(--ink);
+    z-index: 5;
+    line-height: 1.4;
+  }
+
+  .panel-top-sfx {
+    position: absolute;
+    bottom: 30px;
+    right: 30px;
+    font-family: 'Noto Serif JP', serif;
+    font-weight: 900;
+    font-size: 96px;
+    color: var(--ink);
+    transform: rotate(-8deg);
+    letter-spacing: -4px;
+    text-shadow:
+      3px 3px 0 #fff,
+      -3px -3px 0 #fff,
+      3px -3px 0 #fff,
+      -3px 3px 0 #fff,
+      6px 6px 0 var(--ink);
+    z-index: 6;
+  }
+
+  /* Bottom panel (large): hero + bubble */
+  .panel-main {
+    flex: 1;
+    background: #fff;
+    border: 4px solid var(--ink);
+    position: relative;
+    overflow: hidden;
+    border-radius: 2px;
+  }
+
+  /* Radial impact lines */
+  .panel-main::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 30%;
+    width: 1400px;
+    height: 1400px;
+    transform: translate(-50%, -50%);
+    background:
+      repeating-conic-gradient(
+        from 0deg,
+        rgba(0,0,0,0.9) 0deg 2deg,
+        transparent 2deg 8deg
+      );
+    opacity: 0.18;
+  }
+
+  /* Hero silhouette (simple) */
+  .hero {
+    position: absolute;
+    bottom: 0;
+    left: 60px;
+    width: 380px;
+    height: 540px;
+    z-index: 3;
+  }
+  .hero-head {
+    position: absolute;
+    top: 0; left: 100px;
+    width: 180px; height: 200px;
+    background: var(--ink);
+    border-radius: 50% 50% 46% 46%;
+  }
+  .hero-hair {
+    position: absolute;
+    top: -34px; left: 88px;
+    width: 210px; height: 130px;
+    background: var(--ink);
+    clip-path: polygon(0% 100%, 12% 30%, 28% 60%, 42% 12%, 60% 52%, 78% 18%, 100% 76%, 100% 100%);
+  }
+  .hero-eye-l, .hero-eye-r {
+    position: absolute;
+    width: 22px; height: 36px;
+    background: #fff;
+    border-radius: 50%;
+    top: 90px;
+  }
+  .hero-eye-l { left: 140px; }
+  .hero-eye-r { left: 196px; }
+  .hero-mouth {
+    position: absolute;
+    top: 156px; left: 168px;
+    width: 50px; height: 26px;
+    background: #fff;
+    border: 4px solid var(--ink);
+    border-radius: 6px 6px 28px 28px;
+  }
+  .hero-body {
+    position: absolute;
+    top: 200px; left: 30px;
+    width: 320px; height: 360px;
+    background: var(--ink);
+    clip-path: polygon(28% 0%, 72% 0%, 100% 100%, 0% 100%);
+  }
+  .hero-arm {
+    position: absolute;
+    top: 200px; right: -10px;
+    width: 90px; height: 220px;
+    background: var(--ink);
+    transform-origin: top right;
+    transform: rotate(-22deg);
+    border-radius: 16px 0 0 8px;
+  }
+  .hero-fist {
+    position: absolute;
+    top: 196px; right: -28px;
+    width: 110px; height: 110px;
+    background: var(--ink);
+    border-radius: 22px;
+    transform: rotate(-22deg);
+  }
+  .hero-fist::after {
+    content: '';
+    position: absolute;
+    inset: 6px;
+    border: 4px solid #fff;
+    border-radius: 16px;
+    opacity: 0.35;
+  }
+
+  /* Speech bubble with vertical text */
+  .bubble {
+    position: absolute;
+    top: 80px;
+    right: 80px;
+    background: #fff;
+    border: 5px solid var(--ink);
+    border-radius: 220px / 180px;
+    padding: 48px 56px;
+    z-index: 5;
+    filter: drop-shadow(6px 6px 0 rgba(0,0,0,0.15));
+  }
+  /* Tail */
+  .bubble::after {
+    content: '';
+    position: absolute;
+    bottom: -54px;
+    left: 70px;
+    width: 80px;
+    height: 80px;
+    background: #fff;
+    border-right: 5px solid var(--ink);
+    border-bottom: 5px solid var(--ink);
+    transform: rotate(45deg) skewX(-10deg);
+    z-index: -1;
+  }
+
+  .bubble-text {
+    writing-mode: vertical-rl;
+    font-family: 'Noto Serif JP', serif;
+    font-weight: 900;
+    font-size: 64px;
+    line-height: 1.55;
+    color: var(--ink);
+    letter-spacing: 0.06em;
+    height: 540px;
+    text-orientation: upright;
+  }
+  /* keep punctuation in normal orientation */
+  .bubble-text .ja-emph {
+    color: #d83a2c;
+  }
+
+  /* Page header (manga title bar) */
+  .page-header {
+    position: absolute;
+    top: 80px;
+    left: 60px;
+    width: 960px;
+    text-align: center;
+    color: #fff;
+    z-index: 4;
+  }
+  .page-header-title {
+    font-family: 'Noto Serif JP', serif;
+    font-weight: 900;
+    font-size: 56px;
+    letter-spacing: 6px;
+    text-shadow: 0 4px 16px rgba(0,0,0,0.4);
+  }
+  .page-header-sub {
+    margin-top: 8px;
+    font-size: 24px;
+    opacity: 0.75;
+    letter-spacing: 4px;
+  }
+
+  /* ===== Crosshair cursor (selection start) ===== */
+  .crosshair {
+    position: absolute;
+    width: 36px;
+    height: 36px;
+    z-index: 90;
+    pointer-events: none;
+    opacity: 0;
+    animation: crosshairMove 8s linear 4s forwards;
+  }
+  @keyframes crosshairMove {
+    0%, 12% { opacity: 0; left: 495px; top: 760px; }
+    14% { opacity: 1; left: 495px; top: 760px; }
+    26% { opacity: 1; left: 905px; top: 1400px; }
+    62% { opacity: 1; left: 905px; top: 1400px; }
+    66% { opacity: 0; left: 905px; top: 1400px; }
+    100% { opacity: 0; }
+  }
+  .crosshair::before, .crosshair::after {
+    content: '';
+    position: absolute;
+    background: var(--primary);
+  }
+  .crosshair::before { width: 3px; height: 36px; left: 16px; top: 0; }
+  .crosshair::after { width: 36px; height: 3px; top: 16px; left: 0; }
+
+  /* ===== Selection rectangle over bubble ===== */
+  .selection-rect {
+    position: absolute;
+    border: 4px solid var(--primary);
+    background: rgba(91, 155, 213, 0.12);
+    z-index: 80;
+    opacity: 0;
+    pointer-events: none;
+    animation: selRect 8s linear 4s forwards;
+  }
+  @keyframes selRect {
+    0%, 12% { opacity: 0; top: 760px; left: 490px; width: 0; height: 0; }
+    14% { opacity: 1; top: 760px; left: 490px; width: 0; height: 0; }
+    26% { opacity: 1; top: 760px; left: 490px; width: 425px; height: 650px; }
+    62% { opacity: 1; top: 760px; left: 490px; width: 425px; height: 650px; }
+    65% { opacity: 0; }
+    100% { opacity: 0; }
+  }
+  .selection-rect::before {
+    content: '';
+    position: absolute;
+    top: -8px; left: -8px;
+    width: 14px; height: 14px;
+    border: 3px solid var(--primary);
+    background: #fff;
+    border-radius: 3px;
+  }
+  .selection-rect::after {
+    content: '';
+    position: absolute;
+    bottom: -8px; right: -8px;
+    width: 14px; height: 14px;
+    border: 3px solid var(--primary);
+    background: #fff;
+    border-radius: 3px;
+  }
+
+  /* ===== Scan line (vertical, sweeps top→bottom) ===== */
+  .scan-line {
+    position: absolute;
+    top: 760px;
+    left: 490px;
+    width: 425px;
+    height: 5px;
+    background: linear-gradient(90deg, transparent 0%, var(--primary) 30%, #fff 50%, var(--primary) 70%, transparent 100%);
+    z-index: 85;
+    opacity: 0;
+    pointer-events: none;
+    animation: scanLine 8s linear 4s forwards;
+    box-shadow: 0 0 16px rgba(91,155,213,0.8);
+  }
+  @keyframes scanLine {
+    0%, 30% { opacity: 0; top: 760px; }
+    32% { opacity: 1; top: 760px; }
+    44% { opacity: 1; top: 1405px; }
+    45% { opacity: 0; top: 1405px; }
+    100% { opacity: 0; }
+  }
+
+  /* ===== Toast ===== */
+  .toast {
+    position: absolute;
+    top: 200px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #1a1a2e;
+    color: #4ADE80;
+    padding: 22px 48px;
+    border-radius: 14px;
+    font-size: 32px;
+    font-weight: 700;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.35);
+    z-index: 95;
+    opacity: 0;
+    animation: toast 8s linear 4s forwards;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    white-space: nowrap;
+  }
+  @keyframes toast {
+    0%, 47% { opacity: 0; transform: translateX(-50%) translateY(-12px); }
+    49% { opacity: 1; transform: translateX(-50%) translateY(0); }
+    66% { opacity: 1; transform: translateX(-50%) translateY(0); }
+    69% { opacity: 0; transform: translateX(-50%) translateY(0); }
+    100% { opacity: 0; }
+  }
+
+  /* ===== Result Panel (horizontal text) ===== */
+  .result-panel {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%) scale(0.9);
+    width: 920px;
+    background: #fff;
+    border-radius: 22px;
+    box-shadow: 0 24px 70px rgba(0,0,0,0.5);
+    z-index: 88;
+    opacity: 0;
+    overflow: hidden;
+    animation: resultPanel 8s linear 4s forwards;
+  }
+  @keyframes resultPanel {
+    0%, 74% { opacity: 0; transform: translate(-50%, -50%) scale(0.9); }
+    77%, 100% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+  }
+  .result-header {
+    background: #f8f9fa;
+    padding: 26px 36px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    border-bottom: 1px solid #e5e7eb;
+  }
+  .result-header-icon {
+    width: 44px;
+    height: 44px;
+    background: var(--primary);
+    border-radius: 9px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    font-size: 24px;
+  }
+  .result-header-title {
+    font-size: 26px;
+    font-weight: 700;
+    color: #333;
+  }
+  .result-body {
+    padding: 56px 40px;
+    text-align: center;
+  }
+  .result-text {
+    font-size: 56px;
+    font-weight: 900;
+    color: #1E3A5F;
+    background: #f0f7ff;
+    border: 3px dashed var(--primary);
+    border-radius: 14px;
+    padding: 36px 44px;
+    display: inline-block;
+    font-family: 'Noto Serif JP', serif;
+    letter-spacing: 2px;
+  }
+  .result-label {
+    margin-top: 26px;
+    font-size: 22px;
+    color: #888;
+  }
+
+  /* ===== Telops ===== */
+  .telop {
+    position: absolute;
+    bottom: 180px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 48px;
+    font-weight: 900;
+    color: #fff;
+    background: rgba(0,0,0,0.65);
+    border-radius: 18px;
+    padding: 24px 56px;
+    white-space: nowrap;
+    opacity: 0;
+    z-index: 60;
+    text-align: center;
+    box-shadow: 0 8px 30px rgba(0,0,0,0.3);
+  }
+  .telop-1 {
+    animation: telop1 8s linear 4s forwards;
+  }
+  @keyframes telop1 {
+    0%, 2% { opacity: 0; transform: translateX(-50%) translateY(20px); }
+    5% { opacity: 1; transform: translateX(-50%) translateY(0); }
+    24% { opacity: 1; }
+    28% { opacity: 0; }
+    100% { opacity: 0; }
+  }
+  .telop-2 {
+    animation: telop2 8s linear 4s forwards;
+    background: rgba(216, 58, 44, 0.92);
+  }
+  @keyframes telop2 {
+    0%, 73% { opacity: 0; transform: translateX(-50%) scale(0.85); }
+    77% { opacity: 1; transform: translateX(-50%) scale(1.05); }
+    80%, 100% { opacity: 1; transform: translateX(-50%) scale(1); }
+  }
+
+  /* Highlight ring on bubble (pre-selection callout) */
+  .bubble-callout {
+    position: absolute;
+    top: 755px;
+    left: 485px;
+    width: 435px;
+    height: 660px;
+    border: 4px dashed #FFC107;
+    border-radius: 30px;
+    opacity: 0;
+    z-index: 70;
+    pointer-events: none;
+    animation: bubbleCallout 4s linear forwards;
+    box-shadow: 0 0 40px rgba(255,193,7,0.5);
+  }
+  @keyframes bubbleCallout {
+    0%, 25% { opacity: 0; transform: scale(0.85); }
+    32% { opacity: 1; transform: scale(1.05); }
+    40% { opacity: 1; transform: scale(1); }
+    85% { opacity: 1; transform: scale(1); }
+    100% { opacity: 0; transform: scale(1); }
+  }
+</style>
+</head>
+<body>
+<div class="slide">
+
+  <!-- Page header -->
+  <div class="page-header">
+    <div class="page-header-title">第一話 — 決意</div>
+    <div class="page-header-sub">MANGA SAMPLE</div>
+  </div>
+
+  <!-- Manga page -->
+  <div class="manga-page">
+    <!-- Top panel -->
+    <div class="panel-top">
+      <div class="panel-top-narration">夜が明ける前に、<br>奴はそう叫んだ。</div>
+      <div class="panel-top-sfx">ゴゴゴ…</div>
+    </div>
+
+    <!-- Main panel -->
+    <div class="panel-main">
+      <!-- Hero silhouette -->
+      <div class="hero">
+        <div class="hero-hair"></div>
+        <div class="hero-head"></div>
+        <div class="hero-eye-l"></div>
+        <div class="hero-eye-r"></div>
+        <div class="hero-mouth"></div>
+        <div class="hero-body"></div>
+        <div class="hero-arm"></div>
+        <div class="hero-fist"></div>
+      </div>
+
+      <!-- Speech bubble with vertical Japanese text -->
+      <div class="bubble">
+        <div class="bubble-text">絶対に<br>あきらめ<br>ないッ！</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Highlight: this is where the vertical text lives -->
+  <div class="bubble-callout"></div>
+
+  <!-- Selection UI -->
+  <div class="selection-rect"></div>
+  <div class="scan-line"></div>
+  <div class="crosshair"></div>
+
+  <!-- Toast -->
+  <div class="toast">
+    <span>&#10003;</span> コピーしました (10文字)
+  </div>
+
+  <!-- Result panel -->
+  <div class="result-panel">
+    <div class="result-header">
+      <div class="result-header-icon">📋</div>
+      <div class="result-header-title">クリップボードにコピー</div>
+    </div>
+    <div class="result-body">
+      <div class="result-text">絶対にあきらめないッ！</div>
+      <div class="result-label">縦書きを横書きで取得</div>
+    </div>
+  </div>
+
+  <!-- Telops -->
+  <div class="telop telop-1">縦書きの吹き出しもOK</div>
+  <div class="telop telop-2">📖 漫画もそのまま読める！</div>
+
+</div>
+</body>
+</html>
