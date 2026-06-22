@@ -55,6 +55,12 @@ We sincerely thank the National Diet Library for making their high-accuracy Japa
 
 ■ Changelog
 
+v0.6.2
+- Properly fixed the v0.6.0 issue that v0.6.1 had rolled back, and re-enabled the furigana filter and small-region OCR features
+
+v0.6.1
+- Emergency rollback to v0.5.0 behavior. The v0.6.0 release had a bug where OCR'ing short alphanumeric text could append a long run of unwanted characters (1s, 9s) to the result
+
 v0.6.0
 - Automatically filter out furigana (ruby text) in manga and annotated text — only the main body text is returned
 - Small selections like button or link text are now recognized

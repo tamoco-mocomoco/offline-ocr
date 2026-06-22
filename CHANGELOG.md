@@ -2,6 +2,16 @@
 
 [日本語版はこちら](CHANGELOG_ja.md)
 
+## v0.6.2 (2026-06-22)
+
+- Properly fixed the v0.6.0 bug that v0.6.1 had temporarily rolled back, and **re-enabled the furigana filter and small-region OCR features**
+
+## v0.6.1 (2026-06-22)
+
+- Emergency rollback to v0.5.0 behavior. In v0.6.0, **OCR'ing short alphanumeric selections** (small button labels, commit hashes, etc.) could **append a long run of unwanted characters** (e.g. lots of `1`s or `9`s) to the result
+- For example, selecting `cfa8b33` would return `cfa8b33 1999999999...`
+- Properly fixed in v0.6.2
+
 ## v0.6.0 (2026-06-14)
 
 - **Furigana (ruby text) is now automatically filtered out** in manga and ruby-annotated text. Previously the output mixed body and ruby (e.g. `いちばんかのうせい / 一番可能性を / も / 持ってるんだよ / げんや / 玄弥`); now only the main text is returned. Detection boxes that are much smaller than an adjacent larger box are treated as ruby and dropped between detection (DEIM) and recognition (PARSeq), so they're never even read
