@@ -5,6 +5,8 @@
 export interface Settings {
   showResultAlert?: boolean;
   debugMode?: boolean;
+  aiEnabled?: boolean;
+  aiActivePromptId?: string;
 }
 
 export const DEBUG_LAST_CROP_KEY = "debugLastCrop";

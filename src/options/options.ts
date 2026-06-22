@@ -14,13 +14,107 @@ import {
   saveSettings,
   type DebugLastCrop,
 } from "../shared/settings";
+import {
+  loadAIPrompts,
+  saveAIPrompts,
+  type AIPrompt,
+} from "../shared/ai-prompts";
+
+const AI_DOCS_URL = "https://developer.chrome.com/docs/ai/built-in";
 
 const t = chrome.i18n.getMessage;
 
 let rules: CleaningRule[] = [];
+let aiPrompts: AIPrompt[] = [];
 
 function uid(): string {
   return Math.random().toString(36).slice(2, 10);
+}
+
+function newAIPrompt(): AIPrompt {
+  return {
+    id: uid(),
+    title: t("newPromptTitle"),
+    content: "",
+  };
+}
+
+async function getActivePrompt(): Promise<AIPrompt | undefined> {
+  const s = await loadSettings();
+  return aiPrompts.find((p) => p.id === s.aiActivePromptId) ?? aiPrompts[0];
+}
+
+function refreshAIPromptDropdown(activeId: string | undefined): void {
+  const select = document.getElementById("ai-active-prompt") as HTMLSelectElement | null;
+  if (!select) return;
+  select.innerHTML = "";
+  if (aiPrompts.length === 0) {
+    const opt = document.createElement("option");
+    opt.value = "";
+    opt.textContent = t("aiNoPromptOption");
+    opt.disabled = true;
+    opt.selected = true;
+    select.appendChild(opt);
+    return;
+  }
+  for (const p of aiPrompts) {
+    const opt = document.createElement("option");
+    opt.value = p.id;
+    opt.textContent = p.title || t("promptTitlePlaceholder");
+    select.appendChild(opt);
+  }
+  const fallback = aiPrompts[0]?.id ?? "";
+  select.value = activeId && aiPrompts.some((p) => p.id === activeId) ? activeId : fallback;
+}
+
+function renderActivePromptEditor(active: AIPrompt | undefined): void {
+  const editor = document.getElementById("ai-prompt-editor")!;
+  const empty = document.getElementById("ai-prompt-empty")!;
+  const titleInput = document.getElementById("ai-prompt-title") as HTMLInputElement;
+  const contentInput = document.getElementById("ai-prompt-content") as HTMLTextAreaElement;
+  const deleteBtn = document.getElementById("delete-ai-prompt") as HTMLButtonElement;
+
+  if (!active) {
+    editor.style.display = "none";
+    empty.style.display = "block";
+    deleteBtn.disabled = true;
+    return;
+  }
+  editor.style.display = "block";
+  empty.style.display = "none";
+  deleteBtn.disabled = false;
+  titleInput.value = active.title;
+  titleInput.placeholder = t("promptTitlePlaceholder");
+  contentInput.value = active.content;
+}
+
+async function renderAI(): Promise<void> {
+  const active = await getActivePrompt();
+  refreshAIPromptDropdown(active?.id);
+  renderActivePromptEditor(active);
+  if (active) {
+    const s = await loadSettings();
+    if (s.aiActivePromptId !== active.id) {
+      s.aiActivePromptId = active.id;
+      await saveSettings(s);
+    }
+  }
+}
+
+interface LanguageModelGlobal {
+  availability?: () => Promise<string>;
+}
+async function checkAIAvailability(): Promise<{ ok: boolean; status: string }> {
+  const g = globalThis as unknown as { LanguageModel?: LanguageModelGlobal };
+  if (!g.LanguageModel || typeof g.LanguageModel.availability !== "function") {
+    return { ok: false, status: "unsupported" };
+  }
+  try {
+    const a = await g.LanguageModel.availability();
+    return { ok: a === "available" || a === "downloadable" || a === "downloading", status: a };
+  } catch {
+    return { ok: false, status: "error" };
+  }
 }
 
 function newRule(): CleaningRule {
@@ -340,6 +434,150 @@ async function init(): Promise<void> {
     previewEl.style.display = "none";
     metaEl.textContent = t("debugCropCleared");
   });
+
+  // ── Offline AI section ──
+  aiPrompts = await loadAIPrompts();
+  if (aiPrompts.length === 0) {
+    aiPrompts = [
+      {
+        id: uid(),
+        title: t("seedPromptCleanupTitle"),
+        content: t("seedPromptCleanupContent"),
+      },
+      {
+        id: uid(),
+        title: t("seedPromptJsonTitle"),
+        content: t("seedPromptJsonContent"),
+      },
+      {
+        id: uid(),
+        title: t("seedPromptMarkdownTitle"),
+        content: t("seedPromptMarkdownContent"),
+      },
+      {
+        id: uid(),
+        title: t("seedPromptTranslateTitle"),
+        content: t("seedPromptTranslateContent"),
+      },
+    ];
+    await saveAIPrompts(aiPrompts);
+  }
+  await renderAI();
+
+  const aiEnabled = document.getElementById("ai-enabled") as HTMLInputElement;
+  aiEnabled.checked = settings.aiEnabled ?? false;
+  aiEnabled.addEventListener("change", async () => {
+    const s = await loadSettings();
+    s.aiEnabled = aiEnabled.checked;
+    await saveSettings(s);
+  });
+
+  const activePromptSelect = document.getElementById("ai-active-prompt") as HTMLSelectElement;
+  activePromptSelect.addEventListener("change", async () => {
+    const s = await loadSettings();
+    s.aiActivePromptId = activePromptSelect.value || undefined;
+    await saveSettings(s);
+    const active = aiPrompts.find((p) => p.id === activePromptSelect.value);
+    renderActivePromptEditor(active);
+  });
+
+  const titleInput = document.getElementById("ai-prompt-title") as HTMLInputElement;
+  titleInput.addEventListener("input", async () => {
+    const active = await getActivePrompt();
+    if (!active) return;
+    active.title = titleInput.value;
+    await saveAIPrompts(aiPrompts);
+    refreshAIPromptDropdown(active.id);
+  });
+
+  const contentInput = document.getElementById("ai-prompt-content") as HTMLTextAreaElement;
+  contentInput.addEventListener("input", async () => {
+    const active = await getActivePrompt();
+    if (!active) return;
+    active.content = contentInput.value;
+    await saveAIPrompts(aiPrompts);
+  });
+
+  document.getElementById("open-ai-docs")!.addEventListener("click", () => {
+    chrome.tabs.create({ url: AI_DOCS_URL });
+  });
+
+  document.getElementById("add-ai-prompt")!.addEventListener("click", async () => {
+    const p = newAIPrompt();
+    aiPrompts.push(p);
+    await saveAIPrompts(aiPrompts);
+    const s = await loadSettings();
+    s.aiActivePromptId = p.id;
+    await saveSettings(s);
+    await renderAI();
+  });
+
+  document.getElementById("delete-ai-prompt")!.addEventListener("click", async () => {
+    const active = await getActivePrompt();
+    if (!active) return;
+    if (!confirm(t("deletePromptConfirm", [active.title]))) return;
+    aiPrompts = aiPrompts.filter((p) => p.id !== active.id);
+    await saveAIPrompts(aiPrompts);
+    const s = await loadSettings();
+    s.aiActivePromptId = aiPrompts[0]?.id;
+    await saveSettings(s);
+    await renderAI();
+  });
+
+  document.getElementById("export-ai-prompts")!.addEventListener("click", () => {
+    const json = JSON.stringify(aiPrompts, null, 2);
+    const blob = new Blob([json], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "ai-prompts.json";
+    a.click();
+    URL.revokeObjectURL(url);
+  });
+
+  const importAIFile = document.getElementById("import-ai-prompts-file") as HTMLInputElement;
+  document.getElementById("import-ai-prompts")!.addEventListener("click", () => {
+    importAIFile.click();
+  });
+  importAIFile.addEventListener("change", async () => {
+    const file = importAIFile.files?.[0];
+    if (!file) return;
+    try {
+      const text = await file.text();
+      const imported = JSON.parse(text) as AIPrompt[];
+      if (!Array.isArray(imported)) throw new Error("invalid format");
+      for (const p of imported) {
+        const existing = aiPrompts.find((e) => e.title === p.title);
+        if (existing) {
+          existing.content = p.content;
+        } else {
+          p.id = uid();
+          aiPrompts.push(p);
+        }
+      }
+      await saveAIPrompts(aiPrompts);
+      await renderAI();
+    } catch {
+      alert(t("importErrorMessage"));
+    }
+    importAIFile.value = "";
+  });
+
+  // Gemini Nano availability hint
+  const availabilityEl = document.getElementById("ai-availability")!;
+  const { ok, status } = await checkAIAvailability();
+  if (!ok) {
+    availabilityEl.style.display = "block";
+    availabilityEl.className = "availability ng";
+    availabilityEl.textContent =
+      status === "unsupported"
+        ? t("aiAvailabilityUnsupported")
+        : t("aiAvailabilityUnavailable");
+  } else if (status === "downloadable" || status === "downloading") {
+    availabilityEl.style.display = "block";
+    availabilityEl.className = "availability ok";
+    availabilityEl.textContent = t("aiAvailabilityDownload");
+  }
 }
 
 void init();
