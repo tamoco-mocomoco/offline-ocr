@@ -83,3 +83,45 @@ export function argmaxAxis2(
   }
   return indices;
 }
+
+/**
+ * Argmax + confidence-based trailing trim.
+ *
+ * PARSeq は入力末尾の空パディング領域に対しても token を吐き続けて停止トークンを
+ * 返さないことがある (小画像バイパス時に顕在化)。最後に高信頼度 (softmax >= confThr)
+ * で予測したトークン位置を覚えておき、それ以降を打ち切ることで末尾ゴーストを除去する。
+ */
+export function argmaxAxis2WithConfTrim(
+  data: Float32Array,
+  seqLen: number,
+  vocabSize: number,
+  confThr: number = 0.85,
+): Int32Array {
+  const indices = new Int32Array(seqLen);
+  let lastHighIdx = -1;
+
+  for (let s = 0; s < seqLen; s++) {
+    const offset = s * vocabSize;
+    let maxVal = -Infinity;
+    let maxIdx = 0;
+    for (let v = 0; v < vocabSize; v++) {
+      if (data[offset + v] > maxVal) {
+        maxVal = data[offset + v];
+        maxIdx = v;
+      }
+    }
+    indices[s] = maxIdx;
+    if (maxIdx === 0) break;
+
+    let denom = 0;
+    for (let v = 0; v < vocabSize; v++) denom += Math.exp(data[offset + v] - maxVal);
+    const conf = 1 / denom;
+    if (conf >= confThr) lastHighIdx = s;
+  }
+
+  // 最後の高信頼トークン以降を打ち切る (decode 側で stop token として扱われる)
+  if (lastHighIdx >= 0) {
+    for (let i = lastHighIdx + 1; i < seqLen; i++) indices[i] = 0;
+  }
+  return indices;
+}

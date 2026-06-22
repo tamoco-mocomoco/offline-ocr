@@ -1,6 +1,6 @@
 import * as ort from "onnxruntime-web/wasm";
 import { resizeForParseq } from "./image-utils";
-import { normalizeBgr, hwcToChw, argmaxAxis2 } from "./tensor-utils";
+import { normalizeBgr, hwcToChw, argmaxAxis2, argmaxAxis2WithConfTrim } from "./tensor-utils";
 import { CHARSET_TRAIN } from "../config/charset";
 import { type ModelConfig } from "../config/model-config";
 
@@ -62,20 +62,21 @@ export class PARSeqRecognizer {
     const vocabSize = dims[2];
     const data = output.data as Float32Array;
 
-    // argmax along axis=2
-    const indices = argmaxAxis2(data, seqLen, vocabSize);
+    // 小画像バイパス時は信頼度ベースで末尾ゴーストを除去する
+    const indices = preserveAspect
+      ? argmaxAxis2WithConfTrim(data, seqLen, vocabSize)
+      : argmaxAxis2(data, seqLen, vocabSize);
 
-    // Decode: stop at first 0 token, map index i → charset[i-1]
     let result = "";
     for (let s = 0; s < seqLen; s++) {
       const idx = indices[s];
-      if (idx === 0) break; // stop token
+      if (idx === 0) break;
       if (idx - 1 >= 0 && idx - 1 < CHARSET_TRAIN.length) {
         result += CHARSET_TRAIN[idx - 1];
       }
     }
 
-    return result;
+    return preserveAspect ? result.replace(/[\s,;:.\-_]+$/, "") : result;
   }
 
   dispose(): void {

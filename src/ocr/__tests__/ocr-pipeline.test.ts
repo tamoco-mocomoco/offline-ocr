@@ -10,7 +10,7 @@ import * as ort from "onnxruntime-node";
 import sharp from "sharp";
 import { resolve } from "path";
 import { readFileSync } from "fs";
-import { normalizeImageNet, hwcToChw, normalizeBgr, argmaxAxis2 } from "../engine/tensor-utils";
+import { normalizeImageNet, hwcToChw, normalizeBgr, argmaxAxis2, argmaxAxis2WithConfTrim } from "../engine/tensor-utils";
 import { CHARSET_TRAIN } from "../config/charset";
 import { NDL_CLASSES } from "../config/ndl-classes";
 import { DET_CONF_THRESHOLD } from "../config/model-config";
@@ -151,6 +151,7 @@ async function runParseq(
   imgData: { data: Uint8ClampedArray; width: number; height: number },
   x: number, y: number, w: number, h: number,
   preserveAspect: boolean = false,
+  padColor?: { r: number; g: number; b: number },
 ): Promise<string> {
   // Crop the line region
   const cropped = await sharp(Buffer.from(imgData.data.buffer), {
@@ -187,10 +188,15 @@ async function runParseq(
       PARSEQ_W,
       Math.max(1, Math.round((srcW * PARSEQ_H) / srcH)),
     );
-    const idx = (srcH - 1) * srcW * 4 + (srcW - 1) * 4;
-    const r = srcBuf[idx] ?? 0;
-    const g = srcBuf[idx + 1] ?? 0;
-    const b = srcBuf[idx + 2] ?? 0;
+    let r: number, g: number, b: number;
+    if (padColor) {
+      ({ r, g, b } = padColor);
+    } else {
+      const idx = (srcH - 1) * srcW * 4 + (srcW - 1) * 4;
+      r = srcBuf[idx] ?? 0;
+      g = srcBuf[idx + 1] ?? 0;
+      b = srcBuf[idx + 2] ?? 0;
+    }
     resized = await sharp(srcBuf, { raw: { width: srcW, height: srcH, channels: 4 } })
       .resize(scaledW, PARSEQ_H, { fit: "fill" })
       .extend({ right: PARSEQ_W - scaledW, background: { r, g, b, alpha: 255 } })
@@ -214,7 +220,10 @@ async function runParseq(
   const results = await session.run({ [inputName]: inputTensor });
   const output = results[session.outputNames[0]];
   const dims = output.dims;
-  const indices = argmaxAxis2(output.data as Float32Array, dims[1], dims[2]);
+  // 小画像バイパス時は末尾のゴースト token を信頼度で打ち切る
+  const indices = preserveAspect
+    ? argmaxAxis2WithConfTrim(output.data as Float32Array, dims[1], dims[2])
+    : argmaxAxis2(output.data as Float32Array, dims[1], dims[2]);
 
   let result = "";
   for (let s = 0; s < dims[1]; s++) {
@@ -223,7 +232,8 @@ async function runParseq(
       result += CHARSET_TRAIN[indices[s] - 1];
     }
   }
-  return result;
+  // バイパス経路では末尾の空白・句読点も削る
+  return preserveAspect ? result.replace(/[\s,;:.\-_]+$/, "") : result;
 }
 
 const SMALL_IMAGE_BYPASS_MAX_SIDE = 200;
@@ -237,6 +247,13 @@ async function runFullOcr(
   const imgData = await loadImageData(pngBuffer);
 
   if (Math.max(imgData.width, imgData.height) <= SMALL_IMAGE_BYPASS_MAX_SIDE) {
+    // 背景色は元画像の隅から取る。トリミング後の隅は文字の縁にあたる可能性が
+    // あり、それを padding に使うと PARSeq がゴースト文字として読んでしまう。
+    const padColor = {
+      r: imgData.data[0],
+      g: imgData.data[1],
+      b: imgData.data[2],
+    };
     const trimmed = await sharp(Buffer.from(imgData.data.buffer), {
       raw: { width: imgData.width, height: imgData.height, channels: 4 },
     })
@@ -254,6 +271,7 @@ async function runFullOcr(
       trimmedImg,
       0, 0, trimmedImg.width, trimmedImg.height,
       true, // preserveAspect
+      padColor,
     );
   }
 
@@ -356,6 +374,22 @@ describe("OCR pipeline integration", () => {
     const debugDump = readFileSync(fixturePath);
     const result = await runFullOcr(deimSession, parseqSession, debugDump);
     expect(result).toMatch(/62be994/);
+    // 末尾ノイズ (cfa8b33→cfa8b33111... 等) が混入しないこと
+    expect(result.length).toBeLessThan(15);
+  }, 30_000);
+
+  it("テキストが画像端まで伸びても、末尾にゴースト文字が混入しない", async () => {
+    // ユーザー報告: cfa8b33 を OCR すると "cfa8b33 1999999999999..." と
+    // 大量の 1 が後ろに混じる。PARSeq が空パディング領域に対しても
+    // token を吐き続け、停止トークンを返さないことが原因。
+    const fixturePath = resolve(__dirname, "fixtures/small-commit-hash-2.png");
+    const debugDump = readFileSync(fixturePath);
+    const result = await runFullOcr(deimSession, parseqSession, debugDump);
+    // 末尾ノイズが除去されていること (本来の文字数 ≒ 7 に近い)
+    expect(result.length).toBeLessThan(10);
+    // 認識結果に大量の数字・記号の繰り返しが残らないこと
+    expect(result).not.toMatch(/(.)\1{3,}/); // 同一文字4回以上の連続なし
+    expect(result).not.toMatch(/,\s*\d+/); // ", 数字" の繰り返しパターンなし
   }, 30_000);
 
   it("複数行テキストの認識がパディングで劣化しない", async () => {
