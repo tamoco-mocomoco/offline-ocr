@@ -117,6 +117,48 @@
         grid-template-columns: 1fr 1fr;
         gap: 12px;
       }
+      .info-card {
+        background: rgba(120, 180, 240, 0.06);
+        border: 1px solid rgba(78, 163, 255, 0.25);
+      }
+      .info-card h3 {
+        margin: 0 0 8px;
+        font-size: 13px;
+      }
+      .info-card ul {
+        margin: 4px 0 0 0;
+        padding-left: 20px;
+        font-size: 12px;
+      }
+      .warn-card {
+        background: rgba(220, 170, 60, 0.06);
+        border: 1px solid rgba(220, 170, 60, 0.3);
+      }
+      .warn-card h3 {
+        margin: 0 0 8px;
+        font-size: 13px;
+      }
+      input.prompt-input {
+        width: 100%;
+        padding: 6px 8px;
+        border: 1px solid rgba(127,127,127,0.4);
+        border-radius: 4px;
+        background: transparent;
+        font: inherit;
+        color: inherit;
+        box-sizing: border-box;
+      }
+      #ai-prompt-editor textarea {
+        min-height: 100px;
+      }
+      .availability {
+        font-size: 12px;
+        margin: 8px 0 0;
+        padding: 8px 10px;
+        border-radius: 4px;
+      }
+      .availability.ok { color: #1f7a3f; background: rgba(80, 200, 120, 0.1); }
+      .availability.ng { color: #b54848; background: rgba(220, 80, 80, 0.1); }
     </style>
   </head>
   <body>
@@ -180,6 +222,63 @@
         <li><code>Pattern: ー+</code>  <code>Flags: g</code>  <code>Replace: ー</code></li>
         <li><code>Pattern: ^\d+\s*</code>  <code>Flags: gm</code>  <code>Replace: (empty)</code></li>
       </ul>
+    </div>
+
+    <h2 data-i18n="aiHeading"></h2>
+    <p class="desc" data-i18n="aiDescription"></p>
+
+    <div class="card info-card">
+      <h3 data-i18n="aiWhyOfflineHeading"></h3>
+      <p style="margin:0 0 8px" data-i18n="aiWhyOfflineBody"></p>
+      <ul>
+        <li data-i18n="aiWhyOfflineItem1"></li>
+        <li data-i18n="aiWhyOfflineItem2"></li>
+        <li data-i18n="aiWhyOfflineItem3"></li>
+        <li data-i18n="aiWhyOfflineItem4"></li>
+      </ul>
+      <p class="hint" style="margin-top:8px" data-i18n="aiWhyOfflineNote"></p>
+    </div>
+
+    <div class="card warn-card">
+      <h3 data-i18n="aiDisclaimerHeading"></h3>
+      <p style="margin:0 0 10px" data-i18n="aiDisclaimerBody"></p>
+      <button id="open-ai-docs" class="secondary" data-i18n="aiDisclaimerButton"></button>
+    </div>
+
+    <div class="card">
+      <label style="display:flex; align-items:center; gap:8px; cursor:pointer;">
+        <input type="checkbox" id="ai-enabled" />
+        <span data-i18n="optionAIEnabled"></span>
+      </label>
+      <div id="ai-availability" class="availability" style="display:none"></div>
+      <div style="margin-top:12px">
+        <label for="ai-active-prompt" style="display:block; font-size:12px; color:#888; margin-bottom:4px">
+          <span data-i18n="optionAIActivePrompt"></span>
+        </label>
+        <select id="ai-active-prompt" style="width:100%; padding:6px 8px; border:1px solid rgba(127,127,127,0.4); border-radius:4px; background:transparent; color:inherit; font:inherit; box-sizing:border-box;"></select>
+      </div>
+      <p class="hint" style="margin-top:8px" data-i18n="optionAIActivePromptHint"></p>
+    </div>
+
+    <div class="card">
+      <div id="ai-prompt-editor">
+        <label style="display:block; font-size:11px; color:#888; margin-bottom:4px">
+          <span data-i18n="promptTitleLabel"></span>
+        </label>
+        <input type="text" id="ai-prompt-title" class="prompt-input" />
+        <label style="display:block; font-size:11px; color:#888; margin:12px 0 4px">
+          <span data-i18n="promptContentLabel"></span>
+        </label>
+        <textarea id="ai-prompt-content" data-i18n-placeholder="promptContentPlaceholder"></textarea>
+      </div>
+      <p id="ai-prompt-empty" style="display:none; color:#888; font-size:12px; margin:0 0 8px" data-i18n="emptyPromptsMessage"></p>
+      <div class="row">
+        <button id="add-ai-prompt" data-i18n="addPromptButton"></button>
+        <button id="delete-ai-prompt" class="danger" data-i18n="deletePromptButton"></button>
+        <button id="export-ai-prompts" class="secondary" data-i18n="exportPromptsButton"></button>
+        <button id="import-ai-prompts" class="secondary" data-i18n="importPromptsButton"></button>
+        <input type="file" id="import-ai-prompts-file" accept=".json" style="display:none" />
+      </div>
     </div>
 
     <h2 data-i18n="settingsDebugHeading"></h2>
