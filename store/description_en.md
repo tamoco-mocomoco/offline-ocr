@@ -55,6 +55,10 @@ We sincerely thank the National Diet Library for making their high-accuracy Japa
 
 ■ Changelog
 
+v0.7.0
+- Added OCR history. Every clipboard copy is automatically saved locally on your device (data is never sent externally); re-copy, edit, delete, and search from the new history page
+- Open the history via "Open history" in the popup or on the options page
+
 v0.6.2
 - Properly fixed the v0.6.0 issue that v0.6.1 had rolled back, and re-enabled the furigana filter and small-region OCR features
 

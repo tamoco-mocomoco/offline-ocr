@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "__MSG_extName__",
-  "version": "0.6.2",
+  "version": "0.7.0",
   "description": "__MSG_extDescription__",
   "default_locale": "en",
   "permissions": [
@@ -55,7 +55,8 @@
         "models/*",
         "assets/*",
         "offscreen.html",
-        "viewer.html"
+        "viewer.html",
+        "history.html"
       ],
       "matches": ["<all_urls>"]
     }

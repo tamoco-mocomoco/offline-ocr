@@ -2,6 +2,18 @@
 
 [日本語版はこちら](CHANGELOG_ja.md)
 
+## v0.7.0 (2026-07-01)
+
+- Added **OCR history**. Every result copied to the clipboard is now saved locally on your device (`chrome.storage.local`) so you can re-copy, edit, or delete past entries. Nothing is ever sent externally
+- The new history page (`history.html`) supports:
+  - Search by text, URL, or page title
+  - One-click re-copy
+  - Inline editing (with an "edited" badge, plus a Revert button to restore the original)
+  - Individual and bulk deletion, collapsible previews
+- Reachable from both the popup ("Open history") and the options page
+- New "OCR History" section in options: enable/disable, max entries (10–500), current count, and Clear all
+- History also captures OCR done from the viewer page
+
 ## v0.6.2 (2026-06-22)
 
 - Properly fixed the v0.6.0 bug that v0.6.1 had temporarily rolled back, and **re-enabled the furigana filter and small-region OCR features**

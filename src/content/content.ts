@@ -33,6 +33,55 @@ const SETTINGS_STORAGE_KEY = "settings";
 
 interface Settings {
   showResultAlert?: boolean;
+  historyEnabled?: boolean;
+  historyMaxItems?: number;
+}
+
+// --- Inline: history saver (kept in sync with shared/ocr-history.ts) --------
+
+const HISTORY_STORAGE_KEY = "ocrHistory";
+const HISTORY_DEFAULT_MAX = 100;
+const HISTORY_HARD_CAP = 500;
+
+interface OcrHistoryItem {
+  id: string;
+  text: string;
+  originalText?: string;
+  edited: boolean;
+  url?: string;
+  pageTitle?: string;
+  createdAt: number;
+  updatedAt?: number;
+}
+
+async function saveToHistory(
+  text: string,
+  meta: { url?: string; pageTitle?: string; maxItems?: number },
+): Promise<void> {
+  try {
+    const obj = await chrome.storage.local.get(HISTORY_STORAGE_KEY);
+    const arr = obj?.[HISTORY_STORAGE_KEY];
+    const items: OcrHistoryItem[] = Array.isArray(arr)
+      ? (arr as OcrHistoryItem[])
+      : [];
+    const rand = Math.floor(Math.random() * 0xffffff).toString(36);
+    const ts = Date.now().toString(36);
+    const item: OcrHistoryItem = {
+      id: `${ts}-${rand}`,
+      text,
+      originalText: text,
+      edited: false,
+      url: meta.url,
+      pageTitle: meta.pageTitle,
+      createdAt: Date.now(),
+    };
+    items.unshift(item);
+    const limit = Math.min(meta.maxItems ?? HISTORY_DEFAULT_MAX, HISTORY_HARD_CAP);
+    if (items.length > limit) items.length = limit;
+    await chrome.storage.local.set({ [HISTORY_STORAGE_KEY]: items });
+  } catch {
+    // 履歴保存失敗は本来の OCR フローを止めない
+  }
 }
 
 async function loadRules(): Promise<CleaningRule[]> {
@@ -347,10 +396,19 @@ type BackgroundToContent =
               ok,
               text: cleaned,
               showAlert: settings.showResultAlert ?? true,
+              historyEnabled: settings.historyEnabled ?? true,
+              historyMax: settings.historyMaxItems,
             }));
           })
-          .then(({ ok, text, showAlert }) => {
+          .then(({ ok, text, showAlert, historyEnabled, historyMax }) => {
             const len = text.length;
+            if (historyEnabled && text.length > 0) {
+              void saveToHistory(text, {
+                url: location.href,
+                pageTitle: document.title,
+                maxItems: historyMax,
+              });
+            }
             if (ok) {
               showToast(t("toastCopied", [String(len)]), { autoHideMs: 2500 });
             } else {

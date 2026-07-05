@@ -1,0 +1,181 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <title data-i18n="historyPageTitle"></title>
+    <style>
+      :root { color-scheme: light dark; }
+      body {
+        font: 13px/1.55 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        margin: 0;
+        padding: 24px;
+        max-width: 880px;
+      }
+      h1 { font-size: 18px; margin: 0 0 4px; }
+      h2 { font-size: 14px; margin: 24px 0 8px; }
+      p.desc { color: #777; margin: 0 0 16px; }
+      a { color: #4ea3ff; }
+      .toolbar {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+        margin: 0 0 14px;
+      }
+      .toolbar input[type="search"] {
+        flex: 1;
+        padding: 8px 10px;
+        border: 1px solid rgba(127,127,127,0.4);
+        border-radius: 6px;
+        background: transparent;
+        color: inherit;
+        font: inherit;
+      }
+      button {
+        padding: 6px 12px;
+        font: inherit;
+        background: #4ea3ff;
+        color: #fff;
+        border: 0;
+        border-radius: 4px;
+        cursor: pointer;
+      }
+      button:hover { background: #3892ee; }
+      button.secondary {
+        background: transparent;
+        color: inherit;
+        border: 1px solid rgba(127,127,127,0.4);
+      }
+      button.secondary:hover { background: rgba(127,127,127,0.08); }
+      button.danger { background: #d04848; }
+      button.danger:hover { background: #b73a3a; }
+      button.small {
+        padding: 4px 10px;
+        font-size: 11px;
+      }
+      .empty {
+        color: #888;
+        padding: 32px 0;
+        text-align: center;
+        font-size: 13px;
+      }
+      .item {
+        border: 1px solid rgba(127,127,127,0.25);
+        border-radius: 8px;
+        padding: 12px 14px;
+        margin-bottom: 10px;
+        background: rgba(127,127,127,0.04);
+      }
+      .item-head {
+        display: flex;
+        align-items: baseline;
+        justify-content: space-between;
+        margin-bottom: 6px;
+        gap: 8px;
+      }
+      .item-meta {
+        font-size: 11px;
+        color: #888;
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+        min-width: 0;
+      }
+      .item-meta .source {
+        max-width: 320px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      .item-meta .edited-badge {
+        background: rgba(255,193,7,0.18);
+        color: #856404;
+        border: 1px solid rgba(255,193,7,0.4);
+        border-radius: 3px;
+        padding: 0 4px;
+        font-size: 10px;
+      }
+      .item-text {
+        font-family: ui-monospace, Menlo, monospace;
+        font-size: 12px;
+        white-space: pre-wrap;
+        word-break: break-word;
+        background: rgba(127,127,127,0.06);
+        border-radius: 4px;
+        padding: 8px 10px;
+        max-height: 6.5em;
+        overflow: hidden;
+        position: relative;
+      }
+      .item-text.expanded { max-height: none; }
+      .item-text.has-overflow:not(.expanded)::after {
+        content: '';
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        height: 1.6em;
+        background: linear-gradient(to bottom, transparent, rgba(127,127,127,0.08));
+        pointer-events: none;
+      }
+      .item-actions {
+        display: flex;
+        gap: 6px;
+        margin-top: 8px;
+        flex-wrap: wrap;
+      }
+      .item-edit textarea {
+        width: 100%;
+        min-height: 120px;
+        padding: 8px 10px;
+        border: 1px solid rgba(127,127,127,0.4);
+        border-radius: 4px;
+        background: transparent;
+        color: inherit;
+        font: 12px/1.4 ui-monospace, Menlo, monospace;
+        resize: vertical;
+        box-sizing: border-box;
+        margin-bottom: 8px;
+      }
+      .flash {
+        position: fixed;
+        top: 16px;
+        right: 16px;
+        background: #1a1a2e;
+        color: #4ADE80;
+        padding: 10px 14px;
+        border-radius: 6px;
+        font-size: 12px;
+        font-weight: 600;
+        opacity: 0;
+        transform: translateY(-8px);
+        transition: opacity 0.2s, transform 0.2s;
+        z-index: 1000;
+        pointer-events: none;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+      }
+      .flash.show {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    </style>
+  </head>
+  <body>
+    <h1 data-i18n="historyPageTitle"></h1>
+    <p class="desc" data-i18n="historyPageDescription"></p>
+
+    <div class="toolbar">
+      <input
+        type="search"
+        id="search"
+        data-i18n-placeholder="historySearchPlaceholder"
+      />
+      <button id="clear-all" class="danger" data-i18n="historyClearAllButton"></button>
+    </div>
+
+    <div id="list"></div>
+
+    <div id="flash" class="flash"></div>
+
+    <script type="module" src="./history.ts"></script>
+  </body>
+</html>

@@ -13,6 +13,7 @@
 import { calcPadding } from "../ocr/engine/padding";
 import { loadRules, applyCleaningRules } from "../shared/cleaning";
 import { loadSettings } from "../shared/settings";
+import { addToHistory } from "../shared/ocr-history";
 
 const t = chrome.i18n.getMessage;
 
@@ -64,9 +65,12 @@ function hideToast(): void {
 
 // ── File loading ──
 
+let currentImageName: string | null = null;
+
 function loadFile(file: File): void {
   const url = URL.createObjectURL(file);
   const image = new Image();
+  currentImageName = file.name || null;
   image.onload = () => {
     img = image;
     canvas.width = image.naturalWidth;
@@ -266,6 +270,13 @@ chrome.runtime.onMessage.addListener((message) => {
         showToast(t("toastCopied", [String(len)]) || `コピーしました (${len}文字)`, 4000);
       } else {
         showToast(t("toastClipboardFailed") || "クリップボードに書き込めませんでした", 4000);
+      }
+      if ((settings.historyEnabled ?? true) && cleaned.length > 0) {
+        const sourceName = currentImageName;
+        void addToHistory(cleaned, {
+          pageTitle: sourceName ?? t("historySourceViewer"),
+          maxItems: settings.historyMaxItems,
+        });
       }
       if (settings.showResultAlert ?? true) {
         const header = ok
