@@ -172,6 +172,119 @@
     from { opacity: 0; }
     to   { opacity: 1; }
   }
+
+  /* ── Newspaper illustration ── */
+  .newspaper {
+    position: relative;
+    width: 320px;
+    height: 440px;
+    z-index: 10;
+    opacity: 0;
+    transform: translateY(40px) rotate(-6deg) scale(0.85);
+    animation: newsIn 0.7s cubic-bezier(0.34, 1.56, 0.64, 1) forwards 1.0s;
+    filter: drop-shadow(0 18px 32px rgba(0,0,0,0.4));
+  }
+  .news-page {
+    position: absolute;
+    inset: 0;
+    background:
+      radial-gradient(ellipse at 30% 20%, rgba(255,250,230,0.4) 0%, transparent 60%),
+      linear-gradient(to bottom right, #f5f2e8 0%, #ecdec2 100%);
+    border-radius: 3px;
+    overflow: hidden;
+    padding: 18px 20px;
+    color: #1a1612;
+    font-family: 'Noto Serif JP', 'Yuji Mai', serif;
+  }
+  .news-mast {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    border-bottom: 3px double #1a1612;
+    padding-bottom: 8px;
+    margin-bottom: 10px;
+  }
+  .news-mast-name {
+    font-family: 'Noto Serif JP', serif;
+    font-weight: 900;
+    font-size: 32px;
+    letter-spacing: 4px;
+  }
+  .news-mast-meta {
+    font-size: 10px;
+    opacity: 0.7;
+    letter-spacing: 1px;
+  }
+  .news-headline {
+    font-family: 'Noto Serif JP', serif;
+    font-weight: 900;
+    font-size: 22px;
+    line-height: 1.25;
+    margin-bottom: 8px;
+    padding-bottom: 6px;
+    border-bottom: 1px solid #1a1612;
+  }
+  .news-columns {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 8px;
+    height: 210px;
+  }
+  .news-col {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+  }
+  .news-col .line {
+    height: 2px;
+    background: rgba(26,22,18,0.55);
+    border-radius: 1px;
+  }
+  .news-col .line.short { width: 60%; }
+  .news-col .line.med { width: 80%; }
+  .news-col .photo {
+    height: 60px;
+    background:
+      repeating-linear-gradient(45deg, #bdb08a 0 4px, #a89a72 4px 8px);
+    border: 1px solid #1a1612;
+    margin: 2px 0;
+    border-radius: 1px;
+  }
+  .news-foot {
+    margin-top: 8px;
+    padding-top: 6px;
+    border-top: 1px solid #1a1612;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 10px;
+  }
+  .news-foot-tag {
+    background: #1a1612;
+    color: #f5f2e8;
+    padding: 2px 8px;
+    letter-spacing: 3px;
+    font-weight: 900;
+  }
+  .news-corner {
+    position: absolute;
+    top: -6px;
+    right: -6px;
+    width: 44px;
+    height: 44px;
+    background: transparent;
+    border-top: 3px solid #1a1612;
+    border-right: 3px solid #1a1612;
+    transform: rotate(-8deg);
+    opacity: 0.35;
+    pointer-events: none;
+  }
+
+  @keyframes newsIn {
+    0%   { opacity: 0; transform: translateY(60px) rotate(-15deg) scale(0.6); }
+    60%  { opacity: 1; transform: translateY(-10px) rotate(-2deg) scale(0.95); }
+    100% { opacity: 1; transform: translateY(0) rotate(-6deg) scale(1); }
+  }
 </style>
 </head>
 <body>
@@ -181,6 +294,55 @@
     <img src="../../public/icons/icon128.png" alt="icon">
   </div>
   <h1>Chrome拡張で<br>OCR作ってみた！</h1>
+
+  <div class="newspaper">
+    <div class="news-page">
+      <div class="news-mast">
+        <div class="news-mast-name">朝の一筆</div>
+        <div class="news-mast-meta">第千二十三号</div>
+      </div>
+      <div class="news-headline">駅前の古書店 半世紀の歴史に幕</div>
+      <div class="news-columns">
+        <div class="news-col">
+          <div class="line"></div>
+          <div class="line"></div>
+          <div class="line med"></div>
+          <div class="line"></div>
+          <div class="line short"></div>
+          <div class="line"></div>
+          <div class="line"></div>
+          <div class="line med"></div>
+          <div class="line"></div>
+          <div class="line short"></div>
+        </div>
+        <div class="news-col">
+          <div class="photo"></div>
+          <div class="line"></div>
+          <div class="line med"></div>
+          <div class="line"></div>
+          <div class="line short"></div>
+        </div>
+        <div class="news-col">
+          <div class="line"></div>
+          <div class="line short"></div>
+          <div class="line"></div>
+          <div class="line"></div>
+          <div class="line med"></div>
+          <div class="line"></div>
+          <div class="line"></div>
+          <div class="line short"></div>
+          <div class="line"></div>
+          <div class="line med"></div>
+        </div>
+      </div>
+      <div class="news-foot">
+        <span class="news-foot-tag">巷 の 話</span>
+        <span>2026.7.5</span>
+      </div>
+    </div>
+    <div class="news-corner"></div>
+  </div>
+
   <p class="subtitle"><span class="accent">新聞のコラム</span>も<br>縦書きで読めるよ</p>
   <span class="tag">📰 新聞OCR</span>
 </div>

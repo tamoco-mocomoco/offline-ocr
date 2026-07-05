@@ -189,10 +189,10 @@
   /* ===== Highlight callout ===== */
   .body-callout {
     position: absolute;
-    top: 470px;
-    left: 165px;
-    width: 760px;
-    height: 940px;
+    top: 465px;
+    left: 155px;
+    width: 845px;
+    height: 950px;
     border: 5px dashed #FFC107;
     border-radius: 24px;
     opacity: 0;
@@ -220,11 +220,11 @@
     animation: crosshairMove 8s linear 4s forwards;
   }
   @keyframes crosshairMove {
-    0%, 12% { opacity: 0; left: 175px; top: 480px; }
-    14% { opacity: 1; left: 175px; top: 480px; }
-    26% { opacity: 1; left: 915px; top: 1400px; }
-    62% { opacity: 1; left: 915px; top: 1400px; }
-    66% { opacity: 0; left: 915px; top: 1400px; }
+    0%, 12% { opacity: 0; left: 170px; top: 475px; }
+    14% { opacity: 1; left: 170px; top: 475px; }
+    26% { opacity: 1; left: 985px; top: 1405px; }
+    62% { opacity: 1; left: 985px; top: 1405px; }
+    66% { opacity: 0; left: 985px; top: 1405px; }
     100% { opacity: 0; }
   }
   .crosshair::before, .crosshair::after {
@@ -245,10 +245,10 @@
     animation: selRect 8s linear 4s forwards;
   }
   @keyframes selRect {
-    0%, 12% { opacity: 0; top: 470px; left: 170px; width: 0; height: 0; }
-    14% { opacity: 1; top: 470px; left: 170px; width: 0; height: 0; }
-    26% { opacity: 1; top: 470px; left: 170px; width: 750px; height: 935px; }
-    62% { opacity: 1; top: 470px; left: 170px; width: 750px; height: 935px; }
+    0%, 12% { opacity: 0; top: 470px; left: 160px; width: 0; height: 0; }
+    14% { opacity: 1; top: 470px; left: 160px; width: 0; height: 0; }
+    26% { opacity: 1; top: 470px; left: 160px; width: 830px; height: 935px; }
+    62% { opacity: 1; top: 470px; left: 160px; width: 830px; height: 935px; }
     65% { opacity: 0; }
     100% { opacity: 0; }
   }
@@ -274,8 +274,8 @@
   .scan-line {
     position: absolute;
     top: 470px;
-    left: 170px;
-    width: 750px;
+    left: 160px;
+    width: 830px;
     height: 5px;
     background: linear-gradient(90deg, transparent 0%, var(--primary) 30%, #fff 50%, var(--primary) 70%, transparent 100%);
     z-index: 85;
