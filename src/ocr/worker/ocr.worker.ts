@@ -8,7 +8,13 @@
 import * as ort from "onnxruntime-web/wasm";
 import { DEIMDetector, type Detection } from "../engine/deim";
 import { PARSeqRecognizer } from "../engine/parseq";
-import { cropImageData, decodeImage, trimEdgeColor } from "../engine/image-utils";
+import {
+  cropImageData,
+  decodeImage,
+  trimEdgeColor,
+  dominantBorderColor,
+  extractMainTextBand,
+} from "../engine/image-utils";
 import {
   detectionsToPage,
   findAll,
@@ -166,7 +172,12 @@ async function runOcr(imageBlob: Blob, presetId: string): Promise<void> {
     // 検出スコアがしきい値を下回るため、検出をスキップして PARSeq に直接渡す。
     const SMALL_IMAGE_BYPASS_MAX_SIDE = 200;
     if (Math.max(imgW, imgH) <= SMALL_IMAGE_BYPASS_MAX_SIDE) {
-      const trimmed = trimEdgeColor(imageData);
+      // 背景色は border 全体から dominant を集計 (1 pixel だけ見ると断片を
+      // 拾ってしまうため)。その色を基準に、上下の隣接行フラグメントを弾いて
+      // 本文行の帯だけを抽出してから、左右の余白を trim して PARSeq に渡す。
+      const bg = dominantBorderColor(imageData);
+      const band = extractMainTextBand(imageData, bg);
+      const trimmed = trimEdgeColor(band);
       const text = await recognizer!.read(trimmed, true);
       post({ type: "detect-done", numDetections: 1 });
       post({
