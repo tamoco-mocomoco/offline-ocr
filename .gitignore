@@ -4,6 +4,10 @@ dist
 *.zip
 .DS_Store
 
+# Playwright e2e outputs
+test-results/
+playwright-report/
+
 # Generated video/audio assets (re-creatable from scripts)
 store/video/voice/
 store/video/recordings/

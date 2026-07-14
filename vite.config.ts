@@ -126,4 +126,8 @@ export default defineConfig({
   optimizeDeps: {
     exclude: ["onnxruntime-web"],
   },
-});
+  // vitest picks up this block; test/e2e is Playwright-only.
+  test: {
+    exclude: ["**/node_modules/**", "**/dist/**", "test/e2e/**"],
+  },
+} as import("vite").UserConfig & { test: unknown });

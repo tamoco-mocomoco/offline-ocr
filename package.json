@@ -7,13 +7,16 @@
     "build": "tsc --noEmit && vite build",
     "dev": "vite build --watch",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "test:e2e": "playwright test --config test/e2e/playwright.config.ts",
+    "test:e2e:headed": "playwright test --config test/e2e/playwright.config.ts --headed"
   },
   "dependencies": {
     "idb-keyval": "^6.2.1",
     "onnxruntime-web": "^1.21.0"
   },
   "devDependencies": {
+    "@playwright/test": "^1.61.1",
     "@types/chrome": "^0.0.287",
     "onnxruntime-node": "^1.24.3",
     "sharp": "^0.34.5",
