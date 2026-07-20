@@ -14,6 +14,12 @@ import {
   saveSettings,
   type DebugLastCrop,
 } from "../shared/settings";
+import {
+  clearHistory,
+  listHistory,
+  DEFAULT_MAX_ITEMS,
+  HARD_CAP,
+} from "../shared/ocr-history";
 
 const t = chrome.i18n.getMessage;
 
@@ -339,6 +345,55 @@ async function init(): Promise<void> {
     imageEl.removeAttribute("src");
     previewEl.style.display = "none";
     metaEl.textContent = t("debugCropCleared");
+  });
+
+  // ── 履歴設定 ──
+  const historyCheckbox = document.getElementById("history-enabled") as HTMLInputElement;
+  const historyMaxInput = document.getElementById("history-max-items") as HTMLInputElement;
+  const historyCountEl = document.getElementById("history-count")!;
+  const openHistoryBtn = document.getElementById("open-history-from-options")!;
+  const clearHistoryBtn = document.getElementById("clear-history")!;
+
+  historyCheckbox.checked = settings.historyEnabled ?? true;
+  historyMaxInput.value = String(settings.historyMaxItems ?? DEFAULT_MAX_ITEMS);
+  historyMaxInput.max = String(HARD_CAP);
+
+  async function refreshHistoryCount(): Promise<void> {
+    const items = await listHistory();
+    historyCountEl.textContent = t("historyCountLabel", [String(items.length)]);
+  }
+  void refreshHistoryCount();
+
+  historyCheckbox.addEventListener("change", async () => {
+    const s = await loadSettings();
+    s.historyEnabled = historyCheckbox.checked;
+    await saveSettings(s);
+  });
+
+  historyMaxInput.addEventListener("change", async () => {
+    let n = parseInt(historyMaxInput.value, 10);
+    if (isNaN(n) || n < 10) n = 10;
+    if (n > HARD_CAP) n = HARD_CAP;
+    historyMaxInput.value = String(n);
+    const s = await loadSettings();
+    s.historyMaxItems = n;
+    await saveSettings(s);
+  });
+
+  openHistoryBtn.addEventListener("click", () => {
+    void chrome.tabs.create({ url: chrome.runtime.getURL("history.html") });
+  });
+
+  clearHistoryBtn.addEventListener("click", async () => {
+    if (!confirm(t("historyClearAllConfirm"))) return;
+    await clearHistory();
+    await refreshHistoryCount();
+  });
+
+  chrome.storage.onChanged.addListener((changes, area) => {
+    if (area === "local" && changes.ocrHistory) {
+      void refreshHistoryCount();
+    }
   });
 }
 

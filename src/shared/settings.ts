@@ -5,6 +5,10 @@
 export interface Settings {
   showResultAlert?: boolean;
   debugMode?: boolean;
+  /** OCR履歴を保存するか (default: true) */
+  historyEnabled?: boolean;
+  /** 履歴の最大件数 (default: 100, max: 500) */
+  historyMaxItems?: number;
 }
 
 export const DEBUG_LAST_CROP_KEY = "debugLastCrop";

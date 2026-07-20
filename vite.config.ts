@@ -31,6 +31,7 @@ function postBuildLayout(): Plugin {
         ["src/popup/popup.html", "popup.html"],
         ["src/options/options.html", "options.html"],
         ["src/viewer/viewer.html", "viewer.html"],
+        ["src/history/history.html", "history.html"],
       ];
       for (const [from, to] of moves) {
         const src = resolve(dist, from);
@@ -105,6 +106,7 @@ export default defineConfig({
         popup: resolve(__dirname, "src/popup/popup.html"),
         options: resolve(__dirname, "src/options/options.html"),
         viewer: resolve(__dirname, "src/viewer/viewer.html"),
+        history: resolve(__dirname, "src/history/history.html"),
       },
       output: {
         // Stable, predictable filenames so manifest.json can reference them
@@ -124,4 +126,8 @@ export default defineConfig({
   optimizeDeps: {
     exclude: ["onnxruntime-web"],
   },
-});
+  // vitest picks up this block; test/e2e is Playwright-only.
+  test: {
+    exclude: ["**/node_modules/**", "**/dist/**", "test/e2e/**"],
+  },
+} as import("vite").UserConfig & { test: unknown });

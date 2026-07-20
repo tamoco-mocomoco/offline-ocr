@@ -85,6 +85,11 @@ document.getElementById("open-options")?.addEventListener("click", (ev) => {
   window.close();
 });
 
+document.getElementById("open-history")?.addEventListener("click", () => {
+  void chrome.tabs.create({ url: chrome.runtime.getURL("history.html") });
+  window.close();
+});
+
 // ── Paste clipboard image for OCR ──
 
 document.getElementById("paste-clipboard")?.addEventListener("click", async () => {

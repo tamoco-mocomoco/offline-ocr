@@ -132,6 +132,33 @@
       <p class="hint" style="margin-top:6px" data-i18n="optionShowResultAlertHint"></p>
     </div>
 
+    <h2 data-i18n="settingsHistoryHeading"></h2>
+    <div class="card">
+      <label style="display:flex; align-items:center; gap:8px; cursor:pointer;">
+        <input type="checkbox" id="history-enabled" />
+        <span data-i18n="optionHistoryEnabled"></span>
+      </label>
+      <p class="hint" style="margin-top:6px" data-i18n="optionHistoryEnabledHint"></p>
+      <div class="row">
+        <label style="display:flex; align-items:center; gap:8px;">
+          <span data-i18n="optionHistoryMaxItems"></span>
+          <input
+            id="history-max-items"
+            type="number"
+            min="10"
+            max="500"
+            step="10"
+            style="width:90px; padding:6px 8px; border:1px solid rgba(127,127,127,0.4); border-radius:4px; background:transparent; color:inherit; font:inherit;"
+          />
+        </label>
+      </div>
+      <div class="row">
+        <button id="open-history-from-options" class="secondary" data-i18n="openHistoryButton"></button>
+        <button id="clear-history" class="danger" data-i18n="historyClearAllButton"></button>
+        <span id="history-count" class="hint" style="margin-left:8px"></span>
+      </div>
+    </div>
+
     <h2 data-i18n="settingsShortcutsHeading"></h2>
     <div class="card">
       <p style="margin:0 0 8px" data-i18n="shortcutsDescription"></p>

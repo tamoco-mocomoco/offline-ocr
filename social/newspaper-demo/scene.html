@@ -1,0 +1,495 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=1080, height=1920">
+<title>Newspaper Column OCR Demo (vertical)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700;900&family=Noto+Serif+JP:wght@400;700;900&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --primary: #5B9BD5;
+    --ink: #1a1612;
+    --paper: #f5f2e8;
+    --bg-gradient: linear-gradient(160deg, #1E3A5F 0%, #2C5F8A 50%, #5B9BD5 100%);
+  }
+
+  *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: #111;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 1080px;
+    height: 1920px;
+    overflow: hidden;
+    font-family: 'Noto Sans JP', sans-serif;
+  }
+
+  .slide {
+    position: relative;
+    width: 1080px;
+    height: 1920px;
+    background: var(--bg-gradient);
+    overflow: hidden;
+  }
+
+  /* ===== Page header ===== */
+  .page-header {
+    position: absolute;
+    top: 70px;
+    left: 60px;
+    width: 960px;
+    text-align: center;
+    color: #fff;
+    z-index: 4;
+  }
+  .page-header-title {
+    font-family: 'Noto Serif JP', serif;
+    font-weight: 900;
+    font-size: 52px;
+    letter-spacing: 6px;
+    text-shadow: 0 4px 16px rgba(0,0,0,0.4);
+  }
+  .page-header-sub {
+    margin-top: 8px;
+    font-size: 22px;
+    opacity: 0.7;
+    letter-spacing: 4px;
+  }
+
+  /* ===== Newspaper page ===== */
+  .newspaper {
+    position: absolute;
+    top: 260px;
+    left: 70px;
+    width: 940px;
+    height: 1220px;
+    background:
+      radial-gradient(ellipse at 30% 20%, rgba(255,250,230,0.4) 0%, transparent 60%),
+      linear-gradient(to bottom right, var(--paper) 0%, #ece8d8 100%);
+    border-radius: 4px;
+    box-shadow:
+      0 30px 80px rgba(0,0,0,0.45),
+      inset 0 0 80px rgba(160,140,100,0.12);
+    overflow: hidden;
+    padding: 50px 60px;
+    animation: pageDim 8s linear 4s forwards;
+  }
+  @keyframes pageDim {
+    0%, 74% { opacity: 1; filter: brightness(1); }
+    77%, 100% { opacity: 0.3; filter: brightness(0.55); }
+  }
+
+  /* Subtle vertical newsprint fiber lines */
+  .newspaper::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background:
+      repeating-linear-gradient(
+        90deg,
+        transparent 0,
+        transparent 14px,
+        rgba(140,100,40,0.03) 14px,
+        rgba(140,100,40,0.03) 15px
+      );
+    pointer-events: none;
+  }
+
+  /* Masthead inside the page (paper name + edition) */
+  .masthead {
+    border-bottom: 4px double var(--ink);
+    padding-bottom: 16px;
+    margin-bottom: 22px;
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    position: relative;
+    z-index: 2;
+    color: var(--ink);
+  }
+  .masthead-name {
+    font-family: 'Noto Serif JP', serif;
+    font-weight: 900;
+    font-size: 44px;
+    letter-spacing: 8px;
+  }
+  .masthead-meta {
+    font-size: 18px;
+    opacity: 0.7;
+    letter-spacing: 2px;
+  }
+
+  /* Column section header */
+  .column-head {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 30px;
+    position: relative;
+    z-index: 2;
+  }
+  .column-head-tag {
+    font-family: 'Noto Serif JP', serif;
+    font-weight: 900;
+    font-size: 26px;
+    color: #fff;
+    background: var(--ink);
+    padding: 6px 18px;
+    letter-spacing: 4px;
+  }
+  .column-head-title {
+    font-family: 'Noto Serif JP', serif;
+    font-weight: 900;
+    font-size: 36px;
+    color: var(--ink);
+    letter-spacing: 4px;
+  }
+
+  /* Vertical text body */
+  .body {
+    display: flex;
+    flex-direction: row-reverse; /* right-to-left columns */
+    gap: 56px;
+    color: var(--ink);
+    font-family: 'Noto Serif JP', serif;
+    font-weight: 700;
+    height: 920px;
+    position: relative;
+    z-index: 2;
+    padding-top: 10px;
+  }
+  .body-col {
+    writing-mode: vertical-rl;
+    font-size: 78px;
+    line-height: 1.55;
+    letter-spacing: 0.04em;
+    white-space: nowrap;
+  }
+  .body-col .marker {
+    font-size: 60px;
+    color: var(--ink);
+    margin-bottom: 6px;
+    opacity: 0.85;
+  }
+
+  /* Aged stains */
+  .newspaper-stain {
+    position: absolute;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(120,80,40,0.13) 0%, transparent 70%);
+    pointer-events: none;
+  }
+  .newspaper-stain.s1 { top: 80px; right: 60px; width: 70px; height: 70px; }
+  .newspaper-stain.s2 { bottom: 200px; left: 30px; width: 90px; height: 90px; }
+
+  /* ===== Highlight callout ===== */
+  .body-callout {
+    position: absolute;
+    top: 465px;
+    left: 155px;
+    width: 845px;
+    height: 950px;
+    border: 5px dashed #FFC107;
+    border-radius: 24px;
+    opacity: 0;
+    z-index: 70;
+    pointer-events: none;
+    animation: bodyCallout 4s linear forwards;
+    box-shadow: 0 0 50px rgba(255,193,7,0.55);
+  }
+  @keyframes bodyCallout {
+    0%, 25% { opacity: 0; transform: scale(0.9); }
+    32% { opacity: 1; transform: scale(1.04); }
+    40% { opacity: 1; transform: scale(1); }
+    85% { opacity: 1; transform: scale(1); }
+    100% { opacity: 0; transform: scale(1); }
+  }
+
+  /* ===== Selection ===== */
+  .crosshair {
+    position: absolute;
+    width: 36px;
+    height: 36px;
+    z-index: 90;
+    pointer-events: none;
+    opacity: 0;
+    animation: crosshairMove 8s linear 4s forwards;
+  }
+  @keyframes crosshairMove {
+    0%, 12% { opacity: 0; left: 170px; top: 475px; }
+    14% { opacity: 1; left: 170px; top: 475px; }
+    26% { opacity: 1; left: 985px; top: 1405px; }
+    62% { opacity: 1; left: 985px; top: 1405px; }
+    66% { opacity: 0; left: 985px; top: 1405px; }
+    100% { opacity: 0; }
+  }
+  .crosshair::before, .crosshair::after {
+    content: '';
+    position: absolute;
+    background: var(--primary);
+  }
+  .crosshair::before { width: 3px; height: 36px; left: 16px; top: 0; }
+  .crosshair::after { width: 36px; height: 3px; top: 16px; left: 0; }
+
+  .selection-rect {
+    position: absolute;
+    border: 4px solid var(--primary);
+    background: rgba(91, 155, 213, 0.10);
+    z-index: 80;
+    opacity: 0;
+    pointer-events: none;
+    animation: selRect 8s linear 4s forwards;
+  }
+  @keyframes selRect {
+    0%, 12% { opacity: 0; top: 470px; left: 160px; width: 0; height: 0; }
+    14% { opacity: 1; top: 470px; left: 160px; width: 0; height: 0; }
+    26% { opacity: 1; top: 470px; left: 160px; width: 830px; height: 935px; }
+    62% { opacity: 1; top: 470px; left: 160px; width: 830px; height: 935px; }
+    65% { opacity: 0; }
+    100% { opacity: 0; }
+  }
+  .selection-rect::before {
+    content: '';
+    position: absolute;
+    top: -8px; left: -8px;
+    width: 14px; height: 14px;
+    border: 3px solid var(--primary);
+    background: #fff;
+    border-radius: 3px;
+  }
+  .selection-rect::after {
+    content: '';
+    position: absolute;
+    bottom: -8px; right: -8px;
+    width: 14px; height: 14px;
+    border: 3px solid var(--primary);
+    background: #fff;
+    border-radius: 3px;
+  }
+
+  .scan-line {
+    position: absolute;
+    top: 470px;
+    left: 160px;
+    width: 830px;
+    height: 5px;
+    background: linear-gradient(90deg, transparent 0%, var(--primary) 30%, #fff 50%, var(--primary) 70%, transparent 100%);
+    z-index: 85;
+    opacity: 0;
+    pointer-events: none;
+    animation: scanLine 8s linear 4s forwards;
+    box-shadow: 0 0 16px rgba(91,155,213,0.8);
+  }
+  @keyframes scanLine {
+    0%, 30% { opacity: 0; top: 470px; }
+    32% { opacity: 1; top: 470px; }
+    44% { opacity: 1; top: 1400px; }
+    45% { opacity: 0; top: 1400px; }
+    100% { opacity: 0; }
+  }
+
+  /* ===== Toast ===== */
+  .toast {
+    position: absolute;
+    top: 200px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #1a1a2e;
+    color: #4ADE80;
+    padding: 22px 48px;
+    border-radius: 14px;
+    font-size: 32px;
+    font-weight: 700;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.35);
+    z-index: 95;
+    opacity: 0;
+    animation: toast 8s linear 4s forwards;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    white-space: nowrap;
+  }
+  @keyframes toast {
+    0%, 47% { opacity: 0; transform: translateX(-50%) translateY(-12px); }
+    49% { opacity: 1; transform: translateX(-50%) translateY(0); }
+    66% { opacity: 1; transform: translateX(-50%) translateY(0); }
+    69% { opacity: 0; transform: translateX(-50%) translateY(0); }
+    100% { opacity: 0; }
+  }
+
+  /* ===== Result Panel ===== */
+  .result-panel {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%) scale(0.9);
+    width: 960px;
+    background: #fff;
+    border-radius: 22px;
+    box-shadow: 0 24px 70px rgba(0,0,0,0.5);
+    z-index: 88;
+    opacity: 0;
+    overflow: hidden;
+    animation: resultPanel 8s linear 4s forwards;
+  }
+  @keyframes resultPanel {
+    0%, 74% { opacity: 0; transform: translate(-50%, -50%) scale(0.9); }
+    77%, 100% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+  }
+  .result-header {
+    background: #f8f9fa;
+    padding: 26px 36px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    border-bottom: 1px solid #e5e7eb;
+  }
+  .result-header-icon {
+    width: 44px;
+    height: 44px;
+    background: var(--primary);
+    border-radius: 9px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    font-size: 24px;
+  }
+  .result-header-title {
+    font-size: 26px;
+    font-weight: 700;
+    color: #333;
+  }
+  .result-body {
+    padding: 50px 36px;
+    text-align: center;
+  }
+  .result-text {
+    font-size: 42px;
+    font-weight: 900;
+    color: #1E3A5F;
+    background: #f0f7ff;
+    border: 3px dashed var(--primary);
+    border-radius: 14px;
+    padding: 32px 36px;
+    display: inline-block;
+    font-family: 'Noto Serif JP', serif;
+    letter-spacing: 2px;
+    line-height: 1.6;
+    max-width: 100%;
+  }
+  .result-label {
+    margin-top: 22px;
+    font-size: 22px;
+    color: #888;
+  }
+
+  /* ===== Telops ===== */
+  .telop {
+    position: absolute;
+    bottom: 180px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 48px;
+    font-weight: 900;
+    color: #fff;
+    background: rgba(0,0,0,0.65);
+    border-radius: 18px;
+    padding: 24px 56px;
+    white-space: nowrap;
+    opacity: 0;
+    z-index: 60;
+    text-align: center;
+    box-shadow: 0 8px 30px rgba(0,0,0,0.3);
+  }
+  .telop-1 {
+    animation: telop1 8s linear 4s forwards;
+  }
+  @keyframes telop1 {
+    0%, 2% { opacity: 0; transform: translateX(-50%) translateY(20px); }
+    5% { opacity: 1; transform: translateX(-50%) translateY(0); }
+    24% { opacity: 1; }
+    28% { opacity: 0; }
+    100% { opacity: 0; }
+  }
+  .telop-2 {
+    animation: telop2 8s linear 4s forwards;
+    background: rgba(30, 58, 95, 0.92);
+  }
+  @keyframes telop2 {
+    0%, 73% { opacity: 0; transform: translateX(-50%) scale(0.85); }
+    77% { opacity: 1; transform: translateX(-50%) scale(1.05); }
+    80%, 100% { opacity: 1; transform: translateX(-50%) scale(1); }
+  }
+</style>
+</head>
+<body>
+<div class="slide">
+
+  <!-- Page header -->
+  <div class="page-header">
+    <div class="page-header-title">朝刊</div>
+    <div class="page-header-sub">NEWS COLUMN SAMPLE</div>
+  </div>
+
+  <!-- Newspaper -->
+  <div class="newspaper">
+    <div class="newspaper-stain s1"></div>
+    <div class="newspaper-stain s2"></div>
+
+    <!-- Masthead -->
+    <div class="masthead">
+      <div class="masthead-name">朝の一筆</div>
+      <div class="masthead-meta">第千二十三号</div>
+    </div>
+
+    <!-- Column header -->
+    <div class="column-head">
+      <div class="column-head-tag">本日</div>
+      <div class="column-head-title">巷の話</div>
+    </div>
+
+    <!-- Vertical body columns (right→left) -->
+    <div class="body">
+      <div class="body-col"><span class="marker">▼</span>駅前の古書店が</div>
+      <div class="body-col">半世紀の歴史を</div>
+      <div class="body-col">静かに閉じた</div>
+    </div>
+  </div>
+
+  <!-- Highlight callout around body text -->
+  <div class="body-callout"></div>
+
+  <!-- Selection UI -->
+  <div class="selection-rect"></div>
+  <div class="scan-line"></div>
+  <div class="crosshair"></div>
+
+  <!-- Toast -->
+  <div class="toast">
+    <span>&#10003;</span> コピーしました (20文字)
+  </div>
+
+  <!-- Result panel -->
+  <div class="result-panel">
+    <div class="result-header">
+      <div class="result-header-icon">📋</div>
+      <div class="result-header-title">クリップボードにコピー</div>
+    </div>
+    <div class="result-body">
+      <div class="result-text">▼駅前の古書店が半世紀の歴史を静かに閉じた</div>
+      <div class="result-label">縦書きコラムを横書きで取得</div>
+    </div>
+  </div>
+
+  <!-- Telops -->
+  <div class="telop telop-1">新聞のコラムもそのまま</div>
+  <div class="telop telop-2">📰 縦書きOCRもイケる！</div>
+
+</div>
+</body>
+</html>

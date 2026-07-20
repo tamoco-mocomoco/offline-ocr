@@ -2,48 +2,17 @@
  * Tests for joinLinesWithRowDetection — the function that decides whether two
  * consecutive recognized OCR lines should be joined by TAB (same row of a
  * table) or NEWLINE.
- *
- * Importing offscreen.ts at the top would trigger its module-scope side
- * effects (creating an OcrWorker, posting messages to chrome.runtime). We
- * dodge that by reading the source file and evaluating just the function we
- * need — same pattern used for content.ts's inline cleaning helpers.
  */
 
-import { describe, it, expect, beforeAll } from "vitest";
-import { readFileSync } from "node:fs";
-import { resolve } from "node:path";
+import { describe, it, expect } from "vitest";
+import {
+  joinLinesWithRowDetection as join,
+  type RecognizedLine,
+} from "../../shared/join-lines";
 
-type Line = { text: string; x: number; y: number; w: number; h: number };
-type JoinFn = (lines: ReadonlyArray<Line>) => string;
-
-function extract(source: string, name: string): string {
-  const start = source.indexOf(`function ${name}(`);
-  if (start === -1) throw new Error(`${name} not found`);
-  let depth = 0;
-  for (let i = start; i < source.length; i++) {
-    if (source[i] === "{") depth++;
-    else if (source[i] === "}") {
-      depth--;
-      if (depth === 0) return source.slice(start, i + 1);
-    }
-  }
-  throw new Error(`could not extract ${name}`);
-}
+type Line = RecognizedLine;
 
 describe("joinLinesWithRowDetection", () => {
-  let join: JoinFn;
-
-  beforeAll(() => {
-    const src = readFileSync(resolve(__dirname, "../offscreen.ts"), "utf8");
-    const body = extract(src, "joinLinesWithRowDetection");
-    const stripped = body
-      .replace(/: ReadonlyArray<RecognizedLine>/g, "")
-      .replace(/: string/g, "")
-      .replace(/^export /, "");
-    const factory = new Function(`${stripped}\nreturn joinLinesWithRowDetection;`);
-    join = factory() as JoinFn;
-  });
-
   const h = (
     text: string,
     x: number,
