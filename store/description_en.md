@@ -55,6 +55,10 @@ We sincerely thank the National Diet Library for making their high-accuracy Japa
 
 ■ Changelog
 
+v0.7.1
+- Fixed a bug where OCR'ing a small selection could append unwanted trailing characters (a run of "1"s) to the result
+- Fragments of adjacent lines were the culprit; padding color is now taken from the majority color across the border, and a row-ink profile step picks the main text band while dropping thin fragment bands
+
 v0.7.0
 - Added OCR history. Every clipboard copy is automatically saved locally on your device (data is never sent externally); re-copy, edit, delete, and search from the new history page
 - Open the history via "Open history" in the popup or on the options page

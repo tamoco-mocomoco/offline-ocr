@@ -2,6 +2,13 @@
 
 [日本語版はこちら](CHANGELOG_ja.md)
 
+## v0.7.1 (2026-07-09)
+
+- Fixed a bug where OCR'ing a small selection could **append unwanted trailing characters (a run of `1`s)** to the result. Fragments of the adjacent lines caught near the top/bottom of the crop were being stretched vertically by the adjacent-color padding, and PARSeq read those vertical strips as `1`s
+- Padding color is now computed from the **majority color across the entire border** of the image, so a stray fragment pixel no longer skews the pad color
+- Added a **row-ink profile** step that finds contiguous ink bands and picks the tallest one as the main text line — thin fragment bands above/below are dropped automatically
+- The full journey is written up in [this Zenn article](https://zenn.dev/lecto/articles/small-selection-padding-journey) (Japanese)
+
 ## v0.7.0 (2026-07-01)
 
 - Added **OCR history**. Every result copied to the clipboard is now saved locally on your device (`chrome.storage.local`) so you can re-copy, edit, or delete past entries. Nothing is ever sent externally

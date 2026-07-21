@@ -239,6 +239,79 @@ async function runParseq(
 const SMALL_IMAGE_BYPASS_MAX_SIDE = 200;
 
 /** Full OCR pipeline: detect → parse → reading order → recognize */
+/**
+ * Compute the dominant color on the image border (top / bottom / left / right rows/cols).
+ * "枠のうち面積割合の一番大きい色" — 断片文字が数ピクセル入っていても、大部分
+ * を占める背景色を返す。
+ */
+function dominantBorderColor(
+  data: Uint8ClampedArray,
+  width: number,
+  height: number,
+): { r: number; g: number; b: number } {
+  const buckets = new Map<string, number>();
+  const bin = (v: number) => v >> 4; // 16-level quantization per channel
+  const bump = (x: number, y: number) => {
+    const i = (y * width + x) * 4;
+    const key = `${bin(data[i])}-${bin(data[i + 1])}-${bin(data[i + 2])}`;
+    buckets.set(key, (buckets.get(key) ?? 0) + 1);
+  };
+  for (let x = 0; x < width; x++) {
+    bump(x, 0);
+    bump(x, height - 1);
+  }
+  for (let y = 0; y < height; y++) {
+    bump(0, y);
+    bump(width - 1, y);
+  }
+  let bestKey = "0-0-0";
+  let bestCount = 0;
+  for (const [k, c] of buckets) if (c > bestCount) { bestCount = c; bestKey = k; }
+  const [rq, gq, bq] = bestKey.split("-").map(Number);
+  return { r: (rq << 4) | 8, g: (gq << 4) | 8, b: (bq << 4) | 8 };
+}
+
+/**
+ * 行ごとの「非背景ピクセル数」プロファイルを作り、連続する ink 行の中で
+ * 高さが最大の帯を「本文行」とみなしてその範囲を返す。
+ * 上下に隣接行の文字断片が入っていても、断片は帯として細いので除外できる。
+ */
+function findMainTextBand(
+  data: Uint8ClampedArray,
+  width: number,
+  height: number,
+  bg: { r: number; g: number; b: number },
+  threshold: number = 40,
+): { top: number; bottom: number } {
+  const rowInk = new Uint32Array(height);
+  const th2 = threshold * threshold;
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      const i = (y * width + x) * 4;
+      const dr = data[i] - bg.r;
+      const dg = data[i + 1] - bg.g;
+      const db = data[i + 2] - bg.b;
+      if (dr * dr + dg * dg + db * db > th2) rowInk[y]++;
+    }
+  }
+  const bands: { start: number; end: number }[] = [];
+  let start = -1;
+  for (let y = 0; y <= height; y++) {
+    const inkOn = y < height && rowInk[y] > 0;
+    if (inkOn) {
+      if (start === -1) start = y;
+    } else if (start !== -1) {
+      bands.push({ start, end: y });
+      start = -1;
+    }
+  }
+  if (bands.length === 0) return { top: 0, bottom: height };
+  const main = bands.reduce((max, b) =>
+    b.end - b.start > max.end - max.start ? b : max,
+  bands[0]);
+  return { top: main.start, bottom: main.end };
+}
+
 async function runFullOcr(
   deimSession: ort.InferenceSession,
   parseqSession: ort.InferenceSession,
@@ -247,15 +320,29 @@ async function runFullOcr(
   const imgData = await loadImageData(pngBuffer);
 
   if (Math.max(imgData.width, imgData.height) <= SMALL_IMAGE_BYPASS_MAX_SIDE) {
-    // 背景色は元画像の隅から取る。トリミング後の隅は文字の縁にあたる可能性が
-    // あり、それを padding に使うと PARSeq がゴースト文字として読んでしまう。
-    const padColor = {
-      r: imgData.data[0],
-      g: imgData.data[1],
-      b: imgData.data[2],
-    };
-    const trimmed = await sharp(Buffer.from(imgData.data.buffer), {
+    // 背景色は枠から dominant color を集計。1 pixel だけ見ると断片ピクセルを
+    // 引いてしまう可能性があるため、border 全体から多数派を選ぶ。
+    const padColor = dominantBorderColor(imgData.data, imgData.width, imgData.height);
+    // 上下に隣接行の断片があるとき sharp.trim() は取り除けないので、
+    // 行ごとの ink プロファイルから "本文行" の帯だけを抽出する。
+    const band = findMainTextBand(imgData.data, imgData.width, imgData.height, padColor);
+    const bandHeight = band.bottom - band.top;
+    const bandBuf = await sharp(Buffer.from(imgData.data.buffer), {
       raw: { width: imgData.width, height: imgData.height, channels: 4 },
+    })
+      .extract({ left: 0, top: band.top, width: imgData.width, height: bandHeight })
+      .ensureAlpha()
+      .raw()
+      .toBuffer({ resolveWithObject: true });
+    const bandImg = {
+      data: new Uint8ClampedArray(bandBuf.data.buffer),
+      width: bandBuf.info.width,
+      height: bandBuf.info.height,
+    };
+    // 抽出後の左右にも余白があれば sharp.trim() で最終整形（本文だけになった
+    // 状態なので、左右の bg が取れる）
+    const trimmed = await sharp(Buffer.from(bandImg.data.buffer), {
+      raw: { width: bandImg.width, height: bandImg.height, channels: 4 },
     })
       .trim({ threshold: 30 })
       .ensureAlpha()
@@ -390,6 +477,23 @@ describe("OCR pipeline integration", () => {
     // 認識結果に大量の数字・記号の繰り返しが残らないこと
     expect(result).not.toMatch(/(.)\1{3,}/); // 同一文字4回以上の連続なし
     expect(result).not.toMatch(/,\s*\d+/); // ", 数字" の繰り返しパターンなし
+  }, 30_000);
+
+  it("目的の文字の上下に隣接行の断片があっても、断片が引き伸ばされてゴースト文字にならない", async () => {
+    // ユーザー報告: 特定の1行を狙って選択したとき、上下に隣接行の
+    // 「文字の断片」（文字の下半分や上半分だけがピクセル数行分だけ写る）
+    // が入ることがある。その断片が隣接色パディングで引き延ばされて
+    // 「11111」のような細い縦線として PARSeq が誤認識してしまう。
+    // fixture: 上に「日本花子 サンプル」の下端、中央に cfa8b33、
+    //          下に「2026年 個人開発」の上端が写った 180x120 画像
+    const fixturePath = resolve(__dirname, "fixtures/adjacent-text-fragments.png");
+    const debugDump = readFileSync(fixturePath);
+    const result = await runFullOcr(deimSession, parseqSession, debugDump);
+    // 目的の cfa8b33 が認識されていること
+    expect(result).toMatch(/cfa8b33/);
+    // 断片起因のノイズが混入しないこと
+    expect(result.length).toBeLessThan(15);
+    expect(result).not.toMatch(/(.)\1{3,}/);
   }, 30_000);
 
   it("複数行テキストの認識がパディングで劣化しない", async () => {

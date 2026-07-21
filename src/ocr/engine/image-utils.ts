@@ -64,6 +64,70 @@ export function cropImageData(
 }
 
 /**
+ * Border から dominant (面積割合の一番大きい) 色を返す。
+ * 1 pixel だけ見ると断片ピクセルを引いてしまう可能性があるため、
+ * 上下左右の枠全体を集計して多数派を選ぶ。
+ */
+export function dominantBorderColor(src: ImageData): { r: number; g: number; b: number } {
+  const { data, width, height } = src;
+  const buckets = new Map<string, number>();
+  const bin = (v: number) => v >> 4; // 16-level quantization per channel
+  const bump = (x: number, y: number) => {
+    const i = (y * width + x) * 4;
+    const key = `${bin(data[i])}-${bin(data[i + 1])}-${bin(data[i + 2])}`;
+    buckets.set(key, (buckets.get(key) ?? 0) + 1);
+  };
+  for (let x = 0; x < width; x++) { bump(x, 0); bump(x, height - 1); }
+  for (let y = 0; y < height; y++) { bump(0, y); bump(width - 1, y); }
+  let bestKey = "0-0-0";
+  let bestCount = 0;
+  for (const [k, c] of buckets) if (c > bestCount) { bestCount = c; bestKey = k; }
+  const [rq, gq, bq] = bestKey.split("-").map(Number);
+  return { r: (rq << 4) | 8, g: (gq << 4) | 8, b: (bq << 4) | 8 };
+}
+
+/**
+ * 行ごとのインク量プロファイルから、連続する ink 行のうち最大の高さを持つ帯を
+ * 「本文行」とみなしてクロップ。上下に隣接行の文字断片 (line fragments) が
+ * 数ピクセルだけ写っていても、それらは細い帯として弾かれ、本文行だけが残る。
+ */
+export function extractMainTextBand(
+  src: ImageData,
+  bg?: { r: number; g: number; b: number },
+  threshold: number = 40,
+): ImageData {
+  const { data, width, height } = src;
+  const cbg = bg ?? dominantBorderColor(src);
+  const th2 = threshold * threshold;
+  const rowInk = new Uint32Array(height);
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      const i = (y * width + x) * 4;
+      const dr = data[i] - cbg.r;
+      const dg = data[i + 1] - cbg.g;
+      const db = data[i + 2] - cbg.b;
+      if (dr * dr + dg * dg + db * db > th2) rowInk[y]++;
+    }
+  }
+  const bands: { start: number; end: number }[] = [];
+  let start = -1;
+  for (let y = 0; y <= height; y++) {
+    const inkOn = y < height && rowInk[y] > 0;
+    if (inkOn) {
+      if (start === -1) start = y;
+    } else if (start !== -1) {
+      bands.push({ start, end: y });
+      start = -1;
+    }
+  }
+  if (bands.length === 0) return src;
+  const main = bands.reduce((max, b) =>
+    b.end - b.start > max.end - max.start ? b : max,
+  bands[0]);
+  return cropImageData(src, 0, main.start, width, main.end - main.start);
+}
+
+/**
  * Trim uniform edge-color padding from an ImageData. Used to strip the
  * adjacent-color padding added before detection when we bypass DEIM for
  * small images, so PARSeq sees mostly text instead of mostly padding.
