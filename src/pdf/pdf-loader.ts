@@ -32,10 +32,9 @@ import type {
 } from "pdfjs-dist/types/src/display/api";
 // Bundle the worker chunk with Vite so the loader works fully offline.
 // `?url` on a .mjs asks Vite to emit it and give us the resolved URL.
-// In the Node test environment this import is not executed because we set
-// `disableWorker: true` before calling `getDocument`; see below.
+// In the Node test environment `?url` isn't understood, so we resolve the
+// worker path a different way (see `configureWorker` below).
 // eslint-disable-next-line import/no-unresolved
-// @ts-expect-error - Vite-only import, resolved at bundle time
 import PdfWorkerUrl from "pdfjs-dist/legacy/build/pdf.worker.mjs?url";
 
 // ---------------------------------------------------------------------------
@@ -135,8 +134,6 @@ export async function loadPdf(
     // No auto-fetch/stream: bytes are already in-memory
     disableAutoFetch: true,
     disableStream: true,
-    // CSP-friendly: never eval
-    isEvalSupported: false,
   });
 
   let doc: PDFDocumentProxy;

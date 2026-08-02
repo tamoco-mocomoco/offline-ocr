@@ -137,3 +137,29 @@ fileInput.addEventListener("change", () => {
   };
   reader.readAsDataURL(file);
 });
+
+// ── Open local PDF for OCR ──
+
+const pdfInput = document.getElementById("pdf-input") as HTMLInputElement;
+
+document.getElementById("open-pdf")?.addEventListener("click", () => {
+  pdfInput.click();
+});
+
+pdfInput.addEventListener("change", () => {
+  const file = pdfInput.files?.[0];
+  if (!file) return;
+  setStatus(t("statusLoading"));
+  const reader = new FileReader();
+  reader.onload = async () => {
+    await chrome.storage.session.set({
+      viewerPdf: reader.result as string,
+      viewerPdfName: file.name,
+    });
+    await chrome.tabs.create({
+      url: chrome.runtime.getURL("viewer.html?mode=pdf"),
+    });
+    window.close();
+  };
+  reader.readAsDataURL(file);
+});

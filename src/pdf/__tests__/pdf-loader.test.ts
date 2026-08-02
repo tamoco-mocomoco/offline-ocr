@@ -78,10 +78,8 @@ describe("loadPdf", () => {
   it("accepts ArrayBuffer input as well as Uint8Array", async () => {
     // Copy into a fresh ArrayBuffer to make sure the input path isn't limited
     // to Uint8Array (viewer's file input reads as ArrayBuffer).
-    const ab = normalBytes.buffer.slice(
-      normalBytes.byteOffset,
-      normalBytes.byteOffset + normalBytes.byteLength,
-    );
+    const ab = new ArrayBuffer(normalBytes.byteLength);
+    new Uint8Array(ab).set(normalBytes);
     const doc = await loadPdf(ab);
     expect(doc.pageCount).toBe(3);
     await doc.destroy();
