@@ -55,6 +55,12 @@ We sincerely thank the National Diet Library for making their high-accuracy Japa
 
 ■ Changelog
 
+v0.8.0
+- PDF OCR support. From the popup's new "Open PDF" button, open a local PDF in the viewer and OCR any page you like (password-protected PDFs are not yet supported)
+- The viewer now has page navigation (◀ / ▶ buttons, page indicator, ← / → keys)
+- OCR history entries are labeled `filename.pdf#p2` so you can trace which page of which PDF a result came from
+- All PDF rendering and OCR runs locally — the zero-network policy is preserved
+
 v0.7.1
 - Fixed a bug where OCR'ing a small selection could append unwanted trailing characters (a run of "1"s) to the result
 - Fragments of adjacent lines were the culprit; padding color is now taken from the majority color across the border, and a row-ink profile step picks the main text band while dropping thin fragment bands
