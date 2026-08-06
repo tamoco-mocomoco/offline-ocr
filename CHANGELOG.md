@@ -2,7 +2,7 @@
 
 [日本語版はこちら](CHANGELOG_ja.md)
 
-## v0.8.0 (2026-08-02)
+## v0.8.0 (2026-08-06)
 
 - **PDF OCR support**. From the popup's new "Open PDF" button, open a local (password-less) PDF in the viewer and OCR any page you like
 - The viewer now has **page navigation** (◀ / ▶ buttons, page indicator, and ← / → keys) — the existing region-select and full-page OCR work on the current page as-is
