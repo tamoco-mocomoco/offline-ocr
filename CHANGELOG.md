@@ -2,6 +2,15 @@
 
 [日本語版はこちら](CHANGELOG_ja.md)
 
+## v0.8.0 (2026-08-06)
+
+- **PDF OCR support**. From the popup's new "Open PDF" button, open a local (password-less) PDF in the viewer and OCR any page you like
+- The viewer now has **page navigation** (◀ / ▶ buttons, page indicator, and ← / → keys) — the existing region-select and full-page OCR work on the current page as-is
+- OCR history entries are labeled `filename.pdf#p2` so you can trace which page of which PDF a result came from
+- Password-protected PDFs are out of scope for this release and are rejected with a clear error
+- Under the hood: `pdfjs-dist` is bundled and every page is rendered locally. **The zero-network policy is preserved**
+- Design doc: `docs/pdf-viewer-design.md`
+
 ## v0.7.1 (2026-07-09)
 
 - Fixed a bug where OCR'ing a small selection could **append unwanted trailing characters (a run of `1`s)** to the result. Fragments of the adjacent lines caught near the top/bottom of the crop were being stretched vertically by the adjacent-color padding, and PARSeq read those vertical strips as `1`s

@@ -46,6 +46,28 @@
         color: #aaa;
         flex: 1;
       }
+      /* PDF page nav (only shown when a PDF is loaded) */
+      .pdf-nav {
+        display: none;
+        align-items: center;
+        gap: 6px;
+        padding: 0 8px;
+        border-left: 1px solid #333;
+      }
+      .pdf-nav.active { display: flex; }
+      .pdf-nav .page-indicator {
+        min-width: 60px;
+        text-align: center;
+        font-variant-numeric: tabular-nums;
+        color: #ddd;
+        font-size: 13px;
+      }
+      .pdf-nav button {
+        padding: 4px 10px;
+        font-size: 13px;
+        background: #555;
+      }
+      .pdf-nav button:hover { background: #666; }
       /* Canvas area */
       .canvas-area {
         flex: 1;
@@ -99,7 +121,12 @@
       <button id="btn-open" class="secondary" data-i18n="viewerOpenButton"></button>
       <button id="btn-select" disabled data-i18n="viewerSelectButton"></button>
       <button id="btn-ocr-all" disabled data-i18n="viewerOcrAllButton"></button>
-      <input type="file" id="file-input" accept="image/*" style="display:none;" />
+      <div class="pdf-nav" id="pdf-nav">
+        <button id="btn-pdf-prev" data-i18n-title="viewerPdfPrevButton" aria-label="prev">◀</button>
+        <span class="page-indicator" id="pdf-page-indicator"></span>
+        <button id="btn-pdf-next" data-i18n-title="viewerPdfNextButton" aria-label="next">▶</button>
+      </div>
+      <input type="file" id="file-input" accept="image/*,application/pdf,.pdf" style="display:none;" />
       <span class="status" id="status" data-i18n="viewerDropHint"></span>
     </div>
     <div class="canvas-area" id="canvas-area">

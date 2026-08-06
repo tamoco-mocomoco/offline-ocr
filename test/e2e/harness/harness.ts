@@ -5,6 +5,11 @@ import type {
 } from "../../../src/ocr/worker/ocr.worker";
 import { DEFAULT_PRESET_ID } from "../../../src/ocr/config/model-config";
 import { joinLinesWithRowDetection } from "../../../src/shared/join-lines";
+import {
+  loadPdf,
+  PdfPasswordError,
+  PdfLoadError,
+} from "../../../src/pdf/pdf-loader";
 
 type OcrLine = {
   text: string;
@@ -81,6 +86,19 @@ declare global {
       whenReady: () => Promise<void>;
       run: (bytes: Uint8Array | number[]) => Promise<OcrResult>;
     };
+    __pdf: {
+      loadFromUrl: (url: string) => Promise<{
+        pageCount: number;
+        renderPage: (n: number) => Promise<{
+          width: number;
+          height: number;
+          bytes: number[];
+        }>;
+        destroy: () => Promise<void>;
+      }>;
+      expectPasswordError: (url: string) => Promise<boolean>;
+      expectLoadError: (bytes: number[]) => Promise<boolean>;
+    };
   }
 }
 
@@ -89,4 +107,44 @@ window.__ocr = {
   whenReady: () => readyPromise,
   run: (bytes) =>
     runOcr(bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes)),
+};
+
+window.__pdf = {
+  async loadFromUrl(url) {
+    const res = await fetch(url);
+    if (!res.ok) throw new Error(`fetch failed: ${res.status}`);
+    const bytes = new Uint8Array(await res.arrayBuffer());
+    const doc = await loadPdf(bytes);
+    return {
+      pageCount: doc.pageCount,
+      async renderPage(n: number) {
+        const page = await doc.getPage(n);
+        const blob = await page.render();
+        return {
+          width: page.width,
+          height: page.height,
+          bytes: Array.from(new Uint8Array(await blob.arrayBuffer())),
+        };
+      },
+      destroy: () => doc.destroy(),
+    };
+  },
+  async expectPasswordError(url) {
+    const res = await fetch(url);
+    const bytes = new Uint8Array(await res.arrayBuffer());
+    try {
+      await loadPdf(bytes);
+      return false;
+    } catch (e) {
+      return e instanceof PdfPasswordError;
+    }
+  },
+  async expectLoadError(bytes) {
+    try {
+      await loadPdf(new Uint8Array(bytes));
+      return false;
+    } catch (e) {
+      return e instanceof PdfLoadError;
+    }
+  },
 };

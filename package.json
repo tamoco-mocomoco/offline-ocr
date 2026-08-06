@@ -1,6 +1,6 @@
 {
   "name": "chrome-extension-ndlocr-lite",
-  "version": "0.7.1",
+  "version": "0.8.0",
   "private": true,
   "type": "module",
   "scripts": {
@@ -13,12 +13,14 @@
   },
   "dependencies": {
     "idb-keyval": "^6.2.1",
-    "onnxruntime-web": "^1.21.0"
+    "onnxruntime-web": "^1.21.0",
+    "pdfjs-dist": "^6.2.108"
   },
   "devDependencies": {
     "@playwright/test": "^1.61.1",
     "@types/chrome": "^0.0.287",
     "onnxruntime-node": "^1.24.3",
+    "pdfkit": "^0.19.1",
     "sharp": "^0.34.5",
     "typescript": "^5.7.0",
     "vite": "^6.0.0",
