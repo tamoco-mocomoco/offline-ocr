@@ -210,37 +210,64 @@ async function runOcr(imageBlob: Blob, presetId: string): Promise<void> {
     const lines = filterFurigana(lineBoxes).map((b) => b.line);
     const total = lines.length;
 
-    const resultLines: {
+    type LineResult = {
       text: string;
       x: number;
       y: number;
       w: number;
       h: number;
       conf: number;
-    }[] = [];
+    };
+    // Sized array so we can write results out of order and keep the reading
+    // order determined by the upstream evalPage/filterFurigana pass.
+    const resultLines: LineResult[] = new Array(total);
 
-    for (let i = 0; i < lines.length; i++) {
-      const line = lines[i];
+    // Run PARSeq for each detected line with bounded concurrency. Even when
+    // ORT serializes on a single WASM thread this is a wash (never slower),
+    // and on WebGPU multiple lines can overlap on the GPU. Concurrency is
+    // capped so a page with many lines doesn't blow memory.
+    const PARSEQ_CONCURRENCY = 4;
+    let completed = 0;
+
+    const processLine = async (idx: number): Promise<void> => {
+      const line = lines[idx];
       const x = parseInt(line.attrs.X ?? "0");
       const y = parseInt(line.attrs.Y ?? "0");
       const w = parseInt(line.attrs.WIDTH ?? "0");
       const h = parseInt(line.attrs.HEIGHT ?? "0");
       const conf = parseFloat(line.attrs.CONF ?? "0");
-
       if (w <= 0 || h <= 0) {
-        resultLines.push({ text: "", x, y, w, h, conf });
-        continue;
+        resultLines[idx] = { text: "", x, y, w, h, conf };
+      } else {
+        const lineImg = cropImageData(imageData, x, y, w, h);
+        const text = await recognizeLine(lineImg);
+        line.attrs.STRING = text;
+        resultLines[idx] = { text, x, y, w, h, conf };
       }
-
-      const lineImg = cropImageData(imageData, x, y, w, h);
-      const text = await recognizeLine(lineImg);
-      line.attrs.STRING = text;
-      resultLines.push({ text, x, y, w, h, conf });
-
-      if ((i + 1) % 5 === 0 || i === total - 1) {
-        post({ type: "recognize-progress", current: i + 1, total });
+      completed++;
+      if (completed % 5 === 0 || completed === total) {
+        post({
+          type: "recognize-progress",
+          current: completed,
+          total,
+        });
       }
-    }
+    };
+
+    // Simple worker-pool pattern: shared index counter, `min(N, total)`
+    // workers each pull the next line.
+    let next = 0;
+    const worker = async (): Promise<void> => {
+      while (true) {
+        const idx = next++;
+        if (idx >= total) return;
+        await processLine(idx);
+      }
+    };
+    const workerCount = Math.min(PARSEQ_CONCURRENCY, Math.max(total, 1));
+    await Promise.all(
+      Array.from({ length: workerCount }, () => worker()),
+    );
 
     post({ type: "result", lines: resultLines, detections, page });
   } catch (e) {
