@@ -125,3 +125,24 @@ export function argmaxAxis2WithConfTrim(
   }
   return indices;
 }
+
+/**
+ * PARSeq (CTC 系デコーダ) が入力に確信を持てないとき、同じ短いトークンを
+ * スペース区切りで繰り返して max seq length を埋める挙動が観察される
+ * (例: 暗背景+白ラテン文字を認識できずに `the the the ... the` を吐く)。
+ *
+ * 3連続以上の同一空白区切りトークンが出現した位置以降を全て捨てる。
+ * - 正常な OCR 結果には空白区切りで同一トークンが3回以上並ぶことはほぼない
+ *   (日本語は空白区切りが少なく、表のタブ区切り出力は上位層でしか行わない)
+ * - 先頭からループしているケース (correct prefix なし) は空文字が返る
+ *   → 上位層で「文字を検出できませんでした」として扱われ、fail-closed になる
+ */
+export function trimCtcLoopTail(text: string): string {
+  const parts = text.split(/\s+/).filter(Boolean);
+  for (let i = 0; i < parts.length - 2; i++) {
+    if (parts[i] === parts[i + 1] && parts[i] === parts[i + 2]) {
+      return parts.slice(0, i).join(" ").trimEnd();
+    }
+  }
+  return text;
+}

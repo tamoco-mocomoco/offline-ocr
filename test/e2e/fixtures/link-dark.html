@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>OCR fixture: dark-bg underlined link</title>
+    <style>
+      body {
+        margin: 0;
+        padding: 40px;
+        background: #0d1117;
+        font-family:
+          "Helvetica Neue",
+          "Segoe UI",
+          Arial,
+          sans-serif;
+      }
+      .chip {
+        display: inline-block;
+        background: #161b22;
+        color: #f0f6fc;
+        font-weight: 800;
+        text-decoration: underline;
+        border-radius: 4px;
+      }
+      /* Small: both dims ≤ 200 → SMALL_IMAGE_BYPASS_MAX_SIDE path */
+      #target-small {
+        padding: 6px 10px;
+        font-size: 14px;
+      }
+      /* Medium: matches roughly what a user selects on a link chip */
+      #target-medium {
+        padding: 10px 14px;
+        font-size: 18px;
+        margin-top: 20px;
+      }
+      /* Large: goes through DEIM path */
+      #target-large {
+        padding: 14px 24px;
+        font-size: 22px;
+        margin-top: 20px;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="target-small" class="chip">tamoco-mocomoco</div><br />
+    <div id="target-medium" class="chip">tamoco-mocomoco</div><br />
+    <div id="target-large" class="chip">tamoco-mocomoco</div>
+  </body>
+</html>

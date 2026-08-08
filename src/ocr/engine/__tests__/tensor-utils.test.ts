@@ -1,5 +1,11 @@
 import { describe, it, expect } from "vitest";
-import { hwcToChw, normalizeImageNet, normalizeBgr, argmaxAxis2 } from "../tensor-utils";
+import {
+  hwcToChw,
+  normalizeImageNet,
+  normalizeBgr,
+  argmaxAxis2,
+  trimCtcLoopTail,
+} from "../tensor-utils";
 
 describe("hwcToChw", () => {
   it("transposes a 2x2x3 tensor correctly", () => {
@@ -125,5 +131,46 @@ describe("argmaxAxis2", () => {
     const data = new Float32Array([-10, -5, -20]);
     const result = argmaxAxis2(data, 1, 3);
     expect(result[0]).toBe(1); // -5 is the max
+  });
+});
+
+describe("trimCtcLoopTail", () => {
+  it("leaves normal short text alone", () => {
+    expect(trimCtcLoopTail("こんにちは")).toBe("こんにちは");
+    expect(trimCtcLoopTail("hello world")).toBe("hello world");
+    expect(trimCtcLoopTail("")).toBe("");
+  });
+
+  it("leaves 2 repetitions alone (not a loop)", () => {
+    expect(trimCtcLoopTail("the the end")).toBe("the the end");
+    expect(trimCtcLoopTail("は は")).toBe("は は");
+  });
+
+  it("trims a CTC-loop tail while keeping the correct prefix", () => {
+    const input =
+      "tamoco-mocomoco the the the the the the the the the the th";
+    expect(trimCtcLoopTail(input)).toBe("tamoco-mocomoco");
+  });
+
+  it("returns empty when the whole output is a loop", () => {
+    const input =
+      "the the the the the the the the the the the the the the th";
+    expect(trimCtcLoopTail(input)).toBe("");
+  });
+
+  it("trims a loop of a longer token too", () => {
+    const input = "abc def ghi ghi ghi ghi ghi";
+    expect(trimCtcLoopTail(input)).toBe("abc def");
+  });
+
+  it("trims from the first run when multiple runs exist", () => {
+    // First run "aa aa aa" begins at index 1 — cut everything from there
+    const input = "start aa aa aa middle bb bb bb end";
+    expect(trimCtcLoopTail(input)).toBe("start");
+  });
+
+  it("does not fire on non-loop text with repeated 2-char words", () => {
+    // Two-time repetition is fine; three consecutive same tokens is the trigger
+    expect(trimCtcLoopTail("ha ha ok")).toBe("ha ha ok");
   });
 });

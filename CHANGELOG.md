@@ -6,7 +6,7 @@
 
 - **Faster OCR on multi-line pages**. When DEIM detects multiple lines, PARSeq recognition used to run one line at a time; it now runs up to 4 lines in parallel via a worker-pool. Newspaper columns, receipts, and multi-paragraph documents see visible wall-clock improvement as line count grows
 - Output order is preserved (idx-based writes keep the upstream reading-order pass authoritative). No effect on 1–2 line captures
-- Internal change only — no UI, feature, or output-format changes
+- **Fixed a bug where OCR'ing a short Latin label on a dark background could return `the the the ...` (a token repeated dozens of times)**. When PARSeq is uncertain about its input, the CTC decoder can degenerate into a loop. A post-processing step now cuts everything from the first run of ≥3 identical space-separated tokens, applied uniformly to both the small-image bypass path and per-line DEIM path
 
 ## v0.8.0 (2026-08-06)
 

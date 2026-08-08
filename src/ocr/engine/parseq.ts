@@ -1,6 +1,12 @@
 import * as ort from "onnxruntime-web/wasm";
 import { resizeForParseq } from "./image-utils";
-import { normalizeBgr, hwcToChw, argmaxAxis2, argmaxAxis2WithConfTrim } from "./tensor-utils";
+import {
+  normalizeBgr,
+  hwcToChw,
+  argmaxAxis2,
+  argmaxAxis2WithConfTrim,
+  trimCtcLoopTail,
+} from "./tensor-utils";
 import { CHARSET_TRAIN } from "../config/charset";
 import { type ModelConfig } from "../config/model-config";
 
@@ -76,7 +82,13 @@ export class PARSeqRecognizer {
       }
     }
 
-    return preserveAspect ? result.replace(/[\s,;:.\-_]+$/, "") : result;
+    // PARSeq が入力に確信を持てないと、末尾を同一トークンで埋めるループを
+    // 吐くことがある (例: 暗背景の Latin 短文で `the the the ...`)。
+    // 経路によらず一律に除去する。
+    const loopTrimmed = trimCtcLoopTail(result);
+    return preserveAspect
+      ? loopTrimmed.replace(/[\s,;:.\-_]+$/, "")
+      : loopTrimmed;
   }
 
   dispose(): void {
