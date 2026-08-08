@@ -127,22 +127,75 @@ export function argmaxAxis2WithConfTrim(
 }
 
 /**
- * PARSeq (CTC 系デコーダ) が入力に確信を持てないとき、同じ短いトークンを
- * スペース区切りで繰り返して max seq length を埋める挙動が観察される
- * (例: 暗背景+白ラテン文字を認識できずに `the the the ... the` を吐く)。
+ * PARSeq (CTC 系デコーダ) が入力に確信を持てないとき、同じ短い部分列を
+ * 繰り返して max seq length を埋める挙動が観察される。実例:
+ *  - `the the the ... the`               (word-level, 空白区切り)
+ *  - `S.ES.ES.ES.ES.ES.IRES ...`         (character-level, 空白なし)
+ *  - `ぱぱぱぱぱぱ`                          (single-char)
  *
- * 3連続以上の同一空白区切りトークンが出現した位置以降を全て捨てる。
- * - 正常な OCR 結果には空白区切りで同一トークンが3回以上並ぶことはほぼない
- *   (日本語は空白区切りが少なく、表のタブ区切り出力は上位層でしか行わない)
+ * この関数では2段階でループを検出して以降を切り捨てる:
+ *   1) 空白区切りトークン単位で3連続同一を先頭から探す
+ *   2) 文字レベルで、長さ2〜10の substring が3回以上連続する位置を先頭から探す
+ * どちらかで最も早い trim ポイントを採用する。
+ *
+ * - 空白区切りで同一トークンが3回、または短い文字列が3回連続、というパターンは
+ *   通常の OCR 結果 (日本語・英数字混在) にはほとんど出現しない
  * - 先頭からループしているケース (correct prefix なし) は空文字が返る
- *   → 上位層で「文字を検出できませんでした」として扱われ、fail-closed になる
+ *   → 上位層で「文字を検出できませんでした」として扱われる (fail-closed)
  */
 export function trimCtcLoopTail(text: string): string {
-  const parts = text.split(/\s+/).filter(Boolean);
-  for (let i = 0; i < parts.length - 2; i++) {
-    if (parts[i] === parts[i + 1] && parts[i] === parts[i + 2]) {
-      return parts.slice(0, i).join(" ").trimEnd();
+  const wordTrim = findWhitespaceLoopStart(text);
+  const charTrim = findCharLevelLoopStart(text);
+  const cut =
+    wordTrim === -1
+      ? charTrim
+      : charTrim === -1
+        ? wordTrim
+        : Math.min(wordTrim, charTrim);
+  if (cut === -1) return text;
+  return text.slice(0, cut).trimEnd();
+}
+
+/** Return the char index where 3 identical whitespace-separated tokens start, or -1. */
+function findWhitespaceLoopStart(text: string): number {
+  const re = /\S+/g;
+  const tokens: { start: number; end: number; str: string }[] = [];
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(text)) !== null) {
+    tokens.push({ start: m.index, end: m.index + m[0].length, str: m[0] });
+  }
+  for (let i = 0; i < tokens.length - 2; i++) {
+    if (
+      tokens[i].str === tokens[i + 1].str &&
+      tokens[i].str === tokens[i + 2].str
+    ) {
+      return tokens[i].start;
     }
   }
-  return text;
+  return -1;
+}
+
+/**
+ * Return the char index where a substring of length 2..10 repeats 3 or more
+ * times consecutively, or -1. Skips runs whose substring is whitespace only.
+ * Prefers earliest position; among ties prefers shorter substring.
+ */
+function findCharLevelLoopStart(text: string): number {
+  const MAX_LEN = 10;
+  const MIN_LEN = 2;
+  let bestStart = -1;
+  for (let len = MIN_LEN; len <= MAX_LEN; len++) {
+    for (let start = 0; start + 3 * len <= text.length; start++) {
+      const s = text.slice(start, start + len);
+      if (s.trim().length === 0) continue;
+      if (
+        text.slice(start + len, start + 2 * len) === s &&
+        text.slice(start + 2 * len, start + 3 * len) === s
+      ) {
+        if (bestStart === -1 || start < bestStart) bestStart = start;
+        break; // earliest for this len; move to next len
+      }
+    }
+  }
+  return bestStart;
 }

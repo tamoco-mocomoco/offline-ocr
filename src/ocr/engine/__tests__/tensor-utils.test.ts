@@ -173,4 +173,40 @@ describe("trimCtcLoopTail", () => {
     // Two-time repetition is fine; three consecutive same tokens is the trigger
     expect(trimCtcLoopTail("ha ha ok")).toBe("ha ha ok");
   });
+
+  it("trims character-level repetition without whitespace", () => {
+    // Real observed PARSeq output when it fails to decode a dark chip
+    const input =
+      "CHANGELOG_ja. CHANGE CHAND CON S.ES.ES.ES.ES.ES.IRES AHEDESHED";
+    // The '.ES' pattern repeats 5+ times starting at position 33 (after
+    // "CHANGELOG_ja. CHANGE CHAND CON S"). Everything from that S is cut.
+    const out = trimCtcLoopTail(input);
+    expect(out.startsWith("CHANGELOG_ja.")).toBe(true);
+    expect(out).not.toContain(".ES.ES.ES");
+    // Whatever's kept must not itself contain 3-run character repetition
+    expect(out.length).toBeLessThan(input.length);
+  });
+
+  it("trims character-level repetition of long substrings too", () => {
+    // Substring of length 4 repeating 3 times
+    const input = "prefix xxABCDABCDABCD suffix";
+    // 'ABCD' at pos 9,13,17 → 3-run → trim from pos 9 → "prefix xx"
+    expect(trimCtcLoopTail(input)).toBe("prefix xx");
+  });
+
+  it("does not fire on legitimate short doubles", () => {
+    // 2-char runs are not enough
+    expect(trimCtcLoopTail("あいういう")).toBe("あいういう");
+    expect(trimCtcLoopTail("hihi")).toBe("hihi");
+  });
+
+  it("word-level trim wins when it starts earlier than char-level", () => {
+    // "aa aa aa" starts at pos 6 (word-level); no char-level 3-run earlier
+    expect(trimCtcLoopTail("start aa aa aa xyzxyzxyz end")).toBe("start");
+  });
+
+  it("char-level trim wins when it starts earlier than word-level", () => {
+    // "abcabcabc" 3-run at pos 6, word-level "zz zz zz" starts at pos 20
+    expect(trimCtcLoopTail("start abcabcabc mid zz zz zz end")).toBe("start");
+  });
 });

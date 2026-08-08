@@ -61,14 +61,28 @@ async function ocrElement(
   }
 }
 
-// Detects the CTC-loop failure: the same short token repeated 3+ times in a
-// row anywhere in the output. This catches both "the the the ..." (pure
-// loop) and "tamoco-mocomoco the the the ..." (correct start + loop tail).
+// Detects the CTC-loop failure in the final OCR output. Catches both the
+// whitespace-token variant (`the the the ...`) and the character-level
+// variant (`.ES.ES.ES ...`) that mutation-loop garbage cases can produce.
 function looksLikeCtcLoop(text: string): boolean {
+  // Word-level: 3 consecutive identical whitespace-separated tokens
   const parts = text.split(/\s+/).filter(Boolean);
   for (let i = 0; i < parts.length - 2; i++) {
     if (parts[i] === parts[i + 1] && parts[i] === parts[i + 2]) {
       return true;
+    }
+  }
+  // Character-level: any 2-to-10 char substring repeating 3+ times
+  for (let len = 2; len <= 10; len++) {
+    for (let start = 0; start + 3 * len <= text.length; start++) {
+      const s = text.slice(start, start + len);
+      if (s.trim().length === 0) continue;
+      if (
+        text.slice(start + len, start + 2 * len) === s &&
+        text.slice(start + 2 * len, start + 3 * len) === s
+      ) {
+        return true;
+      }
     }
   }
   return false;
@@ -142,4 +156,80 @@ test.describe("dark-bg Latin label OCR", () => {
       expect(text.toLowerCase()).toContain("tamoco");
     },
   );
+});
+
+// Additional user-reported regression: OCR'ing a filename-style link chip
+// (`CHANGELOG_ja.md`) on dark bg produced a mutation-loop garbage output:
+// `CHANGELOG_ja. CHANGE CHAND CON S.ES.ES.ES.ES.ES.IRES AHEDESHED PRONESTION
+// STION O` (mix of correct prefix + word-level noise + character-level
+// `.ES` loop). The character-level part of `trimCtcLoopTail` catches the
+// `.ES` run; this ensures the guard fires end-to-end (not just in unit
+// tests on synthetic intermediate strings).
+test.describe("dark-bg filename chip OCR (CHANGELOG_ja.md)", () => {
+  const fileBypassCases = [
+    { name: "small (bypass path)", selector: "#target-file-small" },
+    { name: "medium (bypass path)", selector: "#target-file-medium" },
+  ];
+
+  for (const c of fileBypassCases) {
+    test(`${c.name}: 'CHANGELOG_ja.md' is recognized, no CTC loop leaks`, async ({
+      context,
+    }) => {
+      const { text, width, height } = await ocrElement(
+        context,
+        "/test/e2e/fixtures/link-dark.html",
+        c.selector,
+      );
+      console.log(
+        `[${c.name}] size=${Math.round(width)}x${Math.round(height)} text=${JSON.stringify(text)}`,
+      );
+      expect(looksLikeCtcLoop(text), `CTC-loop output: ${text}`).toBe(false);
+      // The `.ES` sub-loop pattern from the user report must not survive
+      expect(text).not.toContain(".ES.ES");
+      expect(text).not.toContain(".es.es");
+      // We expect the correct prefix `CHANGELOG` (case-insensitive) or
+      // at minimum the string didn't degenerate to obvious garbage
+      expect(text.length, `empty OCR result`).toBeGreaterThan(0);
+      expect(text.toUpperCase()).toContain("CHANGELOG");
+    });
+  }
+
+  test("large without underline (DEIM path): 'CHANGELOG_ja.md' is recognized", async ({
+    context,
+  }) => {
+    const { text, width, height } = await ocrElement(
+      context,
+      "/test/e2e/fixtures/link-dark.html",
+      "#target-file-large-nou",
+    );
+    console.log(
+      `[file large-nou] size=${Math.round(width)}x${Math.round(height)} text=${JSON.stringify(text)}`,
+    );
+    expect(looksLikeCtcLoop(text), `CTC-loop output: ${text}`).toBe(false);
+    expect(text).not.toContain(".ES.ES");
+    expect(text.length, `empty OCR result`).toBeGreaterThan(0);
+    expect(text.toUpperCase()).toContain("CHANGELOG");
+  });
+
+  // Large with underline: same underline-stroke limitation as the tamoco case
+  // above. Ensure at minimum the CTC-loop guard fires (never letting the
+  // `.ES.ES.ES...` mutation-loop out to the user), even though the correct
+  // text may not be recovered.
+  test("large with underline: no CTC loop leaks even if text is empty (mutation-loop guard)", async ({
+    context,
+  }) => {
+    const { text, width, height } = await ocrElement(
+      context,
+      "/test/e2e/fixtures/link-dark.html",
+      "#target-file-large",
+    );
+    console.log(
+      `[file large] size=${Math.round(width)}x${Math.round(height)} text=${JSON.stringify(text)}`,
+    );
+    // The point of this test is: no `.ES.ES.ES ...`, no `the the the ...`,
+    // no other CTC garbage. Empty result is acceptable (fail-closed).
+    expect(looksLikeCtcLoop(text), `CTC-loop output: ${text}`).toBe(false);
+    expect(text).not.toContain(".ES.ES");
+    expect(text).not.toContain("the the the");
+  });
 });
