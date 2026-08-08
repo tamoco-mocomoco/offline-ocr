@@ -100,20 +100,45 @@ test.describe("dark-bg Latin label OCR", () => {
     });
   }
 
-  // Larger dark chips go through the DEIM detection path, and DEIM currently
-  // scores this specific style below its detection threshold → returns 0
-  // boxes → empty OCR result. This is a separate limitation (not a CTC
-  // loop), tracked as a known issue. Marked fixme so it's visible without
-  // failing the suite.
+  // Larger dark chip WITHOUT underline: goes through DEIM path and is
+  // recognized correctly. The color-inversion in the bypass fallback also
+  // helps but isn't reached for this input.
+  test("large without underline (DEIM path): 'tamoco-mocomoco' is recognized", async ({
+    context,
+  }) => {
+    const { text, width, height } = await ocrElement(
+      context,
+      "/test/e2e/fixtures/link-dark.html",
+      "#target-large-nou",
+    );
+    console.log(
+      `[large-nou] size=${Math.round(width)}x${Math.round(height)} text=${JSON.stringify(text)}`,
+    );
+    expect(looksLikeCtcLoop(text), `CTC-loop output: ${text}`).toBe(false);
+    expect(text.length, `empty OCR result`).toBeGreaterThan(0);
+    expect(text.toLowerCase()).toContain("tamoco");
+  });
+
+  // Larger dark chip WITH underline: known-limitation case.
+  //   - DEIM detects a single box that includes the underline pixel row and
+  //     the class-mapping ends up not producing a LINE element (0 lines after
+  //     detectionsToPage / findAll).
+  //   - The bypass fallback runs; extractMainTextBand yields a ~16px band
+  //     that includes the underline stroke, and PARSeq degenerates into a
+  //     CTC loop that trimCtcLoopTail then collapses to empty.
+  //   - Net effect for the user is an empty result instead of garbage — an
+  //     improvement over v0.8.0 — but still not the correct text.
+  //   - Fix requires either underline-stroke removal in image preprocessing
+  //     or teaching filterFurigana / the parser about underline-adjacent
+  //     Latin lines. Deferred to a follow-up release.
   test.fixme(
-    "large (DEIM path): 'tamoco-mocomoco' is recognized, not a CTC loop or empty",
+    "large with underline (underline-stroke known limitation)",
     async ({ context }) => {
       const { text } = await ocrElement(
         context,
         "/test/e2e/fixtures/link-dark.html",
         "#target-large",
       );
-      expect(text.length).toBeGreaterThan(0);
       expect(text.toLowerCase()).toContain("tamoco");
     },
   );

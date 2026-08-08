@@ -39,11 +39,20 @@
         font-size: 22px;
         margin-top: 20px;
       }
+      /* Large but without underline, to isolate whether the underline is
+       * the failure trigger for this size class. */
+      #target-large-nou {
+        padding: 14px 24px;
+        font-size: 22px;
+        margin-top: 20px;
+        text-decoration: none;
+      }
     </style>
   </head>
   <body>
     <div id="target-small" class="chip">tamoco-mocomoco</div><br />
     <div id="target-medium" class="chip">tamoco-mocomoco</div><br />
-    <div id="target-large" class="chip">tamoco-mocomoco</div>
+    <div id="target-large" class="chip">tamoco-mocomoco</div><br />
+    <div id="target-large-nou" class="chip">tamoco-mocomoco</div>
   </body>
 </html>

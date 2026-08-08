@@ -68,6 +68,38 @@ export function cropImageData(
  * 1 pixel だけ見ると断片ピクセルを引いてしまう可能性があるため、
  * 上下左右の枠全体を集計して多数派を選ぶ。
  */
+/**
+ * PARSeq (NDL の tegaki2 モデル) は「白背景・黒文字」の分布で学習されており、
+ * 暗背景・明文字 (GitHub dark theme のリンクチップなど) では認識できずに CTC
+ * ループを吐きがち。背景色が暗い場合は色を反転させて分布を合わせる。
+ *
+ * 判定は border 全体の dominant color の輝度 (Rec. 709 相当) が閾値未満か。
+ * 判定と反転処理を分けているのは、呼び出し側で bg を既に計算しているケースが
+ * 多いため。
+ */
+export function shouldInvertForParseq(bg: {
+  r: number;
+  g: number;
+  b: number;
+}): boolean {
+  // Rec. 709 luma. 暗背景の判定閾値は 90/255 に設定 (dark GitHub #0d1117 は
+  // luma ~15, light GitHub #ffffff は 255, mid gray #808080 は 128)。
+  const luma = 0.2126 * bg.r + 0.7152 * bg.g + 0.0722 * bg.b;
+  return luma < 90;
+}
+
+export function invertColors(src: ImageData): ImageData {
+  const { data, width, height } = src;
+  const out = new Uint8ClampedArray(data.length);
+  for (let i = 0; i < data.length; i += 4) {
+    out[i] = 255 - data[i];
+    out[i + 1] = 255 - data[i + 1];
+    out[i + 2] = 255 - data[i + 2];
+    out[i + 3] = data[i + 3];
+  }
+  return new ImageData(out, width, height);
+}
+
 export function dominantBorderColor(src: ImageData): { r: number; g: number; b: number } {
   const { data, width, height } = src;
   const buckets = new Map<string, number>();

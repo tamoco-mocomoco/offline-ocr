@@ -14,6 +14,8 @@ import {
   trimEdgeColor,
   dominantBorderColor,
   extractMainTextBand,
+  shouldInvertForParseq,
+  invertColors,
 } from "../engine/image-utils";
 import {
   detectionsToPage,
@@ -171,12 +173,27 @@ async function runOcr(imageBlob: Blob, presetId: string): Promise<void> {
     // タイトに切り取られた小さなキャプチャ (例: コミットハッシュ) は DEIM の
     // 検出スコアがしきい値を下回るため、検出をスキップして PARSeq に直接渡す。
     const SMALL_IMAGE_BYPASS_MAX_SIDE = 200;
-    if (Math.max(imgW, imgH) <= SMALL_IMAGE_BYPASS_MAX_SIDE) {
+    // DEIM が0検出だった場合のフォールバック上限。範囲選択の実用上
+    // 妥当な最大サイズ (1行のリンクチップや小さな見出し等) を想定。
+    const DEIM_FALLBACK_MAX_SIDE = 500;
+
+    const runBypass = async (): Promise<void> => {
       // 背景色は border 全体から dominant を集計 (1 pixel だけ見ると断片を
-      // 拾ってしまうため)。その色を基準に、上下の隣接行フラグメントを弾いて
-      // 本文行の帯だけを抽出してから、左右の余白を trim して PARSeq に渡す。
+      // 拾ってしまうため)。
       const bg = dominantBorderColor(imageData);
-      const band = extractMainTextBand(imageData, bg);
+      // PARSeq (tegaki2) は白背景・黒文字で学習されているため、暗背景の
+      // 場合は色反転して分布を合わせる (GitHub dark のリンクチップ等)。
+      // 反転は band 抽出と trim の前段に置く: これらの関数は "top-left pixel
+      // を bg として扱う" といった前提が暗黙にあるので、canonical
+      // (light-bg-dark-text) に揃えてから処理する方が安全。
+      const invertBg = shouldInvertForParseq(bg);
+      const canonical = invertBg ? invertColors(imageData) : imageData;
+      const canonicalBg = invertBg
+        ? { r: 255 - bg.r, g: 255 - bg.g, b: 255 - bg.b }
+        : bg;
+      // 上下の隣接行フラグメントを弾いて本文行の帯だけを抽出、
+      // 左右の余白を trim して PARSeq に渡す。
+      const band = extractMainTextBand(canonical, canonicalBg);
       const trimmed = trimEdgeColor(band);
       const text = await recognizer!.read(trimmed, true);
       post({ type: "detect-done", numDetections: 1 });
@@ -189,11 +206,27 @@ async function runOcr(imageBlob: Blob, presetId: string): Promise<void> {
           HEIGHT: String(imgH),
         }),
       });
+    };
+
+    if (Math.max(imgW, imgH) <= SMALL_IMAGE_BYPASS_MAX_SIDE) {
+      await runBypass();
       return;
     }
 
     const detections = await detector!.detect(imageData);
     post({ type: "detect-done", numDetections: detections.length });
+
+    // DEIM が 0 検出で、かつ画像が「1行のチップ相当のサイズ」に収まる場合は
+    // bypass path (dominantBorderColor + extractMainTextBand + trimEdgeColor)
+    // にフォールバック。これは暗背景の Latin リンクチップなど、DEIM のスコア
+    // 閾値では拾えないが PARSeq が読める例をレスキューする経路。
+    if (
+      detections.length === 0 &&
+      Math.max(imgW, imgH) <= DEIM_FALLBACK_MAX_SIDE
+    ) {
+      await runBypass();
+      return;
+    }
 
     const page = detectionsToPage(imgW, imgH, "input.jpg", detections);
     const root = createElement("OCRDATASET", {}, [page]);
@@ -268,6 +301,20 @@ async function runOcr(imageBlob: Blob, presetId: string): Promise<void> {
     await Promise.all(
       Array.from({ length: workerCount }, () => worker()),
     );
+
+    // DEIM がラインを検出しても、全ラインで PARSeq が empty を返した場合
+    // (CTC ループを trim して空になったケース含む) は「認識不能」相当。
+    // 画像が小〜中サイズなら bypass path に一度フォールバックしてみる。
+    const anyText = resultLines.some(
+      (r) => r.text && r.text.trim().length > 0,
+    );
+    if (
+      !anyText &&
+      Math.max(imgW, imgH) <= DEIM_FALLBACK_MAX_SIDE
+    ) {
+      await runBypass();
+      return;
+    }
 
     post({ type: "result", lines: resultLines, detections, page });
   } catch (e) {
