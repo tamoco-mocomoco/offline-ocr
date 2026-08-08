@@ -209,4 +209,34 @@ describe("trimCtcLoopTail", () => {
     // "abcabcabc" 3-run at pos 6, word-level "zz zz zz" starts at pos 20
     expect(trimCtcLoopTail("start abcabcabc mid zz zz zz end")).toBe("start");
   });
+
+  it("trims mutation-cluster: prev + [X X] with common prefix", () => {
+    // Real user report: PARSeq decode of a `CHANGELOG_ja.md` chip
+    const input =
+      "CHANGELOG CHANGE CHAND CHAND CON R. CON S.IS.EO.IRES AND STION REREATERESTION OF S.ISTION";
+    // "CHAND CHAND" is identical pair; preceding "CHANGE" shares 4-char
+    // "CHAN" prefix with "CHAND" (ratio 0.8) → mutation cluster starts at
+    // "CHANGE" (position 10). Everything from there is cut.
+    expect(trimCtcLoopTail(input)).toBe("CHANGELOG");
+  });
+
+  it("does not trigger mutation-cluster on legitimate similar words", () => {
+    // "changed" and "changes" share prefix with "change" but no identical
+    // adjacent pair → not a mutation cluster.
+    expect(trimCtcLoopTail("change changed changes complete")).toBe(
+      "change changed changes complete",
+    );
+  });
+
+  it("does not trigger mutation-cluster when short common prefix", () => {
+    // "cat" and "cot" share only "c" (1 char) — below threshold
+    expect(trimCtcLoopTail("start cat cot cot rest")).toBe(
+      "start cat cot cot rest",
+    );
+  });
+
+  it("does not trigger mutation-cluster on very short tokens", () => {
+    // 2-char tokens are below the mutation-cluster minimum
+    expect(trimCtcLoopTail("ab ab ok")).toBe("ab ab ok");
+  });
 });

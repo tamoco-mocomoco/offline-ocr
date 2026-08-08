@@ -146,13 +146,10 @@ export function argmaxAxis2WithConfTrim(
 export function trimCtcLoopTail(text: string): string {
   const wordTrim = findWhitespaceLoopStart(text);
   const charTrim = findCharLevelLoopStart(text);
-  const cut =
-    wordTrim === -1
-      ? charTrim
-      : charTrim === -1
-        ? wordTrim
-        : Math.min(wordTrim, charTrim);
-  if (cut === -1) return text;
+  const mutTrim = findMutationClusterStart(text);
+  const candidates = [wordTrim, charTrim, mutTrim].filter((x) => x !== -1);
+  if (candidates.length === 0) return text;
+  const cut = Math.min(...candidates);
   return text.slice(0, cut).trimEnd();
 }
 
@@ -173,6 +170,54 @@ function findWhitespaceLoopStart(text: string): number {
     }
   }
   return -1;
+}
+
+/**
+ * Detect a mutation-cluster loop: PARSeq sometimes fails to lock in a
+ * clean loop but instead emits a *cluster of similar short tokens* — the
+ * user-reported garbage was
+ *
+ *   `CHANGELOG CHANGE CHAND CHAND CON R. CON S.IS.EO.IRES AND STION ...`
+ *
+ * where `CHANGE`, `CHAND`, `CHAND` share the "CHAN" prefix and one adjacent
+ * pair is identical (`CHAND CHAND`). Neither the whitespace-token nor
+ * character-level 3-repetition check catches this.
+ *
+ * Signal: two consecutive tokens are identical AND the preceding token is a
+ * prefix-mutation of them (short 3–10 char token, common prefix ≥ 3 chars,
+ * prefix ratio ≥ 0.6 vs the shorter token). Requiring the identical pair
+ * keeps this rule conservative — legitimate English like "change changed
+ * changes" has similar tokens but rarely two in a row that are byte-equal.
+ *
+ * Returns the char index where the mutation cluster starts (the preceding
+ * mutation token), or -1.
+ */
+function findMutationClusterStart(text: string): number {
+  const re = /\S+/g;
+  const tokens: { start: number; str: string }[] = [];
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(text)) !== null) {
+    tokens.push({ start: m.index, str: m[0] });
+  }
+  for (let i = 2; i < tokens.length; i++) {
+    if (
+      tokens[i - 1].str === tokens[i].str &&
+      isShortPrefixMutation(tokens[i - 2].str, tokens[i - 1].str)
+    ) {
+      return tokens[i - 2].start;
+    }
+  }
+  return -1;
+}
+
+function isShortPrefixMutation(a: string, b: string): boolean {
+  if (a.length < 3 || a.length > 10) return false;
+  if (b.length < 3 || b.length > 10) return false;
+  if (a === b) return true;
+  let cp = 0;
+  while (cp < a.length && cp < b.length && a[cp] === b[cp]) cp++;
+  if (cp < 3) return false;
+  return cp / Math.min(a.length, b.length) >= 0.6;
 }
 
 /**
