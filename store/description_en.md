@@ -55,6 +55,10 @@ We sincerely thank the National Diet Library for making their high-accuracy Japa
 
 ■ Changelog
 
+v0.8.1
+- Faster OCR on multi-line pages. PARSeq recognition now runs up to 4 lines in parallel via a worker-pool (newspaper columns, receipts, multi-paragraph documents)
+- Output order is unchanged. No effect on 1–2 line captures
+
 v0.8.0
 - PDF OCR support. From the popup's new "Open PDF" button, open a local PDF in the viewer and OCR any page you like (password-protected PDFs are not yet supported)
 - The viewer now has page navigation (◀ / ▶ buttons, page indicator, ← / → keys)

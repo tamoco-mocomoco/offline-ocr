@@ -2,6 +2,12 @@
 
 [日本語版はこちら](CHANGELOG_ja.md)
 
+## v0.8.1 (2026-08-08)
+
+- **Faster OCR on multi-line pages**. When DEIM detects multiple lines, PARSeq recognition used to run one line at a time; it now runs up to 4 lines in parallel via a worker-pool. Newspaper columns, receipts, and multi-paragraph documents see visible wall-clock improvement as line count grows
+- Output order is preserved (idx-based writes keep the upstream reading-order pass authoritative). No effect on 1–2 line captures
+- Internal change only — no UI, feature, or output-format changes
+
 ## v0.8.0 (2026-08-06)
 
 - **PDF OCR support**. From the popup's new "Open PDF" button, open a local (password-less) PDF in the viewer and OCR any page you like
