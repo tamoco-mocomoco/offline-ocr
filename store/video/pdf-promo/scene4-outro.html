@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="utf-8" />
+    <title>Scene 4: アウトロ</title>
+    <style>
+      @import url("https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;700;900&display=swap");
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      body {
+        font-family: "Noto Sans JP", sans-serif;
+        display: flex; justify-content: center; align-items: center;
+        min-height: 100vh; background: #111;
+      }
+      .slide {
+        width: 1920px; height: 1080px;
+        background:
+          radial-gradient(circle at 30% 30%, #3fb950 0%, transparent 40%),
+          radial-gradient(circle at 70% 70%, #4ea3ff 0%, transparent 40%),
+          linear-gradient(135deg, #12233c 0%, #1e3a5f 100%);
+        color: #fff; padding: 80px;
+        display: flex; flex-direction: column;
+        align-items: center; justify-content: center;
+      }
+      .headline {
+        font-size: 84px; font-weight: 900; text-align: center;
+        margin-bottom: 24px; line-height: 1.2;
+        opacity: 0; animation: fadeUp 0.8s ease forwards 0.3s;
+      }
+      .subtitle {
+        font-size: 38px; color: rgba(255,255,255,0.9);
+        text-align: center; margin-bottom: 80px;
+        opacity: 0; animation: fadeUp 0.7s ease forwards 0.9s;
+      }
+      .store-card {
+        background: rgba(255,255,255,0.1);
+        border: 2px solid rgba(255,255,255,0.3);
+        border-radius: 20px;
+        padding: 48px 80px;
+        text-align: center;
+        opacity: 0; animation: fadeUp 0.7s ease forwards 1.5s;
+      }
+      .store-label {
+        font-size: 24px; color: rgba(255,255,255,0.7);
+        letter-spacing: 2px; text-transform: uppercase;
+      }
+      .store-name {
+        font-size: 56px; font-weight: 900; margin-top: 12px;
+      }
+      .store-url {
+        font-size: 26px; color: #a5d8ff; margin-top: 20px;
+        font-family: "Menlo", monospace;
+      }
+      .features {
+        margin-top: 40px;
+        display: flex; gap: 32px;
+        opacity: 0; animation: fadeUp 0.7s ease forwards 2.1s;
+      }
+      .feature {
+        display: flex; align-items: center; gap: 12px;
+        font-size: 24px;
+      }
+      .check {
+        width: 40px; height: 40px; border-radius: 50%;
+        background: #3fb950; display: flex; align-items: center;
+        justify-content: center; font-size: 24px; font-weight: 900;
+      }
+      @keyframes fadeUp {
+        from { opacity: 0; transform: translateY(30px); }
+        to { opacity: 1; transform: translateY(0); }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="slide">
+      <div class="headline">今すぐPDFを、<br />通信ゼロでOCR。</div>
+      <div class="subtitle">Chrome Web Store で「オフラインOCR」</div>
+      <div class="store-card">
+        <div class="store-label">Chrome Web Store</div>
+        <div class="store-name">📄 オフラインOCR v0.8.0</div>
+        <div class="store-url">chromewebstore.google.com/detail/offline-ocr</div>
+      </div>
+      <div class="features">
+        <div class="feature"><div class="check">✓</div>完全オフライン</div>
+        <div class="feature"><div class="check">✓</div>PDF直接対応</div>
+        <div class="feature"><div class="check">✓</div>日本語対応</div>
+        <div class="feature"><div class="check">✓</div>無料</div>
+      </div>
+    </div>
+  </body>
+</html>

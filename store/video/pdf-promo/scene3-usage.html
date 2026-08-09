@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="utf-8" />
+    <title>Scene 3: 使い方</title>
+    <style>
+      @import url("https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;700;900&display=swap");
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      body {
+        font-family: "Noto Sans JP", sans-serif;
+        display: flex; justify-content: center; align-items: center;
+        min-height: 100vh; background: #111;
+      }
+      .slide {
+        width: 1920px; height: 1080px;
+        background: linear-gradient(180deg, #0d1117 0%, #161b22 100%);
+        color: #fff; padding: 80px 120px;
+        display: flex; flex-direction: column;
+      }
+      h1 {
+        font-size: 72px; font-weight: 900; margin-bottom: 60px;
+        opacity: 0; animation: fadeUp 0.7s ease forwards 0.3s;
+      }
+      h1 .highlight { color: #ffca28; }
+      .steps {
+        display: flex; gap: 40px; flex: 1; align-items: flex-start;
+      }
+      .step {
+        flex: 1;
+        background: rgba(255,255,255,0.04);
+        border: 1px solid rgba(255,255,255,0.15);
+        border-radius: 20px;
+        padding: 40px 32px;
+        opacity: 0; transform: translateY(30px);
+      }
+      .step:nth-child(1) { animation: fadeUp 0.6s ease forwards 0.9s; }
+      .step:nth-child(2) { animation: fadeUp 0.6s ease forwards 1.3s; }
+      .step:nth-child(3) { animation: fadeUp 0.6s ease forwards 1.7s; }
+      .step-num {
+        display: inline-block;
+        font-size: 40px; font-weight: 900;
+        color: #0d1117; background: #ffca28;
+        border-radius: 50%; width: 68px; height: 68px;
+        text-align: center; line-height: 68px;
+        margin-bottom: 24px;
+      }
+      .step-title {
+        font-size: 34px; font-weight: 700; margin-bottom: 20px;
+      }
+      .step-desc {
+        font-size: 22px; color: #c9d1d9; line-height: 1.7;
+      }
+      .mock {
+        margin-top: 24px;
+        padding: 20px;
+        background: #1a1a1a;
+        border: 1px solid #333;
+        border-radius: 8px;
+        font-size: 18px;
+      }
+      .mock-btn {
+        display: block; margin: 8px 0;
+        padding: 10px; text-align: center;
+        background: #6c757d; border-radius: 6px;
+        color: #fff; font-weight: 700;
+      }
+      .mock-btn.hl {
+        background: #6c757d;
+        border: 3px solid #ffca28;
+      }
+      @keyframes fadeUp {
+        from { opacity: 0; transform: translateY(30px); }
+        to { opacity: 1; transform: translateY(0); }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="slide">
+      <h1>使い方は <span class="highlight">3ステップ</span></h1>
+      <div class="steps">
+        <div class="step">
+          <div class="step-num">1</div>
+          <div class="step-title">popup を開く</div>
+          <div class="step-desc">拡張機能アイコンをクリック</div>
+          <div class="mock">
+            <div class="mock-btn">範囲選択を開始</div>
+            <div class="mock-btn">画像を開く</div>
+            <div class="mock-btn hl">📄 PDFを開く</div>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">2</div>
+          <div class="step-title">ローカルPDFを選択</div>
+          <div class="step-desc">viewerが開いて<br />最初のページを表示</div>
+          <div class="mock" style="background:#1a1a1a;">
+            <div style="color:#ddd;text-align:center;padding:30px 0;">
+              <div style="font-size:24px;font-weight:700;">◀ &nbsp; 1 / 24 &nbsp; ▶</div>
+              <div style="margin-top:16px;color:#8b949e;">→ / ← キーでも移動</div>
+            </div>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">3</div>
+          <div class="step-title">範囲選択でOCR</div>
+          <div class="step-desc">ドラッグ or「全体OCR」<br />結果はクリップボードへ</div>
+          <div class="mock" style="background:#161b22;">
+            <div style="color:#4ea3ff;">📋 コピー完了</div>
+            <div style="color:#8b949e;margin-top:12px;font-size:14px;">
+              履歴には filename.pdf#p3 形式で保存
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </body>
+</html>
