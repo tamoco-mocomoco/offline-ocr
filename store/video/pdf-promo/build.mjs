@@ -71,7 +71,9 @@ const narrations = [
   { start: 51.0, file: "scene4-01", text: "手元のPDFを、通信ゼロで、その場で読める。オフラインOCR、今すぐお試しください。" },
 ];
 
-const VOICEVOX_URL = "http://localhost:50021";
+// Explicit IPv4 — some macOS setups resolve `localhost` to ::1 first and
+// hit ECONNREFUSED before falling through to IPv4.
+const VOICEVOX_URL = "http://127.0.0.1:50021";
 const SPEAKER_ID = 68; // あいえるたん
 
 // ── Step 1: Record each scene as WebM → MP4 ────────────────────────────────
@@ -198,26 +200,43 @@ async function generateVoice() {
     clips.push({ ...n, wav: outWav });
   }
 
-  // Combine into a single timed track using ffmpeg amix + delays
+  // Compose into a single timed track. Approach:
+  //   - Input 0: silent base of totalDur seconds (forces output length)
+  //   - Inputs 1..N: each clip WAV
+  //   - Filter: adelay=<start_ms>|<start_ms> on each clip to place it on the
+  //     timeline, then amix all with the silent base
+  //   - normalize=0 keeps loudness constant (amix would otherwise quieten
+  //     each track by 1/N)
   const totalDur = 65; // safe upper bound (~60s + tail)
-  const parts = clips
-    .map(
-      (c, i) =>
-        `-itsoffset ${c.start.toFixed(3)} -i "${c.wav}"`,
-    )
-    .join(" ");
-  const amixInputs = clips
-    .map((_, i) => `[${i + 1}:a]adelay=0|0[a${i}]`)
+  const inputs = clips.map((c) => `-i "${c.wav}"`).join(" ");
+  const delayNodes = clips
+    .map((c, i) => {
+      const ms = Math.round(c.start * 1000);
+      return `[${i + 1}:a]adelay=${ms}|${ms}[a${i}]`;
+    })
     .join(";");
-  const amixMerge = clips.map((_, i) => `[a${i}]`).join("");
-  const filter = `${amixInputs};${amixMerge}amix=inputs=${clips.length}:duration=longest:normalize=0[aout]`;
+  const mixInputs = ["[0:a]", ...clips.map((_, i) => `[a${i}]`)].join("");
+  const mixCount = clips.length + 1; // +1 for silence base
+  const filter = `${delayNodes};${mixInputs}amix=inputs=${mixCount}:duration=longest:normalize=0[aout]`;
 
   const outAudio = resolve(VOICE, "narration-full.m4a");
   execSync(
-    `ffmpeg -y -f lavfi -t ${totalDur} -i "anullsrc=r=44100:cl=stereo" ${parts} -filter_complex "${filter}" -map "[aout]" -c:a aac -b:a 192k "${outAudio}"`,
+    `ffmpeg -y -f lavfi -t ${totalDur} -i "anullsrc=r=44100:cl=stereo" ${inputs} -filter_complex "${filter}" -map "[aout]" -c:a aac -b:a 192k "${outAudio}"`,
     { stdio: ["ignore", "ignore", "inherit"] },
   );
-  console.log(`  → narration-full.m4a`);
+
+  // Sanity check: audio should be close to totalDur seconds
+  const dur = parseFloat(
+    execSync(
+      `ffprobe -v error -show_entries format=duration -of csv=p=0 "${outAudio}"`,
+    ).toString().trim(),
+  );
+  console.log(`  → narration-full.m4a (${dur.toFixed(2)}s)`);
+  if (dur < totalDur * 0.5) {
+    console.warn(
+      `  ⚠ narration audio seems too short (${dur}s < half of ${totalDur}s)`,
+    );
+  }
   return outAudio;
 }
 
