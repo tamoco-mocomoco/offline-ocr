@@ -153,6 +153,12 @@ export function trimCtcLoopTail(text: string): string {
   return text.slice(0, cut).trimEnd();
 }
 
+// Legitimate repetitive text (chants, onomatopoeia, "はい はい はい") is
+// usually short. CTC-loop garbage fills PARSeq's max sequence length, so
+// it's typically much longer. When a 3-repeat starts at position 0 AND the
+// whole text is under this length, treat it as intentional (don't trim).
+const CHANT_MAX_LEN = 30;
+
 /** Return the char index where 3 identical whitespace-separated tokens start, or -1. */
 function findWhitespaceLoopStart(text: string): number {
   const re = /\S+/g;
@@ -166,7 +172,10 @@ function findWhitespaceLoopStart(text: string): number {
       tokens[i].str === tokens[i + 1].str &&
       tokens[i].str === tokens[i + 2].str
     ) {
-      return tokens[i].start;
+      const start = tokens[i].start;
+      // Preserve legitimate short chants (see CHANT_MAX_LEN comment).
+      if (start === 0 && text.length < CHANT_MAX_LEN) return -1;
+      return start;
     }
   }
   return -1;
@@ -204,7 +213,12 @@ function findMutationClusterStart(text: string): number {
       tokens[i - 1].str === tokens[i].str &&
       isShortPrefixMutation(tokens[i - 2].str, tokens[i - 1].str)
     ) {
-      return tokens[i - 2].start;
+      const start = tokens[i - 2].start;
+      // Preserve legitimate short chants: `ありがとう ありがとう ありがとう`
+      // is technically "X X + identical prev", but is intentional emphasis
+      // rather than a CTC failure. Same threshold as the other two rules.
+      if (start === 0 && text.length < CHANT_MAX_LEN) return -1;
+      return start;
     }
   }
   return -1;
@@ -237,6 +251,10 @@ function findCharLevelLoopStart(text: string): number {
         text.slice(start + len, start + 2 * len) === s &&
         text.slice(start + 2 * len, start + 3 * len) === s
       ) {
+        // Preserve legitimate short repetitive text (see CHANT_MAX_LEN).
+        if (start === 0 && text.length < CHANT_MAX_LEN) {
+          break; // this len is a false-positive; try next len
+        }
         if (bestStart === -1 || start < bestStart) bestStart = start;
         break; // earliest for this len; move to next len
       }

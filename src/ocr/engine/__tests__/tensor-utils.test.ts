@@ -239,4 +239,42 @@ describe("trimCtcLoopTail", () => {
     // 2-char tokens are below the mutation-cluster minimum
     expect(trimCtcLoopTail("ab ab ok")).toBe("ab ab ok");
   });
+
+  // ── chant-preservation (CHANT_MAX_LEN heuristic) ────────────────────────
+  // Short repetitive text starting at position 0 is almost always a
+  // legitimate chant / onomatopoeia / emphasis pattern rather than a CTC
+  // loop, so it must survive intact.
+
+  it("preserves short 3-repeat chant (Japanese)", () => {
+    expect(trimCtcLoopTail("はい はい はい")).toBe("はい はい はい");
+  });
+
+  it("preserves short 3-repeat chant (English)", () => {
+    expect(trimCtcLoopTail("no no no")).toBe("no no no");
+  });
+
+  it("preserves short emphatic 3-repeat", () => {
+    expect(trimCtcLoopTail("ありがとう ありがとう ありがとう")).toBe(
+      "ありがとう ありがとう ありがとう",
+    );
+  });
+
+  it("preserves short character-level onomatopoeia", () => {
+    // "ドド" repeated 3 times = "ドドドドドド" (6 chars, under 30)
+    expect(trimCtcLoopTail("ドドドドドド")).toBe("ドドドドドド");
+  });
+
+  it("still trims a long CTC loop starting from pos 0", () => {
+    // 60+ chars of "the the the..." — over CHANT_MAX_LEN → recognized as
+    // a CTC failure, not a chant
+    const input =
+      "the the the the the the the the the the the the the the th";
+    expect(trimCtcLoopTail(input)).toBe("");
+  });
+
+  it("still trims a prefix + short loop tail (loop starts > 0)", () => {
+    // Even when the loop tail itself is short, if there's meaningful content
+    // before it, we trim (this is the classic CTC leak shape).
+    expect(trimCtcLoopTail("correct no no no")).toBe("correct");
+  });
 });
