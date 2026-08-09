@@ -1,5 +1,11 @@
 import { describe, it, expect } from "vitest";
-import { hwcToChw, normalizeImageNet, normalizeBgr, argmaxAxis2 } from "../tensor-utils";
+import {
+  hwcToChw,
+  normalizeImageNet,
+  normalizeBgr,
+  argmaxAxis2,
+  trimCtcLoopTail,
+} from "../tensor-utils";
 
 describe("hwcToChw", () => {
   it("transposes a 2x2x3 tensor correctly", () => {
@@ -125,5 +131,150 @@ describe("argmaxAxis2", () => {
     const data = new Float32Array([-10, -5, -20]);
     const result = argmaxAxis2(data, 1, 3);
     expect(result[0]).toBe(1); // -5 is the max
+  });
+});
+
+describe("trimCtcLoopTail", () => {
+  it("leaves normal short text alone", () => {
+    expect(trimCtcLoopTail("こんにちは")).toBe("こんにちは");
+    expect(trimCtcLoopTail("hello world")).toBe("hello world");
+    expect(trimCtcLoopTail("")).toBe("");
+  });
+
+  it("leaves 2 repetitions alone (not a loop)", () => {
+    expect(trimCtcLoopTail("the the end")).toBe("the the end");
+    expect(trimCtcLoopTail("は は")).toBe("は は");
+  });
+
+  it("trims a CTC-loop tail while keeping the correct prefix", () => {
+    const input =
+      "tamoco-mocomoco the the the the the the the the the the th";
+    expect(trimCtcLoopTail(input)).toBe("tamoco-mocomoco");
+  });
+
+  it("returns empty when the whole output is a loop", () => {
+    const input =
+      "the the the the the the the the the the the the the the th";
+    expect(trimCtcLoopTail(input)).toBe("");
+  });
+
+  it("trims a loop of a longer token too", () => {
+    const input = "abc def ghi ghi ghi ghi ghi";
+    expect(trimCtcLoopTail(input)).toBe("abc def");
+  });
+
+  it("trims from the first run when multiple runs exist", () => {
+    // First run "aa aa aa" begins at index 1 — cut everything from there
+    const input = "start aa aa aa middle bb bb bb end";
+    expect(trimCtcLoopTail(input)).toBe("start");
+  });
+
+  it("does not fire on non-loop text with repeated 2-char words", () => {
+    // Two-time repetition is fine; three consecutive same tokens is the trigger
+    expect(trimCtcLoopTail("ha ha ok")).toBe("ha ha ok");
+  });
+
+  it("trims character-level repetition without whitespace", () => {
+    // Real observed PARSeq output when it fails to decode a dark chip
+    const input =
+      "CHANGELOG_ja. CHANGE CHAND CON S.ES.ES.ES.ES.ES.IRES AHEDESHED";
+    // The '.ES' pattern repeats 5+ times starting at position 33 (after
+    // "CHANGELOG_ja. CHANGE CHAND CON S"). Everything from that S is cut.
+    const out = trimCtcLoopTail(input);
+    expect(out.startsWith("CHANGELOG_ja.")).toBe(true);
+    expect(out).not.toContain(".ES.ES.ES");
+    // Whatever's kept must not itself contain 3-run character repetition
+    expect(out.length).toBeLessThan(input.length);
+  });
+
+  it("trims character-level repetition of long substrings too", () => {
+    // Substring of length 4 repeating 3 times
+    const input = "prefix xxABCDABCDABCD suffix";
+    // 'ABCD' at pos 9,13,17 → 3-run → trim from pos 9 → "prefix xx"
+    expect(trimCtcLoopTail(input)).toBe("prefix xx");
+  });
+
+  it("does not fire on legitimate short doubles", () => {
+    // 2-char runs are not enough
+    expect(trimCtcLoopTail("あいういう")).toBe("あいういう");
+    expect(trimCtcLoopTail("hihi")).toBe("hihi");
+  });
+
+  it("word-level trim wins when it starts earlier than char-level", () => {
+    // "aa aa aa" starts at pos 6 (word-level); no char-level 3-run earlier
+    expect(trimCtcLoopTail("start aa aa aa xyzxyzxyz end")).toBe("start");
+  });
+
+  it("char-level trim wins when it starts earlier than word-level", () => {
+    // "abcabcabc" 3-run at pos 6, word-level "zz zz zz" starts at pos 20
+    expect(trimCtcLoopTail("start abcabcabc mid zz zz zz end")).toBe("start");
+  });
+
+  it("trims mutation-cluster: prev + [X X] with common prefix", () => {
+    // Real user report: PARSeq decode of a `CHANGELOG_ja.md` chip
+    const input =
+      "CHANGELOG CHANGE CHAND CHAND CON R. CON S.IS.EO.IRES AND STION REREATERESTION OF S.ISTION";
+    // "CHAND CHAND" is identical pair; preceding "CHANGE" shares 4-char
+    // "CHAN" prefix with "CHAND" (ratio 0.8) → mutation cluster starts at
+    // "CHANGE" (position 10). Everything from there is cut.
+    expect(trimCtcLoopTail(input)).toBe("CHANGELOG");
+  });
+
+  it("does not trigger mutation-cluster on legitimate similar words", () => {
+    // "changed" and "changes" share prefix with "change" but no identical
+    // adjacent pair → not a mutation cluster.
+    expect(trimCtcLoopTail("change changed changes complete")).toBe(
+      "change changed changes complete",
+    );
+  });
+
+  it("does not trigger mutation-cluster when short common prefix", () => {
+    // "cat" and "cot" share only "c" (1 char) — below threshold
+    expect(trimCtcLoopTail("start cat cot cot rest")).toBe(
+      "start cat cot cot rest",
+    );
+  });
+
+  it("does not trigger mutation-cluster on very short tokens", () => {
+    // 2-char tokens are below the mutation-cluster minimum
+    expect(trimCtcLoopTail("ab ab ok")).toBe("ab ab ok");
+  });
+
+  // ── chant-preservation (CHANT_MAX_LEN heuristic) ────────────────────────
+  // Short repetitive text starting at position 0 is almost always a
+  // legitimate chant / onomatopoeia / emphasis pattern rather than a CTC
+  // loop, so it must survive intact.
+
+  it("preserves short 3-repeat chant (Japanese)", () => {
+    expect(trimCtcLoopTail("はい はい はい")).toBe("はい はい はい");
+  });
+
+  it("preserves short 3-repeat chant (English)", () => {
+    expect(trimCtcLoopTail("no no no")).toBe("no no no");
+  });
+
+  it("preserves short emphatic 3-repeat", () => {
+    expect(trimCtcLoopTail("ありがとう ありがとう ありがとう")).toBe(
+      "ありがとう ありがとう ありがとう",
+    );
+  });
+
+  it("preserves short character-level onomatopoeia", () => {
+    // "ドド" repeated 3 times = "ドドドドドド" (6 chars, under 30)
+    expect(trimCtcLoopTail("ドドドドドド")).toBe("ドドドドドド");
+  });
+
+  it("still trims a long CTC loop starting from pos 0", () => {
+    // 60+ chars of "the the the..." — over CHANT_MAX_LEN → recognized as
+    // a CTC failure, not a chant
+    const input =
+      "the the the the the the the the the the the the the the th";
+    expect(trimCtcLoopTail(input)).toBe("");
+  });
+
+  it("still trims a prefix + short loop tail (loop starts > 0)", () => {
+    // Even when the loop tail itself is short, if there's meaningful content
+    // before it, we trim (this is the classic CTC leak shape).
+    expect(trimCtcLoopTail("correct no no no")).toBe("correct");
   });
 });

@@ -2,6 +2,20 @@
 
 [日本語版はこちら](CHANGELOG_ja.md)
 
+## v0.8.1 (2026-08-08)
+
+- **Faster OCR on multi-line pages**. When DEIM detects multiple lines, PARSeq recognition used to run one line at a time; it now runs up to 4 lines in parallel via a worker-pool. Newspaper columns, receipts, and multi-paragraph documents see visible wall-clock improvement as line count grows
+- Output order is preserved (idx-based writes keep the upstream reading-order pass authoritative). No effect on 1–2 line captures
+- **Fixed a bug where OCR'ing a short Latin label on a dark background could return `the the the ...`, `.ES.ES.ES ...`, or `CHANGE CHAND CHAND ...` style garbage**. When PARSeq is uncertain about its input, the CTC decoder can degenerate into a pure loop OR a mutation cluster of similar short tokens. Post-processing now runs three detectors in parallel and cuts at the earliest hit:
+  1. ≥3 consecutive identical whitespace-separated tokens (`the the the`)
+  2. ≥3 consecutive repetitions of any 2–10 character substring (`.ES.ES.ES`)
+  3. An identical adjacent token pair whose preceding token is a prefix-mutation of them (trims `CHANGE CHAND CHAND ...` down to the correct `CHANGELOG` prefix)
+  Applied uniformly to both the small-image bypass path and per-line DEIM path
+- **Legitimate repetitive text is preserved** (chants, onomatopoeia, emphasis — e.g., `はい はい はい`, `ドドドドド`, `ありがとう ありがとう ありがとう`). All three detectors above skip the trim when the loop starts at position 0 AND the whole text is under 30 characters — CTC-loop garbage typically fills PARSeq's max sequence length, so this length heuristic keeps intentional short repetitions intact
+- On top of that, **dark backgrounds are now color-inverted before being fed to PARSeq** so the input matches the model's training distribution (light bg / dark text). Improves accuracy on GitHub dark-theme link chips and similar small-to-medium dark-bg Latin labels
+- Added a fallback that **routes to the bypass pipeline when DEIM finds 0 boxes OR when DEIM finds boxes but PARSeq returns empty for every line**, as long as the image is medium-sized (short side ≤ 500px). Rescues dark chips that DEIM misses under its default confidence threshold
+- **Known limitation**: larger underlined dark chips (roughly >250px wide with `text-decoration: underline`) still return empty rather than the correct text — the underline stroke gets caught by the band extractor and PARSeq can't decode the mixed row. This is better than the previous garbage output but still not correct; a proper underline-stroke removal fix is deferred to a follow-up release
+
 ## v0.8.0 (2026-08-06)
 
 - **PDF OCR support**. From the popup's new "Open PDF" button, open a local (password-less) PDF in the viewer and OCR any page you like

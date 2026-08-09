@@ -14,6 +14,8 @@ import {
   trimEdgeColor,
   dominantBorderColor,
   extractMainTextBand,
+  shouldInvertForParseq,
+  invertColors,
 } from "../engine/image-utils";
 import {
   detectionsToPage,
@@ -171,12 +173,27 @@ async function runOcr(imageBlob: Blob, presetId: string): Promise<void> {
     // タイトに切り取られた小さなキャプチャ (例: コミットハッシュ) は DEIM の
     // 検出スコアがしきい値を下回るため、検出をスキップして PARSeq に直接渡す。
     const SMALL_IMAGE_BYPASS_MAX_SIDE = 200;
-    if (Math.max(imgW, imgH) <= SMALL_IMAGE_BYPASS_MAX_SIDE) {
+    // DEIM が0検出だった場合のフォールバック上限。範囲選択の実用上
+    // 妥当な最大サイズ (1行のリンクチップや小さな見出し等) を想定。
+    const DEIM_FALLBACK_MAX_SIDE = 500;
+
+    const runBypass = async (): Promise<void> => {
       // 背景色は border 全体から dominant を集計 (1 pixel だけ見ると断片を
-      // 拾ってしまうため)。その色を基準に、上下の隣接行フラグメントを弾いて
-      // 本文行の帯だけを抽出してから、左右の余白を trim して PARSeq に渡す。
+      // 拾ってしまうため)。
       const bg = dominantBorderColor(imageData);
-      const band = extractMainTextBand(imageData, bg);
+      // PARSeq (tegaki2) は白背景・黒文字で学習されているため、暗背景の
+      // 場合は色反転して分布を合わせる (GitHub dark のリンクチップ等)。
+      // 反転は band 抽出と trim の前段に置く: これらの関数は "top-left pixel
+      // を bg として扱う" といった前提が暗黙にあるので、canonical
+      // (light-bg-dark-text) に揃えてから処理する方が安全。
+      const invertBg = shouldInvertForParseq(bg);
+      const canonical = invertBg ? invertColors(imageData) : imageData;
+      const canonicalBg = invertBg
+        ? { r: 255 - bg.r, g: 255 - bg.g, b: 255 - bg.b }
+        : bg;
+      // 上下の隣接行フラグメントを弾いて本文行の帯だけを抽出、
+      // 左右の余白を trim して PARSeq に渡す。
+      const band = extractMainTextBand(canonical, canonicalBg);
       const trimmed = trimEdgeColor(band);
       const text = await recognizer!.read(trimmed, true);
       post({ type: "detect-done", numDetections: 1 });
@@ -189,11 +206,27 @@ async function runOcr(imageBlob: Blob, presetId: string): Promise<void> {
           HEIGHT: String(imgH),
         }),
       });
+    };
+
+    if (Math.max(imgW, imgH) <= SMALL_IMAGE_BYPASS_MAX_SIDE) {
+      await runBypass();
       return;
     }
 
     const detections = await detector!.detect(imageData);
     post({ type: "detect-done", numDetections: detections.length });
+
+    // DEIM が 0 検出で、かつ画像が「1行のチップ相当のサイズ」に収まる場合は
+    // bypass path (dominantBorderColor + extractMainTextBand + trimEdgeColor)
+    // にフォールバック。これは暗背景の Latin リンクチップなど、DEIM のスコア
+    // 閾値では拾えないが PARSeq が読める例をレスキューする経路。
+    if (
+      detections.length === 0 &&
+      Math.max(imgW, imgH) <= DEIM_FALLBACK_MAX_SIDE
+    ) {
+      await runBypass();
+      return;
+    }
 
     const page = detectionsToPage(imgW, imgH, "input.jpg", detections);
     const root = createElement("OCRDATASET", {}, [page]);
@@ -210,36 +243,77 @@ async function runOcr(imageBlob: Blob, presetId: string): Promise<void> {
     const lines = filterFurigana(lineBoxes).map((b) => b.line);
     const total = lines.length;
 
-    const resultLines: {
+    type LineResult = {
       text: string;
       x: number;
       y: number;
       w: number;
       h: number;
       conf: number;
-    }[] = [];
+    };
+    // Sized array so we can write results out of order and keep the reading
+    // order determined by the upstream evalPage/filterFurigana pass.
+    const resultLines: LineResult[] = new Array(total);
 
-    for (let i = 0; i < lines.length; i++) {
-      const line = lines[i];
+    // Run PARSeq for each detected line with bounded concurrency. Even when
+    // ORT serializes on a single WASM thread this is a wash (never slower),
+    // and on WebGPU multiple lines can overlap on the GPU. Concurrency is
+    // capped so a page with many lines doesn't blow memory.
+    const PARSEQ_CONCURRENCY = 4;
+    let completed = 0;
+
+    const processLine = async (idx: number): Promise<void> => {
+      const line = lines[idx];
       const x = parseInt(line.attrs.X ?? "0");
       const y = parseInt(line.attrs.Y ?? "0");
       const w = parseInt(line.attrs.WIDTH ?? "0");
       const h = parseInt(line.attrs.HEIGHT ?? "0");
       const conf = parseFloat(line.attrs.CONF ?? "0");
-
       if (w <= 0 || h <= 0) {
-        resultLines.push({ text: "", x, y, w, h, conf });
-        continue;
+        resultLines[idx] = { text: "", x, y, w, h, conf };
+      } else {
+        const lineImg = cropImageData(imageData, x, y, w, h);
+        const text = await recognizeLine(lineImg);
+        line.attrs.STRING = text;
+        resultLines[idx] = { text, x, y, w, h, conf };
       }
-
-      const lineImg = cropImageData(imageData, x, y, w, h);
-      const text = await recognizeLine(lineImg);
-      line.attrs.STRING = text;
-      resultLines.push({ text, x, y, w, h, conf });
-
-      if ((i + 1) % 5 === 0 || i === total - 1) {
-        post({ type: "recognize-progress", current: i + 1, total });
+      completed++;
+      if (completed % 5 === 0 || completed === total) {
+        post({
+          type: "recognize-progress",
+          current: completed,
+          total,
+        });
       }
+    };
+
+    // Simple worker-pool pattern: shared index counter, `min(N, total)`
+    // workers each pull the next line.
+    let next = 0;
+    const worker = async (): Promise<void> => {
+      while (true) {
+        const idx = next++;
+        if (idx >= total) return;
+        await processLine(idx);
+      }
+    };
+    const workerCount = Math.min(PARSEQ_CONCURRENCY, Math.max(total, 1));
+    await Promise.all(
+      Array.from({ length: workerCount }, () => worker()),
+    );
+
+    // DEIM がラインを検出しても、全ラインで PARSeq が empty を返した場合
+    // (CTC ループを trim して空になったケース含む) は「認識不能」相当。
+    // 画像が小〜中サイズなら bypass path に一度フォールバックしてみる。
+    const anyText = resultLines.some(
+      (r) => r.text && r.text.trim().length > 0,
+    );
+    if (
+      !anyText &&
+      Math.max(imgW, imgH) <= DEIM_FALLBACK_MAX_SIDE
+    ) {
+      await runBypass();
+      return;
     }
 
     post({ type: "result", lines: resultLines, detections, page });
