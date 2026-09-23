@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="utf-8" />
+    <title>Scene 0: タイトル</title>
+    <style>
+      @import url("https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;700;900&display=swap");
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      body {
+        font-family: "Noto Sans JP", sans-serif;
+        display: flex; justify-content: center; align-items: center;
+        min-height: 100vh; background: #111;
+      }
+      .slide {
+        width: 1920px; height: 1080px;
+        background:
+          radial-gradient(circle at 20% 30%, #2c5f8a 0%, transparent 45%),
+          radial-gradient(circle at 80% 70%, #5b9bd5 0%, transparent 45%),
+          linear-gradient(135deg, #12233c 0%, #1e3a5f 100%);
+        display: flex; flex-direction: column;
+        align-items: center; justify-content: center;
+        color: #fff; overflow: hidden; position: relative;
+      }
+      .pdf-icon {
+        font-size: 160px;
+        opacity: 0;
+        transform: scale(0.6) rotate(-6deg);
+        animation: iconIn 0.9s cubic-bezier(0.34, 1.56, 0.64, 1) forwards 0.2s;
+      }
+      h1 {
+        font-size: 96px; font-weight: 900; letter-spacing: 4px;
+        margin-top: 40px; text-shadow: 0 4px 24px rgba(0,0,0,0.4);
+        opacity: 0; animation: fadeUp 0.7s ease forwards 1.2s;
+      }
+      .subtitle {
+        font-size: 36px; color: rgba(255,255,255,0.9);
+        margin-top: 24px; letter-spacing: 2px;
+        opacity: 0; animation: fadeUp 0.7s ease forwards 1.8s;
+      }
+      .badge {
+        margin-top: 60px;
+        padding: 12px 28px;
+        background: rgba(255,255,255,0.15);
+        border: 2px solid rgba(255,255,255,0.35);
+        border-radius: 999px;
+        font-size: 24px;
+        letter-spacing: 1px;
+        opacity: 0; animation: fadeUp 0.7s ease forwards 2.4s;
+      }
+      @keyframes iconIn {
+        to { opacity: 1; transform: scale(1) rotate(0); }
+      }
+      @keyframes fadeUp {
+        from { opacity: 0; transform: translateY(20px); }
+        to { opacity: 1; transform: translateY(0); }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="slide">
+      <div class="pdf-icon">📄</div>
+      <h1>PDF もオフラインで</h1>
+      <div class="subtitle">オフラインOCR v0.8.0</div>
+      <div class="badge">🔒 通信ゼロ、全部ブラウザ内で完結</div>
+    </div>
+  </body>
+</html>

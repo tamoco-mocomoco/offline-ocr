@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="utf-8" />
+    <title>Scene 2: どう解決したか</title>
+    <style>
+      @import url("https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;700;900&display=swap");
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      body {
+        font-family: "Noto Sans JP", sans-serif;
+        display: flex; justify-content: center; align-items: center;
+        min-height: 100vh; background: #111;
+      }
+      .slide {
+        width: 1920px; height: 1080px;
+        background: linear-gradient(180deg, #0d1117 0%, #161b22 100%);
+        display: flex; flex-direction: column;
+        align-items: center; justify-content: center;
+        color: #fff; padding: 80px;
+      }
+      h1 {
+        font-size: 72px; font-weight: 900; margin-bottom: 20px;
+        opacity: 0; animation: fadeUp 0.7s ease forwards 0.3s;
+      }
+      h1 .highlight { color: #4ea3ff; }
+      .subtitle {
+        font-size: 32px; color: #8b949e; margin-bottom: 60px;
+        opacity: 0; animation: fadeIn 0.6s ease forwards 0.8s;
+      }
+      .flow {
+        display: flex; align-items: center; gap: 32px;
+        opacity: 0; animation: fadeUp 0.8s ease forwards 1.2s;
+      }
+      .step {
+        background: rgba(78,163,255,0.12);
+        border: 2px solid #4ea3ff;
+        border-radius: 16px;
+        padding: 32px 40px;
+        min-width: 260px;
+        text-align: center;
+      }
+      .step-icon { font-size: 64px; }
+      .step-label {
+        font-size: 24px; font-weight: 700; margin-top: 12px; color: #fff;
+      }
+      .arrow {
+        font-size: 60px; color: #4ea3ff;
+      }
+      .callouts {
+        margin-top: 80px;
+        display: flex; gap: 60px;
+        opacity: 0; animation: fadeUp 0.8s ease forwards 2.0s;
+      }
+      .callout {
+        display: flex; align-items: center; gap: 16px;
+        font-size: 28px;
+      }
+      .callout-icon {
+        width: 60px; height: 60px; border-radius: 50%;
+        background: #3fb950;
+        display: flex; align-items: center; justify-content: center;
+        font-size: 32px;
+      }
+      @keyframes fadeUp {
+        from { opacity: 0; transform: translateY(30px); }
+        to { opacity: 1; transform: translateY(0); }
+      }
+      @keyframes fadeIn {
+        from { opacity: 0; } to { opacity: 1; }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="slide">
+      <h1>拡張機能に <span class="highlight">pdfjs-dist</span> を同梱</h1>
+      <div class="subtitle">ブラウザ内で PDF → 画像 → OCR まで完結</div>
+      <div class="flow">
+        <div class="step">
+          <div class="step-icon">📄</div>
+          <div class="step-label">ローカル PDF</div>
+        </div>
+        <div class="arrow">→</div>
+        <div class="step">
+          <div class="step-icon">🎨</div>
+          <div class="step-label">pdfjs-dist で描画</div>
+        </div>
+        <div class="arrow">→</div>
+        <div class="step">
+          <div class="step-icon">🖼️</div>
+          <div class="step-label">Canvas (画像)</div>
+        </div>
+        <div class="arrow">→</div>
+        <div class="step">
+          <div class="step-icon">🔎</div>
+          <div class="step-label">DEIM + PARSeq</div>
+        </div>
+      </div>
+      <div class="callouts">
+        <div class="callout">
+          <div class="callout-icon">✓</div>
+          <div>file:// を経由しない</div>
+        </div>
+        <div class="callout">
+          <div class="callout-icon">✓</div>
+          <div>通信ゼロを維持</div>
+        </div>
+        <div class="callout">
+          <div class="callout-icon">✓</div>
+          <div>既存の選択・OCR UI そのまま</div>
+        </div>
+      </div>
+    </div>
+  </body>
+</html>

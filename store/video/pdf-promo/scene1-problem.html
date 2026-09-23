@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="utf-8" />
+    <title>Scene 1: これまでできなかった理由</title>
+    <style>
+      @import url("https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;700;900&display=swap");
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      body {
+        font-family: "Noto Sans JP", sans-serif;
+        display: flex; justify-content: center; align-items: center;
+        min-height: 100vh; background: #111;
+      }
+      .slide {
+        width: 1920px; height: 1080px;
+        background: linear-gradient(180deg, #0d1117 0%, #161b22 100%);
+        display: flex; flex-direction: column;
+        align-items: center; justify-content: center;
+        color: #fff; padding: 80px;
+        position: relative;
+      }
+      .header {
+        font-size: 42px; color: #8b949e; margin-bottom: 20px;
+        opacity: 0; animation: fadeIn 0.6s ease forwards 0.3s;
+      }
+      h1 {
+        font-size: 72px; font-weight: 900; margin-bottom: 60px;
+        opacity: 0; animation: fadeUp 0.7s ease forwards 0.7s;
+      }
+      h1 .highlight { color: #ff5252; }
+      .cards {
+        display: flex; gap: 40px; justify-content: center;
+      }
+      .card {
+        flex: 1; max-width: 500px; padding: 40px;
+        background: rgba(255,255,255,0.04);
+        border: 1px solid rgba(255,82,82,0.4);
+        border-radius: 16px;
+        opacity: 0; transform: translateY(30px);
+      }
+      .card:nth-child(1) { animation: fadeUp 0.6s ease forwards 1.2s; }
+      .card:nth-child(2) { animation: fadeUp 0.6s ease forwards 1.6s; }
+      .card:nth-child(3) { animation: fadeUp 0.6s ease forwards 2.0s; }
+      .card-num {
+        font-size: 60px; font-weight: 900; color: #ff5252;
+        opacity: 0.6; line-height: 1;
+      }
+      .card-title {
+        font-size: 32px; font-weight: 700; margin-top: 12px;
+      }
+      .card-desc {
+        font-size: 22px; color: #c9d1d9; margin-top: 20px;
+        line-height: 1.6;
+      }
+      @keyframes fadeIn {
+        from { opacity: 0; }
+        to { opacity: 1; }
+      }
+      @keyframes fadeUp {
+        from { opacity: 0; transform: translateY(30px); }
+        to { opacity: 1; transform: translateY(0); }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="slide">
+      <div class="header">Chrome拡張 × PDF</div>
+      <h1>これまで<span class="highlight">できなかった</span>理由</h1>
+      <div class="cards">
+        <div class="card">
+          <div class="card-num">01</div>
+          <div class="card-title">file:// への<br />アクセス制限</div>
+          <div class="card-desc">ユーザーが明示的に「ファイルURLへのアクセスを許可」を ON にしないとローカルPDFを開けない</div>
+        </div>
+        <div class="card">
+          <div class="card-num">02</div>
+          <div class="card-title">内蔵PDFビューアには<br />スクリプト注入不可</div>
+          <div class="card-desc">Chrome の PDFium プロセスに Content Script を注入できず、範囲選択の仕組みが動かない</div>
+        </div>
+        <div class="card">
+          <div class="card-num">03</div>
+          <div class="card-title">PDFレンダリング<br />を自前で持ち込む必要</div>
+          <div class="card-desc">拡張機能側で PDF を pixel まで描画するライブラリを同梱する必要がある</div>
+        </div>
+      </div>
+    </div>
+  </body>
+</html>
