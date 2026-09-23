@@ -13,9 +13,16 @@ automatically copied to your clipboard. No data ever leaves your browser.
 
 - Launch from the toolbar icon, `Alt+Shift+O`, or the right-click context menu
 - Drag to select a region (`Esc` to cancel)
-- DEIM text-region detection → XY-Cut reading order → PARSeq character recognition
+- DEIM text-region detection → XY-Cut reading order → PARSeq character recognition (up to 4 lines recognized in parallel)
 - Results are auto-copied via `navigator.clipboard.writeText` with a toast notification
 - Models are cached in IndexedDB after the first load for fast subsequent runs
+- **Image viewer**: open local images or clipboard images for OCR (zoom + region select supported)
+- **PDF viewer**: open a local PDF and OCR any page you like via page navigation (password-protected PDFs not supported)
+- **OCR history**: results are automatically saved to `chrome.storage.local` for later re-copy, edit, search, and delete
+- **Cleaning rules**: customize regex-based post-processing rules
+- Same-row detection for tables/receipts produces tab-separated output
+- Automatic furigana (ruby) filtering
+- Robust against tight selections, tiny images, and captures with adjacent-line fragments (v0.2 / v0.6 / v0.7.1)
 
 ## Build
 

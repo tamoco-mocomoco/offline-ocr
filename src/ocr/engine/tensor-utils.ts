@@ -125,3 +125,140 @@ export function argmaxAxis2WithConfTrim(
   }
   return indices;
 }
+
+/**
+ * PARSeq (CTC 系デコーダ) が入力に確信を持てないとき、同じ短い部分列を
+ * 繰り返して max seq length を埋める挙動が観察される。実例:
+ *  - `the the the ... the`               (word-level, 空白区切り)
+ *  - `S.ES.ES.ES.ES.ES.IRES ...`         (character-level, 空白なし)
+ *  - `ぱぱぱぱぱぱ`                          (single-char)
+ *
+ * この関数では2段階でループを検出して以降を切り捨てる:
+ *   1) 空白区切りトークン単位で3連続同一を先頭から探す
+ *   2) 文字レベルで、長さ2〜10の substring が3回以上連続する位置を先頭から探す
+ * どちらかで最も早い trim ポイントを採用する。
+ *
+ * - 空白区切りで同一トークンが3回、または短い文字列が3回連続、というパターンは
+ *   通常の OCR 結果 (日本語・英数字混在) にはほとんど出現しない
+ * - 先頭からループしているケース (correct prefix なし) は空文字が返る
+ *   → 上位層で「文字を検出できませんでした」として扱われる (fail-closed)
+ */
+export function trimCtcLoopTail(text: string): string {
+  const wordTrim = findWhitespaceLoopStart(text);
+  const charTrim = findCharLevelLoopStart(text);
+  const mutTrim = findMutationClusterStart(text);
+  const candidates = [wordTrim, charTrim, mutTrim].filter((x) => x !== -1);
+  if (candidates.length === 0) return text;
+  const cut = Math.min(...candidates);
+  return text.slice(0, cut).trimEnd();
+}
+
+// Legitimate repetitive text (chants, onomatopoeia, "はい はい はい") is
+// usually short. CTC-loop garbage fills PARSeq's max sequence length, so
+// it's typically much longer. When a 3-repeat starts at position 0 AND the
+// whole text is under this length, treat it as intentional (don't trim).
+const CHANT_MAX_LEN = 30;
+
+/** Return the char index where 3 identical whitespace-separated tokens start, or -1. */
+function findWhitespaceLoopStart(text: string): number {
+  const re = /\S+/g;
+  const tokens: { start: number; end: number; str: string }[] = [];
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(text)) !== null) {
+    tokens.push({ start: m.index, end: m.index + m[0].length, str: m[0] });
+  }
+  for (let i = 0; i < tokens.length - 2; i++) {
+    if (
+      tokens[i].str === tokens[i + 1].str &&
+      tokens[i].str === tokens[i + 2].str
+    ) {
+      const start = tokens[i].start;
+      // Preserve legitimate short chants (see CHANT_MAX_LEN comment).
+      if (start === 0 && text.length < CHANT_MAX_LEN) return -1;
+      return start;
+    }
+  }
+  return -1;
+}
+
+/**
+ * Detect a mutation-cluster loop: PARSeq sometimes fails to lock in a
+ * clean loop but instead emits a *cluster of similar short tokens* — the
+ * user-reported garbage was
+ *
+ *   `CHANGELOG CHANGE CHAND CHAND CON R. CON S.IS.EO.IRES AND STION ...`
+ *
+ * where `CHANGE`, `CHAND`, `CHAND` share the "CHAN" prefix and one adjacent
+ * pair is identical (`CHAND CHAND`). Neither the whitespace-token nor
+ * character-level 3-repetition check catches this.
+ *
+ * Signal: two consecutive tokens are identical AND the preceding token is a
+ * prefix-mutation of them (short 3–10 char token, common prefix ≥ 3 chars,
+ * prefix ratio ≥ 0.6 vs the shorter token). Requiring the identical pair
+ * keeps this rule conservative — legitimate English like "change changed
+ * changes" has similar tokens but rarely two in a row that are byte-equal.
+ *
+ * Returns the char index where the mutation cluster starts (the preceding
+ * mutation token), or -1.
+ */
+function findMutationClusterStart(text: string): number {
+  const re = /\S+/g;
+  const tokens: { start: number; str: string }[] = [];
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(text)) !== null) {
+    tokens.push({ start: m.index, str: m[0] });
+  }
+  for (let i = 2; i < tokens.length; i++) {
+    if (
+      tokens[i - 1].str === tokens[i].str &&
+      isShortPrefixMutation(tokens[i - 2].str, tokens[i - 1].str)
+    ) {
+      const start = tokens[i - 2].start;
+      // Preserve legitimate short chants: `ありがとう ありがとう ありがとう`
+      // is technically "X X + identical prev", but is intentional emphasis
+      // rather than a CTC failure. Same threshold as the other two rules.
+      if (start === 0 && text.length < CHANT_MAX_LEN) return -1;
+      return start;
+    }
+  }
+  return -1;
+}
+
+function isShortPrefixMutation(a: string, b: string): boolean {
+  if (a.length < 3 || a.length > 10) return false;
+  if (b.length < 3 || b.length > 10) return false;
+  if (a === b) return true;
+  let cp = 0;
+  while (cp < a.length && cp < b.length && a[cp] === b[cp]) cp++;
+  if (cp < 3) return false;
+  return cp / Math.min(a.length, b.length) >= 0.6;
+}
+
+/**
+ * Return the char index where a substring of length 2..10 repeats 3 or more
+ * times consecutively, or -1. Skips runs whose substring is whitespace only.
+ * Prefers earliest position; among ties prefers shorter substring.
+ */
+function findCharLevelLoopStart(text: string): number {
+  const MAX_LEN = 10;
+  const MIN_LEN = 2;
+  let bestStart = -1;
+  for (let len = MIN_LEN; len <= MAX_LEN; len++) {
+    for (let start = 0; start + 3 * len <= text.length; start++) {
+      const s = text.slice(start, start + len);
+      if (s.trim().length === 0) continue;
+      if (
+        text.slice(start + len, start + 2 * len) === s &&
+        text.slice(start + 2 * len, start + 3 * len) === s
+      ) {
+        // Preserve legitimate short repetitive text (see CHANT_MAX_LEN).
+        if (start === 0 && text.length < CHANT_MAX_LEN) {
+          break; // this len is a false-positive; try next len
+        }
+        if (bestStart === -1 || start < bestStart) bestStart = start;
+        break; // earliest for this len; move to next len
+      }
+    }
+  }
+  return bestStart;
+}

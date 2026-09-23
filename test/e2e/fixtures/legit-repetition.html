@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="utf-8" />
+    <title>OCR fixture: legitimate repetitive text</title>
+    <style>
+      body {
+        margin: 0;
+        padding: 40px;
+        background: #ffffff;
+        font-family: "Hiragino Sans", "Yu Gothic", "Noto Sans JP", "Meiryo",
+          sans-serif;
+        color: #111;
+      }
+      .card {
+        display: inline-block;
+        padding: 16px 24px;
+        font-size: 28px;
+        font-weight: 700;
+        margin: 12px 0;
+        background: #ffffff;
+      }
+    </style>
+  </head>
+  <body>
+    <!-- Cases that COULD false-trigger the CTC-loop trim if the rule
+         is too aggressive. Each one is a real, legitimate OCR target. -->
+
+    <!-- 1) Manga sound effect (single character repeated) -->
+    <div id="sfx" class="card">ドドドドドドド</div><br />
+
+    <!-- 2) Japanese chant / short-word repetition -->
+    <div id="chant" class="card">はい はい はい</div><br />
+
+    <!-- 3) Prefix + repetition tail — analogous to CTC loop shape but
+         legitimate (e.g., an emphatic ending). -->
+    <div id="prefix-loop" class="card">ありがとう ありがとう ありがとう</div><br />
+
+    <!-- 4) English 3-word repetition -->
+    <div id="en-chant" class="card">no no no</div><br />
+
+    <!-- 5) Repeating substring without whitespace -->
+    <div id="no-space-repeat" class="card">ららららら</div><br />
+
+    <!-- 6) Repetitive content followed by meaningful content -->
+    <div id="repeat-then-text" class="card">ハハハ、元気ですか</div><br />
+
+    <!-- 7) Filename-list style: similar-prefix tokens (mutation-cluster risk) -->
+    <div id="filenames" class="card">test1.md test2.md test3.md</div>
+  </body>
+</html>
