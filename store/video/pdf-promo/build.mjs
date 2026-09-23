@@ -45,30 +45,42 @@ const FADE_DURATION = 0.8; // seconds
 
 // ── Scenes (matches narration.txt timings) ─────────────────────────────────
 
+// Scene durations chosen to fit the narration comfortably with ~0.5s gaps
+// between consecutive lines. At speedScale=1.15, total narration ≈ 60s;
+// scene sum 74s minus 4×0.8s xfades = 70.8s of final video, leaving room
+// for breathing space and CTA hold.
 const scenes = [
-  { file: "scene0-title.html", duration: 6_000 },
-  { file: "scene1-problem.html", duration: 16_000 },
-  { file: "scene2-solution.html", duration: 14_000 },
-  { file: "scene3-usage.html", duration: 14_000 },
-  { file: "scene4-outro.html", duration: 10_000 },
+  { file: "scene0-title.html", duration: 8_000 },
+  { file: "scene1-problem.html", duration: 22_000 },
+  { file: "scene2-solution.html", duration: 18_000 },
+  { file: "scene3-usage.html", duration: 18_000 },
+  { file: "scene4-outro.html", duration: 8_000 },
 ];
 
-// Narration timing (seconds from start of full video, after xfade compaction).
-// Each fade shortens the timeline by FADE_DURATION, so a scene starting at
-// cumulative-with-fades time is what we need for voice sync.
+// Narration timing (seconds from the start of the composited video, after
+// xfade compaction). speedScale=1.15 → each line ≈ 4–6s; leave ≥0.4s of
+// silence between consecutive lines so they don't overlap. All ends must
+// stay under the total video length (~70.8s) with a small tail buffer.
+//
+//  Scene   Video window (approx.)   Narrations
+//  0       0.0  – 7.2               scene0-01
+//  1       7.2  – 28.4              scene1-01..04
+//  2      28.4  – 45.6              scene2-01..03
+//  3      45.6  – 62.8              scene3-01..03
+//  4      62.8  – 70.8              scene4-01
 const narrations = [
-  { start: 2.0, file: "scene0-01", text: "オフラインOCR。バージョン0.8.0で、PDFにも対応しました。" },
-  { start: 6.0, file: "scene1-01", text: "実はChrome拡張でPDFを扱うのって、意外と大変なんです。" },
-  { start: 10.0, file: "scene1-02", text: "ローカルのPDFを開くには、ユーザーがファイルURLへのアクセスを自分で許可する必要があります。" },
-  { start: 15.0, file: "scene1-03", text: "Chromeの内蔵PDFビューアには、拡張のスクリプトを注入できません。" },
-  { start: 18.5, file: "scene1-04", text: "PDFを描画する仕組みを、拡張機能側で持ち込むしかない。" },
-  { start: 22.0, file: "scene2-01", text: "そこで、pdfjs-distを拡張本体に同梱しました。" },
-  { start: 25.5, file: "scene2-02", text: "ローカルPDFをpdfjs-distで画像に描画して、そのままDEIMとPARSeqにかける。" },
-  { start: 31.0, file: "scene2-03", text: "権限設定は不要、通信ゼロも維持。既存の選択UIもそのまま動きます。" },
-  { start: 36.0, file: "scene3-01", text: "使い方はかんたん。ポップアップに新しく「PDFを開く」ボタンが増えています。" },
-  { start: 41.5, file: "scene3-02", text: "PDFを選ぶとビューアが開いて、ページ移動はキーでもボタンでもスムーズに。" },
-  { start: 46.5, file: "scene3-03", text: "あとはドラッグで範囲選択、結果はクリップボードにコピーされます。" },
-  { start: 51.0, file: "scene4-01", text: "手元のPDFを、通信ゼロで、その場で読める。オフラインOCR、今すぐお試しください。" },
+  { start:  1.0, file: "scene0-01", text: "オフラインOCR。バージョン0.8.0で、PDFにも対応しました。" },
+  { start:  8.5, file: "scene1-01", text: "実はChrome拡張でPDFを扱うのって、意外と大変なんです。" },
+  { start: 13.5, file: "scene1-02", text: "ローカルのPDFを開くには、ファイルURLアクセスの許可が必要です。" },
+  { start: 20.5, file: "scene1-03", text: "Chromeの内蔵PDFビューアには、拡張のスクリプトを注入できません。" },
+  { start: 26.0, file: "scene1-04", text: "PDFを描画する仕組みを、拡張機能側で持ち込むしかない。" },
+  { start: 31.5, file: "scene2-01", text: "そこで、pdfjs-distを拡張本体に同梱しました。" },
+  { start: 36.0, file: "scene2-02", text: "PDFを画像に描画して、そのままOCRエンジンに流します。" },
+  { start: 41.5, file: "scene2-03", text: "権限設定は不要、通信ゼロも維持。既存の選択UIもそのまま。" },
+  { start: 47.5, file: "scene3-01", text: "ポップアップに新しく「PDFを開く」ボタンが増えました。" },
+  { start: 53.0, file: "scene3-02", text: "PDFを選ぶとビューアが開き、ページ移動もキーでスムーズに。" },
+  { start: 58.5, file: "scene3-03", text: "あとはドラッグで範囲選択。結果はクリップボードへ。" },
+  { start: 63.5, file: "scene4-01", text: "手元のPDFを、通信ゼロでOCR。オフラインOCR、今すぐお試しください。" },
 ];
 
 // Explicit IPv4 — some macOS setups resolve `localhost` to ::1 first and
@@ -174,6 +186,7 @@ async function generateVoice() {
   }
 
   const clips = [];
+  const spans = [];
   for (const n of narrations) {
     const outWav = resolve(VOICE, `${n.file}.wav`);
     console.log(`  ${n.file}: "${n.text.slice(0, 30)}..."`);
@@ -184,7 +197,7 @@ async function generateVoice() {
       { method: "POST" },
     );
     const params = await q.json();
-    params.speedScale = 1.05;
+    params.speedScale = 1.15;
     params.intonationScale = 1.2;
 
     // 2) synthesize
@@ -198,6 +211,29 @@ async function generateVoice() {
     );
     writeFileSync(outWav, Buffer.from(await s.arrayBuffer()));
     clips.push({ ...n, wav: outWav });
+
+    const dur = parseFloat(
+      execSync(
+        `ffprobe -v error -show_entries format=duration -of csv=p=0 "${outWav}"`,
+      ).toString().trim(),
+    );
+    spans.push({ file: n.file, start: n.start, end: n.start + dur, dur });
+  }
+
+  // Verify no narration overlaps the next one (require ≥0.2s gap).
+  let bad = false;
+  for (let i = 0; i < spans.length - 1; i++) {
+    const gap = spans[i + 1].start - spans[i].end;
+    const marker = gap < 0.2 ? "✗ OVERLAP" : "";
+    console.log(
+      `    ${spans[i].file} ${spans[i].start.toFixed(2)}-${spans[i].end.toFixed(2)} → next in ${gap.toFixed(2)}s ${marker}`,
+    );
+    if (gap < 0.2) bad = true;
+  }
+  if (bad) {
+    console.error(
+      "\n  ⚠ Narration overlap detected — narration timings need adjustment.",
+    );
   }
 
   // Compose into a single timed track. Approach:
@@ -207,7 +243,7 @@ async function generateVoice() {
   //     timeline, then amix all with the silent base
   //   - normalize=0 keeps loudness constant (amix would otherwise quieten
   //     each track by 1/N)
-  const totalDur = 65; // safe upper bound (~60s + tail)
+  const totalDur = 75; // safe upper bound (video ~70.8s + tail)
   const inputs = clips.map((c) => `-i "${c.wav}"`).join(" ");
   const delayNodes = clips
     .map((c, i) => {
