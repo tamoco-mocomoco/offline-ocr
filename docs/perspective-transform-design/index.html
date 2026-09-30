@@ -1,0 +1,1356 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>透視変換 (四隅で選択) 対応 — 設計方針</title>
+    <style>
+      :root {
+        --bg: #0d1117;
+        --panel: #161b22;
+        --panel2: #21262d;
+        --border: #30363d;
+        --text: #e6edf3;
+        --dim: #8b949e;
+        --accent: #4ea3ff;
+        --accent2: #58a6ff;
+        --warn: #ffca28;
+        --err: #ff5252;
+        --ok: #3fb950;
+        --code: #f78166;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      html,
+      body {
+        margin: 0;
+        padding: 0;
+        background: var(--bg);
+        color: var(--text);
+        font-family:
+          "Hiragino Sans", "Yu Gothic", "Noto Sans JP", "Meiryo", -apple-system,
+          BlinkMacSystemFont, sans-serif;
+        line-height: 1.7;
+      }
+      .wrap {
+        max-width: 1100px;
+        margin: 0 auto;
+        padding: 40px 24px 80px;
+      }
+      header {
+        border-bottom: 1px solid var(--border);
+        padding-bottom: 28px;
+        margin-bottom: 40px;
+      }
+      h1 {
+        font-size: 34px;
+        margin: 0 0 12px;
+        letter-spacing: -0.02em;
+      }
+      .subtitle {
+        color: var(--dim);
+        font-size: 15px;
+      }
+      .subtitle .status {
+        display: inline-block;
+        padding: 2px 10px;
+        border-radius: 999px;
+        background: rgba(255, 202, 40, 0.15);
+        color: var(--warn);
+        border: 1px solid rgba(255, 202, 40, 0.4);
+        font-size: 12px;
+        margin-left: 8px;
+        vertical-align: middle;
+      }
+      h2 {
+        font-size: 24px;
+        margin: 56px 0 20px;
+        padding-top: 12px;
+        border-top: 1px solid var(--border);
+      }
+      h3 {
+        font-size: 18px;
+        margin: 32px 0 12px;
+        color: var(--accent2);
+      }
+      p {
+        margin: 12px 0;
+      }
+      code {
+        background: var(--panel2);
+        padding: 2px 6px;
+        border-radius: 4px;
+        font-family:
+          ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+        font-size: 0.9em;
+        color: var(--code);
+      }
+      pre {
+        background: var(--panel);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        padding: 16px 18px;
+        overflow-x: auto;
+        font-size: 13px;
+        line-height: 1.55;
+      }
+      pre code {
+        background: transparent;
+        padding: 0;
+        color: var(--text);
+        font-size: inherit;
+      }
+      ul,
+      ol {
+        padding-left: 24px;
+      }
+      li {
+        margin: 6px 0;
+      }
+      .callout {
+        border-left: 3px solid var(--accent);
+        background: rgba(78, 163, 255, 0.08);
+        border-radius: 0 8px 8px 0;
+        padding: 12px 16px;
+        margin: 20px 0;
+      }
+      .callout.warn {
+        border-color: var(--warn);
+        background: rgba(255, 202, 40, 0.08);
+      }
+      .callout.ok {
+        border-color: var(--ok);
+        background: rgba(63, 185, 80, 0.08);
+      }
+      .callout-title {
+        font-weight: 700;
+        margin-bottom: 4px;
+      }
+      .grid-2 {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 20px;
+        margin: 20px 0;
+      }
+      .card {
+        background: var(--panel);
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        padding: 20px;
+      }
+      .card h4 {
+        margin: 0 0 12px;
+        font-size: 15px;
+        color: var(--dim);
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        font-weight: 600;
+      }
+      figure {
+        margin: 24px 0;
+        padding: 20px;
+        background: var(--panel);
+        border: 1px solid var(--border);
+        border-radius: 10px;
+      }
+      figcaption {
+        font-size: 13px;
+        color: var(--dim);
+        margin-top: 12px;
+        text-align: center;
+      }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        margin: 20px 0;
+        font-size: 14px;
+      }
+      th,
+      td {
+        text-align: left;
+        padding: 10px 12px;
+        border-bottom: 1px solid var(--border);
+      }
+      th {
+        color: var(--dim);
+        font-weight: 600;
+        font-size: 13px;
+      }
+      td code {
+        font-size: 12px;
+      }
+      .tag {
+        display: inline-block;
+        padding: 2px 8px;
+        border-radius: 4px;
+        font-size: 11px;
+        font-weight: 600;
+        letter-spacing: 0.02em;
+      }
+      .tag-ok {
+        background: rgba(63, 185, 80, 0.15);
+        color: var(--ok);
+        border: 1px solid rgba(63, 185, 80, 0.35);
+      }
+      .tag-todo {
+        background: rgba(78, 163, 255, 0.15);
+        color: var(--accent);
+        border: 1px solid rgba(78, 163, 255, 0.35);
+      }
+      .tag-warn {
+        background: rgba(255, 202, 40, 0.15);
+        color: var(--warn);
+        border: 1px solid rgba(255, 202, 40, 0.35);
+      }
+      /* Interactive quad demo */
+      .demo {
+        background: var(--panel);
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        padding: 20px;
+        margin: 24px 0;
+      }
+      .demo-canvas-wrap {
+        position: relative;
+        margin: 0 auto;
+        max-width: 640px;
+      }
+      .demo-canvas-wrap canvas {
+        display: block;
+        width: 100%;
+        background: #1a1a1a;
+        border-radius: 6px;
+        cursor: crosshair;
+        touch-action: none;
+      }
+      .demo-controls {
+        display: flex;
+        gap: 8px;
+        justify-content: center;
+        margin-top: 12px;
+        flex-wrap: wrap;
+      }
+      .demo-controls button {
+        background: var(--accent);
+        color: #fff;
+        border: none;
+        padding: 8px 16px;
+        border-radius: 6px;
+        font: inherit;
+        font-size: 14px;
+        cursor: pointer;
+      }
+      .demo-controls button.secondary {
+        background: var(--panel2);
+        color: var(--text);
+        border: 1px solid var(--border);
+      }
+      .demo-controls button:hover {
+        opacity: 0.85;
+      }
+      .demo-preview {
+        margin-top: 16px;
+        text-align: center;
+      }
+      .demo-preview canvas {
+        display: inline-block;
+        max-width: 100%;
+        background: #fff;
+        border-radius: 6px;
+      }
+      .demo-note {
+        text-align: center;
+        font-size: 13px;
+        color: var(--dim);
+        margin-top: 10px;
+      }
+      /* mockup */
+      .mockup {
+        background: #1a1a1a;
+        border: 1px solid #333;
+        border-radius: 8px;
+        padding: 12px;
+        margin: 16px 0;
+      }
+      .toolbar-mock {
+        display: flex;
+        gap: 10px;
+        align-items: center;
+        padding: 8px 12px;
+        background: #252525;
+        border-radius: 6px;
+        margin-bottom: 8px;
+      }
+      .toolbar-mock button {
+        padding: 6px 14px;
+        font-size: 13px;
+        font-weight: 600;
+        border: 0;
+        border-radius: 6px;
+        color: #fff;
+        cursor: default;
+      }
+      .btn-primary { background: #4ea3ff; }
+      .btn-secondary { background: #555; }
+      .btn-new {
+        background: #6c757d;
+        outline: 2px solid var(--warn);
+        outline-offset: 2px;
+      }
+      .badge-new {
+        display: inline-block;
+        margin-left: 6px;
+        font-size: 10px;
+        color: var(--warn);
+        letter-spacing: 0.05em;
+        font-weight: 700;
+      }
+      .arch-flow {
+        display: grid;
+        grid-template-columns: repeat(5, 1fr);
+        gap: 8px;
+        margin: 20px 0;
+        text-align: center;
+      }
+      .arch-flow .step {
+        background: var(--panel);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        padding: 12px 8px;
+        font-size: 12px;
+      }
+      .arch-flow .step .step-title {
+        font-weight: 700;
+        color: var(--accent2);
+        display: block;
+        margin-bottom: 4px;
+      }
+      .arch-flow .step.new {
+        border-color: var(--warn);
+        background: rgba(255, 202, 40, 0.05);
+      }
+      .arrow {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: var(--accent);
+        font-size: 18px;
+      }
+      @media (max-width: 720px) {
+        h1 { font-size: 26px; }
+        h2 { font-size: 20px; }
+        .grid-2 { grid-template-columns: 1fr; }
+        .arch-flow { grid-template-columns: 1fr; }
+        .arrow { transform: rotate(90deg); }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <header>
+        <h1>透視変換 (四隅で選択) 対応 — 設計方針</h1>
+        <div class="subtitle">
+          Chrome 拡張 オフラインOCR / feature branch <code>feature/perspective-transform-design</code>
+          <span class="status">Draft / Review 前</span>
+        </div>
+      </header>
+
+      <h2>0. TL;DR</h2>
+      <div class="callout ok">
+        <div class="callout-title">要点</div>
+        <ul>
+          <li>
+            透視変換の <strong>数学ロジックは既に実装済み</strong>
+            (<code>src/ocr/engine/perspective.ts</code>、<a
+              href="https://github.com/tamoco-mocomoco/ndlocr-lite-wasm"
+              target="_blank" rel="noopener"
+              >ndlocr-lite-wasm</a
+            >
+            から移植された <code>computeHomography</code> /
+            <code>applyPerspective</code> が動く状態)。
+          </li>
+          <li>
+            未実装なのは <strong>UI (4点ドラッグ)</strong> と
+            <strong>ビューアーへの組み込み</strong> のみ。
+          </li>
+          <li>
+            既存の「範囲選択 (矩形)」フローを壊さず、
+            <strong>「四隅で選択」を並列モードとして追加</strong>する方針。
+          </li>
+          <li>
+            この HTML は設計方針の共有 + 下部にインタラクティブなドラッグ
+            プレビュー
+            (実際の Canvas + 実際の <code>computeHomography</code> 相当のロジック)
+            を含みます。実装イメージを触って確認できます。
+          </li>
+        </ul>
+      </div>
+
+      <h2>1. 何を実現したいか</h2>
+      <p>
+        現在の範囲選択は <strong>軸に平行な矩形</strong>のみです。
+        カメラで斜めから撮った書類、机の上のレシート、画面のスクショに写り込んだ
+        ドキュメント (Zoomウィンドウ内の PDF 等)
+        のように、<strong>ドキュメントが遠近で歪んでいるケース</strong>では、
+        矩形選択だと余計な背景が入ったり、そもそも文字が斜めのまま
+        PARSeq に流れて認識精度が落ちる問題があります。
+      </p>
+      <p>
+        参考リポジトリ
+        (<a href="https://github.com/tamoco-mocomoco/ndlocr-lite-wasm" target="_blank" rel="noopener">
+          ndlocr-lite-wasm
+        </a>)
+        では、ユーザーが <strong>4 点 (角) をドラッグ</strong> して
+        ドキュメント領域を指定
+        →
+        その 4 点を「正面から見た矩形」に対応させるホモグラフィ変換
+        →
+        変換後の綺麗な矩形画像を OCR、というフローが取れています。
+        同じことをオフラインOCR拡張の viewer に載せます。
+      </p>
+
+      <h3>ユースケース</h3>
+      <ul>
+        <li>スマホで撮ったレシートを拡張の viewer に開いて、傾き補正して OCR</li>
+        <li>Zoom などで共有された画面キャプチャの中で、斜めに写っている文書領域だけを 4 点指定で選択</li>
+        <li>雑誌・書籍の見開きスキャンで、片方のページだけ抜き出す</li>
+        <li>スクリーンショット内で斜めに配置されたラベル・チップ</li>
+      </ul>
+
+      <h2>2. 既にあるもの / 足りないもの</h2>
+      <div class="grid-2">
+        <div class="card">
+          <h4>✅ すでに実装済み</h4>
+          <ul>
+            <li>
+              <code>computeHomography(src[4], dst[4])</code>
+              — 4対応点から 3×3 ホモグラフィを解く (Gaussian
+              elimination, 8×9 行列)
+            </li>
+            <li>
+              <code>applyPerspective(imageData, matrix, outW, outH)</code>
+              — 逆マッピング + バイリニア補間で変換画像を生成
+            </li>
+            <li>
+              <code>Point { x, y }</code> の型定義
+            </li>
+            <li>
+              上記は <code>src/ocr/engine/perspective.ts</code> に 135 行、
+              単体テスト無しで置かれている
+            </li>
+          </ul>
+        </div>
+        <div class="card">
+          <h4>🚧 これから作るもの</h4>
+          <ul>
+            <li>
+              viewer の <strong>4 点ドラッグ UI</strong>
+              (角ハンドル、edge line、外側ダーク overlay)
+            </li>
+            <li>
+              「範囲選択 (矩形)」と切り替える <strong>モード切替 UI</strong>
+              (toolbar に「四隅で選択」ボタン追加)
+            </li>
+            <li>
+              リアルタイム <strong>変換プレビュー</strong> (小サイズ・軽量)
+            </li>
+            <li>
+              確定 → <code>applyPerspective</code> → 既存の OCR パイプラインに
+              画像を流す配線
+            </li>
+            <li>
+              vitest ユニット
+              (<code>computeHomography</code>/<code>applyPerspective</code>
+              の再現性) + Playwright E2E
+              (ドラッグ → プレビュー → OCR の end-to-end)
+            </li>
+          </ul>
+        </div>
+      </div>
+
+      <h2>3. UX — どこにどう出すか</h2>
+
+      <h3>3-1. ツールバーへのボタン追加</h3>
+      <p>
+        viewer の toolbar に <strong>「四隅で選択」</strong>
+        ボタンを1つ追加します。既存の「範囲選択」
+        と並列のモードで、どちらか片方だけがアクティブになる排他制御。
+      </p>
+      <div class="callout">
+        <div class="callout-title">ボタン名について</div>
+        技術的には「透視変換」「台形補正」「quad selection」などと呼ばれる機能ですが、
+        <strong>ボタン上の文言は「四隅で選択」に統一</strong>します。
+        <ul style="margin: 8px 0 0 0;">
+          <li>既存の「範囲選択」と並列で、<strong>操作の仕方</strong>がそのまま名前になっている</li>
+          <li>「台形」「quad」「透視」といった用語はユーザーにとって分かりづらい</li>
+          <li>tooltip / help に「斜めの文書やレシートの傾きを補正して選択できます」など補足</li>
+        </ul>
+      </div>
+
+      <figure>
+        <div class="mockup">
+          <div style="font-size: 12px; color: #888; padding: 4px 8px;">
+            viewer toolbar (mockup)
+          </div>
+          <div class="toolbar-mock">
+            <button class="btn-secondary">開く</button>
+            <button class="btn-primary">範囲選択</button>
+            <button class="btn-new">📐 四隅で選択<span class="badge-new">NEW</span></button>
+            <button class="btn-primary">全体OCR</button>
+            <span
+              style="color: #aaa; font-size: 13px; margin-left: auto; padding-right: 8px;"
+              >1920×1080 — page 3 / 24</span
+            >
+          </div>
+        </div>
+        <figcaption>
+          既存の「範囲選択」「全体OCR」の間に「📐 四隅で選択」を挿入。
+          PDF モードでも同じ toolbar で動く。
+        </figcaption>
+      </figure>
+
+      <h3>3-2. モード遷移</h3>
+      <ul>
+        <li>
+          「四隅で選択」クリック → 画像上に <strong>初期の4点</strong>
+          (画像の 10%
+          マージン内側に自動配置) が表示され、それぞれドラッグで移動可能に
+        </li>
+        <li>
+          4点で囲まれた領域が <strong>青い枠</strong> として描かれ、
+          外側は 40% 暗い overlay で覆う
+          (どの領域を選んでいるか瞬時に分かるように)
+        </li>
+        <li>
+          画面右下または画面下部に <strong>小さなプレビュー</strong>
+          (200px × auto) が表示され、
+          現在の 4 点で囲まれた領域を「正面から見た矩形」に変換した結果が
+          <strong>リアルタイム</strong>で更新される
+        </li>
+        <li>
+          <strong>「この領域でOCR」</strong>ボタンで確定
+          → 変換画像を OCR パイプラインに流し、
+          結果はクリップボード + OCR履歴 (これまで通り)
+        </li>
+        <li>
+          <strong>Esc</strong> でモードから抜ける (通常のビューに戻る、選択破棄)
+        </li>
+      </ul>
+
+      <h3>3-3. 触って確認する — インタラクティブデモ</h3>
+      <p>
+        以下は、実装後の UX を模したデモです。
+        <strong>4 つの青いハンドルをドラッグ</strong>すると、
+        右側のプレビューが即時に更新されます。
+        変換ロジックは <code>src/ocr/engine/perspective.ts</code>
+        の
+        <code>computeHomography</code> +
+        <code>applyPerspective</code>
+        と同等のコードをこの HTML に埋め込んでいます (ブラウザ内完結)。
+      </p>
+
+      <div class="demo">
+        <div style="display: grid; grid-template-columns: 1.4fr 1fr; gap: 16px; align-items: start;">
+          <div>
+            <div style="font-size: 13px; color: var(--dim); margin-bottom: 6px;">
+              1. 青い 4 隅のハンドルをドラッグして選択枠を調整
+            </div>
+            <div class="demo-canvas-wrap">
+              <canvas id="src" width="640" height="440"></canvas>
+            </div>
+          </div>
+          <div>
+            <div style="font-size: 13px; color: var(--dim); margin-bottom: 6px;">
+              2. 正面補正プレビュー (リアルタイム)
+            </div>
+            <div class="demo-preview">
+              <canvas id="preview" width="240" height="140"></canvas>
+            </div>
+            <div class="demo-note">
+              このプレビューがそのまま PARSeq に流れるイメージです
+            </div>
+            <div class="demo-controls" style="margin-top: 16px;">
+              <button id="reset-quad" class="secondary">初期配置に戻す</button>
+              <button id="fit-image" class="secondary">選択枠を画像全体に広げる</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <h2>4. アーキテクチャ / データフロー</h2>
+      <p>
+        既存の「範囲選択 → captureVisibleTab → 矩形クロップ → OCR」
+        フローの中に、「四隅で選択」経路を並列に追加します。
+      </p>
+
+      <div class="arch-flow">
+        <div class="step">
+          <span class="step-title">1. Viewer</span>
+          画像 or PDF ページを表示
+        </div>
+        <div class="arrow">→</div>
+        <div class="step new">
+          <span class="step-title">2. 四隅選択 UI (NEW)</span>
+          4 点ドラッグで領域を指定
+        </div>
+        <div class="arrow">→</div>
+        <div class="step new">
+          <span class="step-title">3. 画像を平面化 (NEW)</span>
+          <code>applyPerspective</code> で矩形化
+        </div>
+        <div class="arrow">→</div>
+        <div class="step">
+          <span class="step-title">4. OCR</span>
+          既存 offscreen worker (DEIM + PARSeq)
+        </div>
+        <div class="arrow">→</div>
+        <div class="step">
+          <span class="step-title">5. Result</span>
+          Clipboard + OCR履歴
+        </div>
+      </div>
+
+      <div class="callout">
+        <div class="callout-title">ポイント</div>
+        既存の「範囲選択 (矩形)」経路は変更しない。「四隅で選択」は
+        <strong>新しい選択モード</strong> として並列に増やす。DEIM / PARSeq
+        から見れば「1 枚の PNG を渡される」ことに変わりはないので、
+        変換後の画像を上流で作って渡すだけ。
+      </div>
+
+      <h2>5. モジュール設計</h2>
+
+      <h3>5-1. 触るファイル</h3>
+      <table>
+        <thead>
+          <tr>
+            <th>ファイル</th>
+            <th>変更</th>
+            <th>主な役割</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code>src/ocr/engine/perspective.ts</code></td>
+            <td><span class="tag tag-ok">既存</span></td>
+            <td>ホモグラフィ計算 + 変換適用 (触らない)</td>
+          </tr>
+          <tr>
+            <td>
+              <code>src/ocr/engine/__tests__/perspective.test.ts</code>
+            </td>
+            <td><span class="tag tag-todo">新規</span></td>
+            <td>
+              <code>computeHomography</code> / <code>applyPerspective</code>
+              の regression テスト
+            </td>
+          </tr>
+          <tr>
+            <td><code>src/viewer/quad-selection.ts</code></td>
+            <td><span class="tag tag-todo">新規</span></td>
+            <td>
+              4 点ドラッグの状態管理 + Canvas 描画。単体テスト可能な純粋関数群
+            </td>
+          </tr>
+          <tr>
+            <td><code>src/viewer/viewer.ts</code></td>
+            <td><span class="tag tag-warn">拡張</span></td>
+            <td>
+              「四隅で選択」ボタン追加 + モード切替 + 確定時に
+              <code>applyPerspective</code> → OCR
+            </td>
+          </tr>
+          <tr>
+            <td><code>src/viewer/viewer.html</code></td>
+            <td><span class="tag tag-warn">拡張</span></td>
+            <td>toolbar ボタン + プレビュー <code>&lt;canvas&gt;</code> 追加</td>
+          </tr>
+          <tr>
+            <td><code>public/_locales/{ja,en}/messages.json</code></td>
+            <td><span class="tag tag-warn">拡張</span></td>
+            <td>「四隅で選択」等の i18n キー追加</td>
+          </tr>
+          <tr>
+            <td><code>test/e2e/perspective.spec.ts</code></td>
+            <td><span class="tag tag-todo">新規</span></td>
+            <td>
+              Playwright: viewer 上で 4 隅ハンドルをドラッグ→OCRまでの end-to-end
+            </td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h3>5-2. quad-selection.ts の外形</h3>
+      <pre><code>// 純粋ロジック層 — 描画・イベントは呼び出し側で
+export interface QuadState {
+  corners: [Point, Point, Point, Point]; // TL, TR, BR, BL
+  draggingIndex: -1 | 0 | 1 | 2 | 3;
+}
+
+// 初期化: 画像サイズから 10% inset した quad を返す
+export function initQuad(w: number, h: number, marginRatio = 0.1): QuadState;
+
+// ドラッグ中の座標更新。制約 (画像外に出ない・quad が反転しない) を適用
+export function moveCorner(
+  state: QuadState,
+  idx: 0 | 1 | 2 | 3,
+  p: Point,
+  imgW: number,
+  imgH: number,
+): QuadState;
+
+// クリック位置が既存の角ハンドル近傍 (GRAB_RADIUS 内) かを判定
+export function hitTestCorner(
+  state: QuadState,
+  p: Point,
+  handleRadiusPx: number,
+): -1 | 0 | 1 | 2 | 3;
+
+// quad の 4 辺の長さから「補正後の出力サイズ (rectangle)」を決める
+export function suggestOutputSize(state: QuadState): { w: number; h: number };
+
+// canvas に quad を描画 (外側 dim overlay + 4 lines + handles)
+export function drawQuad(
+  ctx: CanvasRenderingContext2D,
+  state: QuadState,
+  imgW: number,
+  imgH: number,
+  displayScale: number,
+): void;</code></pre>
+      <p>
+        描画とロジックを分けることで、
+        vitest では <code>moveCorner</code> の制約や
+        <code>suggestOutputSize</code>
+        の計算だけを純粋にテストできます。Canvas 描画は Playwright E2E
+        で覆う想定。
+      </p>
+
+      <h3>5-3. viewer.ts への差し込みポイント</h3>
+      <pre><code>// 既存のフラグに並列で追加
+let selectMode = false;      // (既存) 矩形選択
+let quadMode = false;         // (新規) 「四隅で選択」モード
+let quadState: QuadState | null = null;
+
+// toolbar
+btnQuadSelect.addEventListener("click", () =&gt; {
+  if (!img) return;
+  selectMode = false;                         // 排他
+  quadMode = true;
+  quadState = initQuad(canvas.width, canvas.height);
+  canvas.style.cursor = "crosshair";
+  drawImage();
+  drawQuad(ctx, quadState, canvas.width, canvas.height, /*scale*/ 1);
+  updatePreview();
+});
+
+// 確定 (「この領域でOCR」)
+async function confirmQuad(): Promise&lt;void&gt; {
+  if (!quadState) return;
+  const { w: outW, h: outH } = suggestOutputSize(quadState);
+  const H = computeHomography(
+    quadState.corners,
+    [{x:0,y:0},{x:outW,y:0},{x:outW,y:outH},{x:0,y:outH}],
+  );
+  const srcData = ctx!.getImageData(0, 0, canvas.width, canvas.height);
+  const warped = applyPerspective(srcData, H, outW, outH);
+  // warped を PNG Blob 化して既存の runOcr の入り口に流す
+  await sendToOcrPipeline(warped);
+}</code></pre>
+
+      <h2>6. パフォーマンス設計</h2>
+      <p>
+        <code>applyPerspective</code>
+        は逐次スキャン + バイリニア補間なので、フル解像度で毎フレーム
+        走らせるとドラッグがカクつきます。以下 2 段構え:
+      </p>
+      <ul>
+        <li>
+          <strong>ドラッグ中</strong>: 画像を 1/4 程度に縮小した
+          <code>lowResSrc</code>
+          に対して <code>applyPerspective</code> を走らせ、
+          プレビューは 200px 幅程度の小さな canvas に描画。
+          (参考リポジトリと同じ方針)
+        </li>
+        <li>
+          <strong>確定時 (OCR 実行時)</strong>: フル解像度の
+          <code>imageData</code>
+          に対して 1 回だけ <code>applyPerspective</code>
+          を走らせる。
+          OCR
+          の DEIM 推論 (数百 ms 〜) に比べれば十分小さいコストで済む。
+        </li>
+      </ul>
+      <div class="callout warn">
+        <div class="callout-title">計測タスク</div>
+        1080×1920 のスマホ写真クロップに対する
+        フル解像度 <code>applyPerspective</code>
+        の実行時間を Chromium で測定する
+        (目安: 500ms 以内であればユーザー体験としては十分)。
+        必要ならピクセルループを <code>OffscreenCanvas</code> +
+        <code>drawImage</code> ベースの近似実装に差し替え可能
+        (品質は落ちるが数十msで済む)。
+      </div>
+
+      <h2>7. UX 決定事項 / Open Questions</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>論点</th>
+            <th>現時点の案</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Q1</td>
+            <td>初期の 4 点の配置</td>
+            <td>
+              画像の 10% inset に自動配置 (ndlocr-lite-wasm と同じ)
+            </td>
+          </tr>
+          <tr>
+            <td>Q2</td>
+            <td>4 点の枠が凹型 (self-intersecting) になったら?</td>
+            <td>
+              <code>moveCorner</code>
+              の時点で凸性チェック、凹になる操作は隣接する軸の位置に
+              クランプ (制約付き移動)
+            </td>
+          </tr>
+          <tr>
+            <td>Q3</td>
+            <td>プレビューの縦横比</td>
+            <td>
+              4 辺の長さから最大の高さ・幅を採用し、
+              近い実寸で補正 (ndlocr-lite-wasm 準拠)
+            </td>
+          </tr>
+          <tr>
+            <td>Q4</td>
+            <td>タッチデバイス対応</td>
+            <td>
+              Pointer Events で mouse/touch を統合。ハンドル判定は
+              GRAB_RADIUS を可変にして touch では大きめ (24px)
+            </td>
+          </tr>
+          <tr>
+            <td>Q5</td>
+            <td>右クリック context menu (画像を右クリック→開く) から入れる?</td>
+            <td>
+              Phase 1 では viewer 内のボタンのみ。Phase 2 で
+              context menu 経由も検討
+            </td>
+          </tr>
+          <tr>
+            <td>Q6</td>
+            <td>PDF ページ上でも動く?</td>
+            <td>
+              viewer が PDF ページを 1 枚の canvas
+              として持つので、
+              画像モードと同じロジックがそのまま動く (追加実装不要)
+            </td>
+          </tr>
+          <tr>
+            <td>Q7</td>
+            <td>OCR 履歴のラベル</td>
+            <td>
+              画像モード: 従来通り。PDF モード:
+              <code>filename.pdf#p3 (quad)</code>
+              のように quad 使用を明示
+            </td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h2>8. テスト戦略</h2>
+      <div class="grid-2">
+        <div class="card">
+          <h4>vitest (Node)</h4>
+          <ul>
+            <li>
+              <code>computeHomography</code>: 恒等 (src==dst) が単位行列を返す /
+              軸並行の矩形→矩形が平行移動+スケール行列を返す /
+              退化ケース (3 点共線) が例外を投げる
+            </li>
+            <li>
+              <code>applyPerspective</code>: 単位行列で画像がそのまま出る /
+              90度回転行列で画像が回る /
+              グラデーション画像で補間結果が滑らか
+            </li>
+            <li>
+              <code>quad-selection.ts</code>:
+              <code>moveCorner</code> が凸性維持 /
+              <code>suggestOutputSize</code> の縦横比
+            </li>
+          </ul>
+        </div>
+        <div class="card">
+          <h4>Playwright E2E</h4>
+          <ul>
+            <li>
+              viewer.html で fixture 画像を開き、
+              「四隅で選択」→ 4 点ドラッグ →
+              「この領域でOCR」→ 認識テキストが期待文字列を含む
+            </li>
+            <li>
+              PDF モードで「四隅で選択」が動くこと
+            </li>
+            <li>
+              Esc でモードを抜けられること
+            </li>
+          </ul>
+        </div>
+      </div>
+
+      <h2>9. リリース計画</h2>
+      <table>
+        <thead>
+          <tr><th>Phase</th><th>内容</th><th>目安バージョン</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Phase 1</td>
+            <td>
+              viewer に「四隅で選択」モードを追加。純粋ロジック層 +
+              vitest + Playwright E2E。i18n 対応。CHANGELOG 更新。
+            </td>
+            <td>v0.9.0</td>
+          </tr>
+          <tr>
+            <td>Phase 2</td>
+            <td>
+              右クリック context menu からの直接起動。
+              タッチデバイスのハンドル判定調整。
+            </td>
+            <td>v0.9.1 or 後続</td>
+          </tr>
+          <tr>
+            <td>Phase 3</td>
+            <td>
+              (検討) 4 辺のうち 1
+              辺だけ調整するショートカット、
+              ドキュメントエッジの自動検出補助
+            </td>
+            <td>未定</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h2>10. リスクと対応</h2>
+      <table>
+        <thead>
+          <tr><th>リスク</th><th>対応</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>
+              フル解像度の <code>applyPerspective</code> が遅い (>1s)
+            </td>
+            <td>
+              計測タスクを先に走らせ、遅ければ OffscreenCanvas
+              + <code>drawImage</code> の近似実装に差し替え
+            </td>
+          </tr>
+          <tr>
+            <td>凹型の枠で PARSeq が混乱する</td>
+            <td>
+              <code>moveCorner</code>
+              の時点で凹型を作れない制約を入れる (自動クランプ)
+            </td>
+          </tr>
+          <tr>
+            <td>
+              既存の矩形選択ユーザーの体験が変わる
+            </td>
+            <td>
+              モードは排他だがデフォルトは矩形選択のまま。
+              「四隅で選択」ボタンを明示的に押したときだけ切り替わる
+            </td>
+          </tr>
+          <tr>
+            <td>i18n 反映漏れ</td>
+            <td>
+              JA / EN 両方の messages.json に同じキーを追加する CI
+              チェック的なスクリプトを検討 (今回のスコープ外だが要件として書いておく)
+            </td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h2>11. 次のアクション</h2>
+      <ol>
+        <li>この設計方針の Review + フィードバック反映</li>
+        <li>
+          Phase 1 の実装ブランチを切る
+          (feature/perspective-transform-ui など)
+        </li>
+        <li>
+          <code>quad-selection.ts</code> を先に書いて vitest で検証
+        </li>
+        <li>
+          viewer.ts に組み込み + Playwright E2E でエンドツーエンド確認
+        </li>
+        <li>
+          パフォーマンス計測 → 必要ならレンダリング戦略切替
+        </li>
+        <li>
+          i18n + CHANGELOG + ストア説明を更新して v0.9.0 リリース
+        </li>
+      </ol>
+
+      <footer
+        style="margin-top: 60px; padding-top: 20px; border-top: 1px solid var(--border); color: var(--dim); font-size: 13px; text-align: center;"
+      >
+        参考:
+        <a
+          href="https://github.com/tamoco-mocomoco/ndlocr-lite-wasm"
+          target="_blank"
+          rel="noopener"
+          style="color: var(--accent2);"
+          >ndlocr-lite-wasm</a
+        >
+        (透視変換の元実装) —
+        <a
+          href="https://chromewebstore.google.com/detail/offline-ocr/cfppiicaeemimcbodibggnnolckcpmpd"
+          target="_blank"
+          rel="noopener"
+          style="color: var(--accent2);"
+          >オフラインOCR (本拡張)</a
+        >
+      </footer>
+    </div>
+
+    <script>
+      // ------------------------------------------------------------------
+      // Interactive demo: draggable quad + real-time perspective preview
+      // The math here mirrors src/ocr/engine/perspective.ts (Gauss +
+      // bilinear inverse mapping).
+      // ------------------------------------------------------------------
+
+      function solveLinearSystem(A) {
+        const n = 8;
+        for (let col = 0; col < n; col++) {
+          let maxRow = col;
+          let maxVal = Math.abs(A[col][col]);
+          for (let row = col + 1; row < n; row++) {
+            if (Math.abs(A[row][col]) > maxVal) {
+              maxVal = Math.abs(A[row][col]);
+              maxRow = row;
+            }
+          }
+          [A[col], A[maxRow]] = [A[maxRow], A[col]];
+          const pivot = A[col][col];
+          if (Math.abs(pivot) < 1e-12) throw new Error("Singular matrix");
+          for (let j = col; j <= n; j++) A[col][j] /= pivot;
+          for (let row = 0; row < n; row++) {
+            if (row === col) continue;
+            const factor = A[row][col];
+            for (let j = col; j <= n; j++)
+              A[row][j] -= factor * A[col][j];
+          }
+        }
+        return A.map((row) => row[n]);
+      }
+
+      function computeHomography(src, dst) {
+        const A = [];
+        for (let i = 0; i < 4; i++) {
+          const { x, y } = src[i];
+          const { x: X, y: Y } = dst[i];
+          A.push([x, y, 1, 0, 0, 0, -X * x, -X * y, X]);
+          A.push([0, 0, 0, x, y, 1, -Y * x, -Y * y, Y]);
+        }
+        const h = solveLinearSystem(A);
+        return [...h, 1];
+      }
+
+      function invert3x3(m) {
+        const [a, b, c, d, e, f, g, h, i] = m;
+        const det =
+          a * (e * i - f * h) - b * (d * i - f * g) + c * (d * h - e * g);
+        if (Math.abs(det) < 1e-12) throw new Error("Matrix not invertible");
+        const invDet = 1 / det;
+        return [
+          (e * i - f * h) * invDet,
+          (c * h - b * i) * invDet,
+          (b * f - c * e) * invDet,
+          (f * g - d * i) * invDet,
+          (a * i - c * g) * invDet,
+          (c * d - a * f) * invDet,
+          (d * h - e * g) * invDet,
+          (b * g - a * h) * invDet,
+          (a * e - b * d) * invDet,
+        ];
+      }
+
+      function applyPerspective(srcData, matrix, outW, outH) {
+        const inv = invert3x3(matrix);
+        const sw = srcData.width;
+        const sh = srcData.height;
+        const srcPx = srcData.data;
+        const out = new ImageData(outW, outH);
+        const dstPx = out.data;
+        for (let dy = 0; dy < outH; dy++) {
+          for (let dx = 0; dx < outW; dx++) {
+            const w = inv[6] * dx + inv[7] * dy + inv[8];
+            const sx = (inv[0] * dx + inv[1] * dy + inv[2]) / w;
+            const sy = (inv[3] * dx + inv[4] * dy + inv[5]) / w;
+            const x0 = Math.floor(sx);
+            const y0 = Math.floor(sy);
+            const x1 = x0 + 1;
+            const y1 = y0 + 1;
+            const di = (dy * outW + dx) * 4;
+            if (x0 < 0 || y0 < 0 || x1 >= sw || y1 >= sh) {
+              dstPx[di + 3] = 255;
+              continue;
+            }
+            const fx = sx - x0;
+            const fy = sy - y0;
+            const w00 = (1 - fx) * (1 - fy);
+            const w10 = fx * (1 - fy);
+            const w01 = (1 - fx) * fy;
+            const w11 = fx * fy;
+            const i00 = (y0 * sw + x0) * 4;
+            const i10 = (y0 * sw + x1) * 4;
+            const i01 = (y1 * sw + x0) * 4;
+            const i11 = (y1 * sw + x1) * 4;
+            dstPx[di] =
+              srcPx[i00] * w00 +
+              srcPx[i10] * w10 +
+              srcPx[i01] * w01 +
+              srcPx[i11] * w11;
+            dstPx[di + 1] =
+              srcPx[i00 + 1] * w00 +
+              srcPx[i10 + 1] * w10 +
+              srcPx[i01 + 1] * w01 +
+              srcPx[i11 + 1] * w11;
+            dstPx[di + 2] =
+              srcPx[i00 + 2] * w00 +
+              srcPx[i10 + 2] * w10 +
+              srcPx[i01 + 2] * w01 +
+              srcPx[i11 + 2] * w11;
+            dstPx[di + 3] = 255;
+          }
+        }
+        return out;
+      }
+
+      // --- Synthetic source image (grid + text) -----------------------
+      const src = document.getElementById("src");
+      const preview = document.getElementById("preview");
+      const srcCtx = src.getContext("2d");
+      const previewCtx = preview.getContext("2d");
+      const W = src.width;
+      const H = src.height;
+
+      // A "document"-like image with rules + heading, so warping is visible
+      function drawBaseImage() {
+        srcCtx.save();
+        // outer background (imagined perspective-distorted "desk")
+        const g = srcCtx.createLinearGradient(0, 0, 0, H);
+        g.addColorStop(0, "#3a3f4a");
+        g.addColorStop(1, "#1f232b");
+        srcCtx.fillStyle = g;
+        srcCtx.fillRect(0, 0, W, H);
+        // simulated skewed white document (drawn as a distorted quad)
+        srcCtx.save();
+        srcCtx.transform(1, -0.12, 0.28, 1.0, 40, 90);
+        srcCtx.fillStyle = "#f5f2ea";
+        srcCtx.fillRect(0, 0, 460, 260);
+        // Grid lines to make warping obvious
+        srcCtx.strokeStyle = "#c5b78a";
+        srcCtx.lineWidth = 1;
+        for (let x = 0; x <= 460; x += 40) {
+          srcCtx.beginPath();
+          srcCtx.moveTo(x, 0);
+          srcCtx.lineTo(x, 260);
+          srcCtx.stroke();
+        }
+        for (let y = 0; y <= 260; y += 40) {
+          srcCtx.beginPath();
+          srcCtx.moveTo(0, y);
+          srcCtx.lineTo(460, y);
+          srcCtx.stroke();
+        }
+        // Fake heading
+        srcCtx.fillStyle = "#26313b";
+        srcCtx.font = "700 32px 'Hiragino Sans','Yu Gothic',sans-serif";
+        srcCtx.fillText("オフラインOCR", 20, 46);
+        srcCtx.font = "400 18px 'Hiragino Sans','Yu Gothic',sans-serif";
+        srcCtx.fillText("PDF 対応と高速化", 20, 76);
+        srcCtx.font = "400 14px 'Hiragino Sans','Yu Gothic',sans-serif";
+        srcCtx.fillText("透視変換 (perspective correction)", 20, 108);
+        srcCtx.fillText("の実装イメージです。", 20, 128);
+        srcCtx.fillText("4 隅をドラッグしてください →", 20, 168);
+        srcCtx.restore();
+        srcCtx.restore();
+      }
+
+      // --- Quad state -------------------------------------------------
+      const HANDLE_RADIUS = 8;
+      const GRAB_RADIUS = 18;
+      let corners = [
+        { x: 90, y: 90 }, // TL
+        { x: W - 80, y: 60 }, // TR
+        { x: W - 60, y: H - 60 }, // BR
+        { x: 110, y: H - 90 }, // BL
+      ];
+      let draggingIndex = -1;
+
+      function pointToCanvasSpace(evt) {
+        const r = src.getBoundingClientRect();
+        const x = (evt.clientX - r.left) * (src.width / r.width);
+        const y = (evt.clientY - r.top) * (src.height / r.height);
+        return { x, y };
+      }
+
+      function hitTest(p) {
+        for (let i = 0; i < 4; i++) {
+          const dx = corners[i].x - p.x;
+          const dy = corners[i].y - p.y;
+          if (dx * dx + dy * dy < GRAB_RADIUS * GRAB_RADIUS) return i;
+        }
+        return -1;
+      }
+
+      function draw() {
+        drawBaseImage();
+        srcCtx.save();
+        // dim outside the quad using evenodd
+        srcCtx.fillStyle = "rgba(13,17,23,0.55)";
+        srcCtx.beginPath();
+        srcCtx.rect(0, 0, W, H);
+        // hole (counter-clockwise)
+        srcCtx.moveTo(corners[0].x, corners[0].y);
+        srcCtx.lineTo(corners[3].x, corners[3].y);
+        srcCtx.lineTo(corners[2].x, corners[2].y);
+        srcCtx.lineTo(corners[1].x, corners[1].y);
+        srcCtx.closePath();
+        srcCtx.fill("evenodd");
+        srcCtx.restore();
+
+        // quad outline
+        srcCtx.strokeStyle = "#4ea3ff";
+        srcCtx.lineWidth = 2;
+        srcCtx.beginPath();
+        srcCtx.moveTo(corners[0].x, corners[0].y);
+        for (let i = 1; i < 4; i++)
+          srcCtx.lineTo(corners[i].x, corners[i].y);
+        srcCtx.closePath();
+        srcCtx.stroke();
+
+        // handles
+        for (const p of corners) {
+          srcCtx.beginPath();
+          srcCtx.arc(p.x, p.y, HANDLE_RADIUS, 0, Math.PI * 2);
+          srcCtx.fillStyle = "#4ea3ff";
+          srcCtx.fill();
+          srcCtx.strokeStyle = "#fff";
+          srcCtx.lineWidth = 2;
+          srcCtx.stroke();
+        }
+      }
+
+      function dist(a, b) {
+        return Math.hypot(a.x - b.x, a.y - b.y);
+      }
+
+      function updatePreview() {
+        const outW = Math.round(
+          Math.max(dist(corners[0], corners[1]), dist(corners[3], corners[2])),
+        );
+        const outH = Math.round(
+          Math.max(dist(corners[0], corners[3]), dist(corners[1], corners[2])),
+        );
+        if (outW <= 4 || outH <= 4) return;
+        const dst = [
+          { x: 0, y: 0 },
+          { x: outW, y: 0 },
+          { x: outW, y: outH },
+          { x: 0, y: outH },
+        ];
+        let matrix;
+        try {
+          matrix = computeHomography(corners, dst);
+        } catch (e) {
+          return; // singular
+        }
+        const srcData = srcCtx.getImageData(0, 0, W, H);
+        const warped = applyPerspective(srcData, matrix, outW, outH);
+
+        // Fit preview canvas to output aspect (max 240×160)
+        const maxW = 240;
+        const maxH = 160;
+        const scale = Math.min(maxW / outW, maxH / outH);
+        const pw = Math.max(1, Math.round(outW * scale));
+        const ph = Math.max(1, Math.round(outH * scale));
+        preview.width = pw;
+        preview.height = ph;
+        // Draw via a temp canvas
+        const tmp = document.createElement("canvas");
+        tmp.width = outW;
+        tmp.height = outH;
+        tmp.getContext("2d").putImageData(warped, 0, 0);
+        previewCtx.imageSmoothingQuality = "high";
+        previewCtx.clearRect(0, 0, pw, ph);
+        previewCtx.drawImage(tmp, 0, 0, outW, outH, 0, 0, pw, ph);
+      }
+
+      let scheduled = false;
+      function schedule() {
+        if (scheduled) return;
+        scheduled = true;
+        requestAnimationFrame(() => {
+          scheduled = false;
+          draw();
+          updatePreview();
+        });
+      }
+
+      src.addEventListener("pointerdown", (e) => {
+        const p = pointToCanvasSpace(e);
+        draggingIndex = hitTest(p);
+        if (draggingIndex !== -1) {
+          src.setPointerCapture(e.pointerId);
+        }
+      });
+      src.addEventListener("pointermove", (e) => {
+        if (draggingIndex === -1) return;
+        const p = pointToCanvasSpace(e);
+        // clamp to canvas
+        p.x = Math.max(2, Math.min(W - 2, p.x));
+        p.y = Math.max(2, Math.min(H - 2, p.y));
+        corners[draggingIndex] = p;
+        schedule();
+      });
+      src.addEventListener("pointerup", (e) => {
+        draggingIndex = -1;
+        src.releasePointerCapture(e.pointerId);
+      });
+
+      document.getElementById("reset-quad").addEventListener("click", () => {
+        corners = [
+          { x: 90, y: 90 },
+          { x: W - 80, y: 60 },
+          { x: W - 60, y: H - 60 },
+          { x: 110, y: H - 90 },
+        ];
+        schedule();
+      });
+      document.getElementById("fit-image").addEventListener("click", () => {
+        corners = [
+          { x: 8, y: 8 },
+          { x: W - 8, y: 8 },
+          { x: W - 8, y: H - 8 },
+          { x: 8, y: H - 8 },
+        ];
+        schedule();
+      });
+
+      // initial paint
+      draw();
+      updatePreview();
+    </script>
+  </body>
+</html>
