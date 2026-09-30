@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>透視変換（台形選択）対応 — 設計方針</title>
+    <title>透視変換 (四隅で選択) 対応 — 設計方針</title>
     <style>
       :root {
         --bg: #0d1117;
@@ -349,7 +349,7 @@
   <body>
     <div class="wrap">
       <header>
-        <h1>透視変換（台形選択）対応 — 設計方針</h1>
+        <h1>透視変換 (四隅で選択) 対応 — 設計方針</h1>
         <div class="subtitle">
           Chrome 拡張 オフラインOCR / feature branch <code>feature/perspective-transform-design</code>
           <span class="status">Draft / Review 前</span>
@@ -376,7 +376,7 @@
           </li>
           <li>
             既存の「範囲選択 (矩形)」フローを壊さず、
-            <strong>「台形選択」を並列モードとして追加</strong>する方針。
+            <strong>「四隅で選択」を並列モードとして追加</strong>する方針。
           </li>
           <li>
             この HTML は設計方針の共有 + 下部にインタラクティブなドラッグ
@@ -413,7 +413,7 @@
       <h3>ユースケース</h3>
       <ul>
         <li>スマホで撮ったレシートを拡張の viewer に開いて、傾き補正して OCR</li>
-        <li>Zoom などで共有された画面キャプチャの中の文書領域だけを台形選択</li>
+        <li>Zoom などで共有された画面キャプチャの中で、斜めに写っている文書領域だけを 4 点指定で選択</li>
         <li>雑誌・書籍の見開きスキャンで、片方のページだけ抜き出す</li>
         <li>スクリーンショット内で斜めに配置されたラベル・チップ</li>
       </ul>
@@ -450,7 +450,7 @@
             </li>
             <li>
               「範囲選択 (矩形)」と切り替える <strong>モード切替 UI</strong>
-              (toolbar に「台形選択」ボタン追加)
+              (toolbar に「四隅で選択」ボタン追加)
             </li>
             <li>
               リアルタイム <strong>変換プレビュー</strong> (小サイズ・軽量)
@@ -473,10 +473,20 @@
 
       <h3>3-1. ツールバーへのボタン追加</h3>
       <p>
-        viewer の toolbar に <strong>「台形選択」</strong>
+        viewer の toolbar に <strong>「四隅で選択」</strong>
         ボタンを1つ追加します。既存の「範囲選択」
         と並列のモードで、どちらか片方だけがアクティブになる排他制御。
       </p>
+      <div class="callout">
+        <div class="callout-title">ボタン名について</div>
+        技術的には「透視変換」「台形補正」「quad selection」などと呼ばれる機能ですが、
+        <strong>ボタン上の文言は「四隅で選択」に統一</strong>します。
+        <ul style="margin: 8px 0 0 0;">
+          <li>既存の「範囲選択」と並列で、<strong>操作の仕方</strong>がそのまま名前になっている</li>
+          <li>「台形」「quad」「透視」といった用語はユーザーにとって分かりづらい</li>
+          <li>tooltip / help に「斜めの文書やレシートの傾きを補正して選択できます」など補足</li>
+        </ul>
+      </div>
 
       <figure>
         <div class="mockup">
@@ -486,7 +496,7 @@
           <div class="toolbar-mock">
             <button class="btn-secondary">開く</button>
             <button class="btn-primary">範囲選択</button>
-            <button class="btn-new">📐 台形選択<span class="badge-new">NEW</span></button>
+            <button class="btn-new">📐 四隅で選択<span class="badge-new">NEW</span></button>
             <button class="btn-primary">全体OCR</button>
             <span
               style="color: #aaa; font-size: 13px; margin-left: auto; padding-right: 8px;"
@@ -495,7 +505,7 @@
           </div>
         </div>
         <figcaption>
-          既存の「範囲選択」「全体OCR」の間に「📐 台形選択」を挿入。
+          既存の「範囲選択」「全体OCR」の間に「📐 四隅で選択」を挿入。
           PDF モードでも同じ toolbar で動く。
         </figcaption>
       </figure>
@@ -503,20 +513,19 @@
       <h3>3-2. モード遷移</h3>
       <ul>
         <li>
-          「台形選択」クリック → 画像上に <strong>初期の4点</strong>
+          「四隅で選択」クリック → 画像上に <strong>初期の4点</strong>
           (画像の 10%
           マージン内側に自動配置) が表示され、それぞれドラッグで移動可能に
         </li>
         <li>
-          4点で囲まれた領域が <strong>4角形 (quad)</strong> として青枠で描かれ、
+          4点で囲まれた領域が <strong>青い枠</strong> として描かれ、
           外側は 40% 暗い overlay で覆う
           (どの領域を選んでいるか瞬時に分かるように)
         </li>
         <li>
           画面右下または画面下部に <strong>小さなプレビュー</strong>
           (200px × auto) が表示され、
-          現在のquad
-          を「正面から見た矩形」に変換した結果が
+          現在の 4 点で囲まれた領域を「正面から見た矩形」に変換した結果が
           <strong>リアルタイム</strong>で更新される
         </li>
         <li>
@@ -545,7 +554,7 @@
         <div style="display: grid; grid-template-columns: 1.4fr 1fr; gap: 16px; align-items: start;">
           <div>
             <div style="font-size: 13px; color: var(--dim); margin-bottom: 6px;">
-              1. 4 隅をドラッグして quad を調整
+              1. 青い 4 隅のハンドルをドラッグして選択枠を調整
             </div>
             <div class="demo-canvas-wrap">
               <canvas id="src" width="640" height="440"></canvas>
@@ -563,7 +572,7 @@
             </div>
             <div class="demo-controls" style="margin-top: 16px;">
               <button id="reset-quad" class="secondary">初期配置に戻す</button>
-              <button id="fit-image" class="secondary">画像全体を quad に</button>
+              <button id="fit-image" class="secondary">選択枠を画像全体に広げる</button>
             </div>
           </div>
         </div>
@@ -572,7 +581,7 @@
       <h2>4. アーキテクチャ / データフロー</h2>
       <p>
         既存の「範囲選択 → captureVisibleTab → 矩形クロップ → OCR」
-        フローの中に、「台形選択」経路を並列に追加します。
+        フローの中に、「四隅で選択」経路を並列に追加します。
       </p>
 
       <div class="arch-flow">
@@ -582,12 +591,12 @@
         </div>
         <div class="arrow">→</div>
         <div class="step new">
-          <span class="step-title">2. Quad UI (NEW)</span>
-          4 点ドラッグで台形選択
+          <span class="step-title">2. 四隅選択 UI (NEW)</span>
+          4 点ドラッグで領域を指定
         </div>
         <div class="arrow">→</div>
         <div class="step new">
-          <span class="step-title">3. Warp (NEW)</span>
+          <span class="step-title">3. 画像を平面化 (NEW)</span>
           <code>applyPerspective</code> で矩形化
         </div>
         <div class="arrow">→</div>
@@ -604,7 +613,7 @@
 
       <div class="callout">
         <div class="callout-title">ポイント</div>
-        既存の「範囲選択 (矩形)」経路は変更しない。「台形選択」は
+        既存の「範囲選択 (矩形)」経路は変更しない。「四隅で選択」は
         <strong>新しい選択モード</strong> として並列に増やす。DEIM / PARSeq
         から見れば「1 枚の PNG を渡される」ことに変わりはないので、
         変換後の画像を上流で作って渡すだけ。
@@ -648,7 +657,7 @@
             <td><code>src/viewer/viewer.ts</code></td>
             <td><span class="tag tag-warn">拡張</span></td>
             <td>
-              「台形選択」ボタン追加 + モード切替 + 確定時に
+              「四隅で選択」ボタン追加 + モード切替 + 確定時に
               <code>applyPerspective</code> → OCR
             </td>
           </tr>
@@ -660,14 +669,13 @@
           <tr>
             <td><code>public/_locales/{ja,en}/messages.json</code></td>
             <td><span class="tag tag-warn">拡張</span></td>
-            <td>「台形選択」等の i18n キー追加</td>
+            <td>「四隅で選択」等の i18n キー追加</td>
           </tr>
           <tr>
             <td><code>test/e2e/perspective.spec.ts</code></td>
             <td><span class="tag tag-todo">新規</span></td>
             <td>
-              Playwright: viewer 上で quad
-              をドラッグ→OCRまでの end-to-end
+              Playwright: viewer 上で 4 隅ハンドルをドラッグ→OCRまでの end-to-end
             </td>
           </tr>
         </tbody>
@@ -721,7 +729,7 @@ export function drawQuad(
       <h3>5-3. viewer.ts への差し込みポイント</h3>
       <pre><code>// 既存のフラグに並列で追加
 let selectMode = false;      // (既存) 矩形選択
-let quadMode = false;         // (新規) 台形選択
+let quadMode = false;         // (新規) 「四隅で選択」モード
 let quadState: QuadState | null = null;
 
 // toolbar
@@ -803,7 +811,7 @@ async function confirmQuad(): Promise&lt;void&gt; {
           </tr>
           <tr>
             <td>Q2</td>
-            <td>quad が凹型 (self-intersecting) になったら?</td>
+            <td>4 点の枠が凹型 (self-intersecting) になったら?</td>
             <td>
               <code>moveCorner</code>
               の時点で凸性チェック、凹になる操作は隣接する軸の位置に
@@ -814,7 +822,7 @@ async function confirmQuad(): Promise&lt;void&gt; {
             <td>Q3</td>
             <td>プレビューの縦横比</td>
             <td>
-              quad の 4 辺の長さから最大の高さ・幅を採用し、
+              4 辺の長さから最大の高さ・幅を採用し、
               近い実寸で補正 (ndlocr-lite-wasm 準拠)
             </td>
           </tr>
@@ -882,11 +890,11 @@ async function confirmQuad(): Promise&lt;void&gt; {
           <ul>
             <li>
               viewer.html で fixture 画像を開き、
-              「台形選択」→ 4 点ドラッグ →
+              「四隅で選択」→ 4 点ドラッグ →
               「この領域でOCR」→ 認識テキストが期待文字列を含む
             </li>
             <li>
-              PDF モードで台形選択が動くこと
+              PDF モードで「四隅で選択」が動くこと
             </li>
             <li>
               Esc でモードを抜けられること
@@ -904,7 +912,7 @@ async function confirmQuad(): Promise&lt;void&gt; {
           <tr>
             <td>Phase 1</td>
             <td>
-              viewer に台形選択モードを追加。純粋ロジック層 +
+              viewer に「四隅で選択」モードを追加。純粋ロジック層 +
               vitest + Playwright E2E。i18n 対応。CHANGELOG 更新。
             </td>
             <td>v0.9.0</td>
@@ -945,7 +953,7 @@ async function confirmQuad(): Promise&lt;void&gt; {
             </td>
           </tr>
           <tr>
-            <td>凹型 quad で PARSeq が混乱する</td>
+            <td>凹型の枠で PARSeq が混乱する</td>
             <td>
               <code>moveCorner</code>
               の時点で凹型を作れない制約を入れる (自動クランプ)
@@ -957,7 +965,7 @@ async function confirmQuad(): Promise&lt;void&gt; {
             </td>
             <td>
               モードは排他だがデフォルトは矩形選択のまま。
-              「台形選択」ボタンを明示的に押したときだけ切り替わる
+              「四隅で選択」ボタンを明示的に押したときだけ切り替わる
             </td>
           </tr>
           <tr>
