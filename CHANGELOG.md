@@ -6,6 +6,7 @@
 
 - **"Deskew & Select" mode**. For photos taken at an angle or documents lying on a desk with visible perspective, the viewer now lets you fit a quadrilateral to the region with four draggable corner handles, then **unwarps the region with a perspective transform before feeding it to OCR** — as if you had taken the photo straight down
   - **Live "corrected preview"** in the top-right as you drag — see exactly what the OCR will see before you commit. Clamped to 240 px and coalesced through requestAnimationFrame so it stays smooth even on multi-megapixel source images
+  - Press **Enter** to confirm (works alongside the on-screen button)
   - Corner drags are constrained to keep the quad convex. Self-intersecting layouts are rejected, so the selection is always a valid region
   - Output size for the unwarped image is chosen automatically from the four edge lengths (uses the longer of each opposing pair) so text isn't compressed
   - The unwarped image flows through the exact same downstream pipeline as rectangular selection (adjacent-color padding → PNG → offscreen OCR). All the accuracy work from prior releases — v0.7.1's row-ink profile, v0.8.1's CTC loop detection, dark-bg color inversion — applies with no extra plumbing

@@ -18,7 +18,7 @@
   "viewerSelectButton": { "message": "Start Selection" },
   "viewerQuadSelectButton": { "message": "Deskew & Select" },
   "viewerQuadConfirmButton": { "message": "OCR this region" },
-  "viewerQuadHint": { "message": "Position the four handles at the corners of the text, then press [OCR this region] — the warp is corrected before OCR (Esc to cancel)" },
+  "viewerQuadHint": { "message": "Position the four handles at the corners of the text, then press [OCR this region] or Enter — the warp is corrected before OCR (Esc to cancel)" },
   "viewerQuadPreviewLabel": { "message": "Corrected preview" },
   "viewerOcrAllButton": { "message": "OCR Entire Image" },
   "viewerDropHint": { "message": "Drag & drop, Ctrl+V to paste, or click the button to select" },

@@ -496,7 +496,7 @@ canvas.addEventListener("mouseup", (e) => {
   }
 });
 
-// Esc to cancel selection / quad mode
+// Esc to cancel selection / quad mode; Enter to confirm quad OCR
 document.addEventListener("keydown", (e) => {
   if (e.key === "Escape") {
     selectMode = false;
@@ -508,6 +508,19 @@ document.addEventListener("keydown", (e) => {
     canvas.style.cursor = "default";
     selRect = null;
     drawImage();
+    return;
+  }
+  if (
+    e.key === "Enter" &&
+    quadMode &&
+    quadState &&
+    quadState.draggingIndex === -1
+  ) {
+    // If the confirm button happens to have focus, let its native click fire
+    // instead of double-triggering confirmQuad.
+    if (e.target === btnQuadConfirm) return;
+    e.preventDefault();
+    void confirmQuad();
   }
 });
 
@@ -712,6 +725,8 @@ btnSelect.addEventListener("click", () => {
 
 btnQuadSelect.addEventListener("click", () => {
   if (!img) return;
+  // Blur so Enter doesn't re-fire this handler (which would reset the quad).
+  btnQuadSelect.blur();
   selectMode = false;
   selRect = null;
   quadMode = true;
@@ -723,7 +738,7 @@ btnQuadSelect.addEventListener("click", () => {
   showQuadPreview();
   statusEl.textContent =
     t("viewerQuadHint") ||
-    "4つのハンドルを文字の四隅に合わせて [この範囲でOCR] を押してください";
+    "4つのハンドルを文字の四隅に合わせて [この範囲でOCR] (Enter) を押してください";
 });
 
 btnQuadConfirm.addEventListener("click", () => {

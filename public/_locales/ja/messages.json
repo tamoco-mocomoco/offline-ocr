@@ -18,7 +18,7 @@
   "viewerSelectButton": { "message": "範囲選択を開始" },
   "viewerQuadSelectButton": { "message": "ゆがみ補正で選択" },
   "viewerQuadConfirmButton": { "message": "この範囲でOCR" },
-  "viewerQuadHint": { "message": "4つのハンドルを文字の四隅に合わせて [この範囲でOCR] を押してください (ゆがみを補正してからOCRします / Escでキャンセル)" },
+  "viewerQuadHint": { "message": "4つのハンドルを文字の四隅に合わせて [この範囲でOCR] (Enter) を押してください (ゆがみを補正してからOCRします / Escでキャンセル)" },
   "viewerQuadPreviewLabel": { "message": "補正後プレビュー" },
   "viewerOcrAllButton": { "message": "画像全体をOCR" },
   "viewerDropHint": { "message": "画像をドラッグ＆ドロップ、Ctrl+Vで貼り付け、またはボタンでファイルを選択" },

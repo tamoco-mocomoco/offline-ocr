@@ -60,6 +60,7 @@ We sincerely thank the National Diet Library for making their high-accuracy Japa
 v0.9.0
 - Added "Deskew & Select" mode. For angled photos or documents with visible perspective, drag the four corner handles in the viewer to fit the region — it's then unwarped with a perspective transform before OCR
 - Live "corrected preview" in the top-right updates as you drag, so you see exactly what will be fed to OCR before committing
+- Press Enter to confirm (works alongside the on-screen button)
 - Corner drags are constrained to keep the quad convex, so the selection is always a valid region
 - Output resolution is chosen automatically from the four edge lengths so small text isn't compressed
 - The unwarped image flows through the same downstream pipeline as rectangular selection, so all prior accuracy work (v0.7.1 row-ink profile, v0.8.1 CTC loop detection, dark-bg inversion) applies with no extra plumbing
