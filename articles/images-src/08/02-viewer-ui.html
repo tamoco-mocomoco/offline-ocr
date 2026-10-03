@@ -1,0 +1,314 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="utf-8" />
+    <title>Viewer UI mockup</title>
+    <style>
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      body {
+        width: 1400px;
+        height: 820px;
+        background: #0f0f0f;
+        font-family: "Hiragino Sans", "Yu Gothic", "Noto Sans JP", sans-serif;
+      }
+
+      .viewer {
+        width: 1400px;
+        height: 820px;
+        background: #1a1a1a;
+        color: #fff;
+        display: flex;
+        flex-direction: column;
+      }
+
+      /* Toolbar */
+      .toolbar {
+        background: #252525;
+        border-bottom: 1px solid #333;
+        padding: 10px 20px;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+      .btn {
+        padding: 7px 18px;
+        font-size: 14px;
+        font-weight: 600;
+        background: #4ea3ff;
+        color: #fff;
+        border: 0;
+        border-radius: 6px;
+      }
+      .btn.sec { background: #555; }
+      .btn.hl { background: #ff8c42; box-shadow: 0 0 0 3px rgba(255,140,66,0.25); }
+      .btn.ghost { background: #4ea3ff; }
+      .status {
+        margin-left: 12px;
+        color: #ddd;
+        font-size: 13px;
+      }
+
+      /* Canvas area */
+      .canvas-area {
+        flex: 1;
+        position: relative;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      /* Simulated main canvas with the perspective-distorted document */
+      .main-stage {
+        width: 1200px;
+        height: 680px;
+        background: #2a2a2a;
+        border-radius: 2px;
+        position: relative;
+        overflow: visible;
+      }
+      .perspective-root {
+        position: absolute;
+        inset: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        perspective: 1200px;
+        perspective-origin: 50% 45%;
+      }
+      .main-page {
+        width: 640px;
+        height: 300px;
+        background: #ffffff;
+        border: 1px solid #ddd;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.4);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transform: rotateY(-28deg) rotateX(10deg);
+        transform-origin: 50% 50%;
+        font-size: 68px;
+        font-weight: 700;
+        color: #111;
+        letter-spacing: 0.08em;
+      }
+
+      /* Quad overlay */
+      .quad-overlay { position: absolute; inset: 0; pointer-events: none; }
+      .quad-fill { fill: rgba(91,155,213,0.15); stroke: #5B9BD5; stroke-width: 3; stroke-dasharray: 8 5; }
+      .handle { fill: #5B9BD5; stroke: #fff; stroke-width: 2.5; }
+
+      /* Preview panel in top-right */
+      .preview-panel {
+        position: absolute;
+        top: 120px;
+        right: 20px;
+        background: rgba(37,37,37,0.95);
+        border: 1px solid #444;
+        border-radius: 10px;
+        padding: 12px;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.6);
+        z-index: 10;
+      }
+      .preview-label {
+        font-size: 12px;
+        color: #ccc;
+        margin-bottom: 8px;
+        text-align: center;
+      }
+      .preview-canvas {
+        display: flex;
+        width: 240px;
+        height: 86px;
+        background: #ffffff;
+        border-radius: 4px;
+        align-items: center;
+        justify-content: center;
+        color: #111;
+        font-weight: 700;
+        font-size: 28px;
+        letter-spacing: 0.06em;
+        white-space: nowrap;
+      }
+
+      /* Annotations */
+      .annot {
+        position: absolute;
+        color: #ffb86b;
+        font-size: 14px;
+        font-weight: 600;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        text-shadow: 0 1px 2px rgba(0,0,0,0.5);
+        z-index: 11;
+      }
+      .annot .arrow {
+        width: 32px;
+        height: 2px;
+        background: #ffb86b;
+        position: relative;
+      }
+      .annot .arrow::after {
+        content: "";
+        position: absolute;
+        right: -1px;
+        top: -4px;
+        border-left: 8px solid #ffb86b;
+        border-top: 5px solid transparent;
+        border-bottom: 5px solid transparent;
+      }
+      .annot .arrow.left::after {
+        right: auto;
+        left: -1px;
+        border-left: 0;
+        border-right: 8px solid #ffb86b;
+      }
+      #annot-handle {
+        top: 262px;
+        left: 290px;
+      }
+      #annot-preview {
+        top: 36px;
+        right: 20px;
+        color: #ffb86b;
+      }
+      #annot-preview .arrow-down {
+        width: 2px;
+        height: 32px;
+        background: #ffb86b;
+        position: relative;
+      }
+      #annot-preview .arrow-down::after {
+        content: "";
+        position: absolute;
+        bottom: -1px;
+        left: -4px;
+        border-top: 8px solid #ffb86b;
+        border-left: 5px solid transparent;
+        border-right: 5px solid transparent;
+      }
+      #annot-button {
+        top: 60px;
+        left: 290px;
+      }
+
+      /* Status line at the bottom */
+      .status-bar {
+        background: #252525;
+        border-top: 1px solid #333;
+        padding: 10px 20px;
+        font-size: 12px;
+        color: #ccc;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="viewer">
+      <div class="toolbar">
+        <button class="btn sec">画像を開く</button>
+        <button class="btn">範囲選択を開始</button>
+        <button class="btn hl">ゆがみ補正で選択</button>
+        <button class="btn ghost">この範囲でOCR</button>
+        <button class="btn">画像全体をOCR</button>
+        <span class="status">4つのハンドルを文字の四隅に合わせて [この範囲でOCR] (Enter) を押してください</span>
+      </div>
+
+      <div class="canvas-area">
+        <div class="main-stage" id="main-stage">
+          <div class="perspective-root" id="scene">
+            <div class="main-page" id="main-page">オフライン処理</div>
+          </div>
+
+          <svg class="quad-overlay" id="quad-overlay" preserveAspectRatio="none">
+            <polygon class="quad-fill" id="main-poly" points="0,0 0,0 0,0 0,0" />
+            <circle class="handle" id="main-h0" cx="0" cy="0" r="11" />
+            <circle class="handle" id="main-h1" cx="0" cy="0" r="11" />
+            <circle class="handle" id="main-h2" cx="0" cy="0" r="11" />
+            <circle class="handle" id="main-h3" cx="0" cy="0" r="11" />
+          </svg>
+
+          <div class="preview-panel">
+            <div class="preview-label">補正後プレビュー</div>
+            <div class="preview-canvas">オフライン処理</div>
+          </div>
+
+          <div class="annot" id="annot-handle">
+            4隅ハンドル<div class="arrow"></div>
+          </div>
+          <div class="annot" id="annot-preview">
+            <div style="display:flex; flex-direction:column; align-items:center; gap:6px;">
+              <span>リアルタイム更新</span>
+              <div class="arrow-down"></div>
+            </div>
+          </div>
+          <div class="annot" id="annot-button">
+            <div class="arrow left"></div>Enterでも実行
+          </div>
+        </div>
+      </div>
+
+      <div class="status-bar">
+        viewer.html — chrome-extension://{id}/viewer.html
+      </div>
+    </div>
+
+    <script>
+      function fitQuadToPage() {
+        const stage = document.getElementById("main-stage");
+        const page = document.getElementById("main-page");
+        const scene = document.getElementById("scene");
+        const overlay = document.getElementById("quad-overlay");
+
+        const stageRect = stage.getBoundingClientRect();
+        const sceneRect = scene.getBoundingClientRect();
+
+        overlay.setAttribute("viewBox", `0 0 ${stageRect.width} ${stageRect.height}`);
+
+        const w = page.offsetWidth;
+        const h = page.offsetHeight;
+        const cx = w / 2;
+        const cy = h / 2;
+
+        const localOriginX = sceneRect.left - stageRect.left + (sceneRect.width - w) / 2;
+        const localOriginY = sceneRect.top - stageRect.top + (sceneRect.height - h) / 2;
+
+        const style = getComputedStyle(page);
+        const m = new DOMMatrixReadOnly(style.transform);
+        const T1 = new DOMMatrix().translate(cx, cy);
+        const T2 = new DOMMatrix().translate(-cx, -cy);
+        const inner = T1.multiply(m).multiply(T2);
+
+        const perspStr = getComputedStyle(scene).perspective;
+        const perspective = perspStr && perspStr !== "none" ? parseFloat(perspStr) : 0;
+
+        const corners = [
+          { x: 0, y: 0 },
+          { x: w, y: 0 },
+          { x: w, y: h },
+          { x: 0, y: h },
+        ];
+        const projected = corners.map((p) => {
+          const v = inner.transformPoint(new DOMPoint(p.x, p.y, 0, 1));
+          if (perspective > 0) {
+            const denom = 1 - v.z / perspective;
+            return {
+              x: localOriginX + (v.x - cx) / denom + cx,
+              y: localOriginY + (v.y - cy) / denom + cy,
+            };
+          }
+          return { x: localOriginX + v.x, y: localOriginY + v.y };
+        });
+
+        document
+          .getElementById("main-poly")
+          .setAttribute("points", projected.map((p) => `${p.x},${p.y}`).join(" "));
+        ["main-h0", "main-h1", "main-h2", "main-h3"].forEach((id, i) => {
+          const h = document.getElementById(id);
+          h.setAttribute("cx", projected[i].x);
+          h.setAttribute("cy", projected[i].y);
+        });
+      }
+      fitQuadToPage();
+    </script>
+  </body>
+</html>
