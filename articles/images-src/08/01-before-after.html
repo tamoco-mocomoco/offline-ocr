@@ -1,0 +1,238 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="utf-8" />
+    <title>Before / After</title>
+    <style>
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      body {
+        width: 1200px;
+        height: 600px;
+        background: #fafafa;
+        font-family: "Hiragino Sans", "Yu Gothic", "Noto Sans JP", sans-serif;
+        color: #222;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 32px 48px;
+      }
+
+      .side {
+        width: 500px;
+        height: 500px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+      }
+      .label {
+        font-size: 16px;
+        font-weight: 700;
+        margin-bottom: 10px;
+        color: #555;
+        letter-spacing: 0.08em;
+      }
+      .caption {
+        font-size: 13px;
+        color: #888;
+        margin-top: 10px;
+      }
+      .stage {
+        width: 480px;
+        height: 400px;
+        background: #ffffff;
+        border: 1px solid #ddd;
+        border-radius: 12px;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.05);
+        position: relative;
+        overflow: visible;
+      }
+
+      /* Left: perspective-distorted page */
+      .scene {
+        position: absolute;
+        inset: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        perspective: 1000px;
+        perspective-origin: 50% 50%;
+      }
+      .page {
+        width: 360px;
+        height: 160px;
+        background: #ffffff;
+        border: 1px solid #e0e0e0;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transform: rotateY(-32deg) rotateX(8deg);
+        transform-origin: 50% 50%;
+        font-size: 44px;
+        font-weight: 700;
+        color: #222;
+        letter-spacing: 0.06em;
+      }
+
+      /* SVG quad overlay (points filled in by JS at load time) */
+      .overlay { position: absolute; inset: 0; pointer-events: none; }
+      .quad-fill { fill: rgba(91,155,213,0.15); stroke: #5B9BD5; stroke-width: 2.5; stroke-dasharray: 7 4; }
+      .handle { fill: #5B9BD5; stroke: #fff; stroke-width: 2.5; }
+
+      /* Arrow in the middle */
+      .arrow {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 10px;
+      }
+      .arrow .glyph { font-size: 56px; color: #5B9BD5; font-weight: 300; line-height: 1; }
+      .arrow .text {
+        font-size: 12px;
+        color: #777;
+        text-align: center;
+        line-height: 1.5;
+      }
+
+      /* Right: unwarped flat */
+      .flat-wrap {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        height: 100%;
+      }
+      .flat {
+        padding: 36px 28px;
+        background: #ffffff;
+        border: 1px solid #e0e0e0;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        font-size: 54px;
+        font-weight: 700;
+        color: #222;
+        letter-spacing: 0.08em;
+        border-radius: 2px;
+      }
+
+      .ocr-badge {
+        margin-top: 14px;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 6px 14px;
+        background: #e8f5e9;
+        color: #2e7d32;
+        border: 1px solid #a5d6a7;
+        border-radius: 20px;
+        font-size: 14px;
+        font-weight: 600;
+      }
+      .ocr-badge::before {
+        content: "✓";
+        font-weight: 700;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="side">
+      <div class="label">Before — 斜めに写った紙面</div>
+      <div class="stage" id="stage-left">
+        <div class="scene">
+          <div class="page" id="page-left">オフライン処理</div>
+        </div>
+        <svg class="overlay" id="overlay-left" viewBox="0 0 480 400" preserveAspectRatio="none">
+          <polygon class="quad-fill" id="poly-left" points="0,0 0,0 0,0 0,0" />
+          <circle class="handle" id="h0-left" cx="0" cy="0" r="8" />
+          <circle class="handle" id="h1-left" cx="0" cy="0" r="8" />
+          <circle class="handle" id="h2-left" cx="0" cy="0" r="8" />
+          <circle class="handle" id="h3-left" cx="0" cy="0" r="8" />
+        </svg>
+      </div>
+      <div class="caption">4つのハンドルで文字の四隅を囲む</div>
+    </div>
+
+    <div class="arrow">
+      <div class="glyph">→</div>
+      <div class="text">
+        透視変換で<br />平面化
+      </div>
+    </div>
+
+    <div class="side">
+      <div class="label">After — ゆがみ補正後 / OCRへ</div>
+      <div class="stage">
+        <div class="flat-wrap">
+          <div class="flat">オフライン処理</div>
+        </div>
+      </div>
+      <div class="caption">
+        <span class="ocr-badge">OCR成功: 「オフライン処理」</span>
+      </div>
+    </div>
+
+    <script>
+      /**
+       * Compute the actual on-screen projected corners of the perspective-rotated
+       * .page element and fit the SVG quad + handles to them. Mirrors the
+       * projection used in the E2E fixture (perspective + transformPoint + z-divide).
+       */
+      function fitQuadToPage(stageId, pageId, polyId, handleIds) {
+        const stage = document.getElementById(stageId);
+        const page = document.getElementById(pageId);
+        const scene = page.parentElement;
+
+        const stageRect = stage.getBoundingClientRect();
+        const sceneRect = scene.getBoundingClientRect();
+
+        const w = page.offsetWidth;
+        const h = page.offsetHeight;
+        const cx = w / 2;
+        const cy = h / 2;
+
+        // The .page element is centered inside .scene (flex align center),
+        // so its untransformed top-left in stage-local coords is:
+        const localOriginX = sceneRect.left - stageRect.left + (sceneRect.width - w) / 2;
+        const localOriginY = sceneRect.top - stageRect.top + (sceneRect.height - h) / 2;
+
+        const style = getComputedStyle(page);
+        const m = new DOMMatrixReadOnly(style.transform);
+        const T1 = new DOMMatrix().translate(cx, cy);
+        const T2 = new DOMMatrix().translate(-cx, -cy);
+        const inner = T1.multiply(m).multiply(T2);
+
+        const perspStr = getComputedStyle(scene).perspective;
+        const perspective = perspStr && perspStr !== "none" ? parseFloat(perspStr) : 0;
+
+        const corners = [
+          { x: 0, y: 0 },     // TL
+          { x: w, y: 0 },     // TR
+          { x: w, y: h },     // BR
+          { x: 0, y: h },     // BL
+        ];
+        const projected = corners.map((p) => {
+          const v = inner.transformPoint(new DOMPoint(p.x, p.y, 0, 1));
+          if (perspective > 0) {
+            const denom = 1 - v.z / perspective;
+            return {
+              x: localOriginX + (v.x - cx) / denom + cx,
+              y: localOriginY + (v.y - cy) / denom + cy,
+            };
+          }
+          return { x: localOriginX + v.x, y: localOriginY + v.y };
+        });
+
+        document
+          .getElementById(polyId)
+          .setAttribute("points", projected.map((p) => `${p.x},${p.y}`).join(" "));
+        handleIds.forEach((id, i) => {
+          const h = document.getElementById(id);
+          h.setAttribute("cx", projected[i].x);
+          h.setAttribute("cy", projected[i].y);
+        });
+      }
+
+      fitQuadToPage("stage-left", "page-left", "poly-left", [
+        "h0-left", "h1-left", "h2-left", "h3-left",
+      ]);
+    </script>
+  </body>
+</html>

@@ -21,6 +21,20 @@ import {
   PdfRenderError,
   type PdfDocument,
 } from "../pdf/pdf-loader";
+import {
+  initQuad,
+  hitTestCorner,
+  moveCorner,
+  suggestOutputSize,
+  outputCorners,
+  type QuadState,
+  type Corner,
+} from "./quad-selection";
+import {
+  computeHomography,
+  applyPerspective,
+  type Point,
+} from "../ocr/engine/perspective";
 
 const t = chrome.i18n.getMessage;
 
@@ -28,8 +42,21 @@ const t = chrome.i18n.getMessage;
 
 const btnOpen = document.getElementById("btn-open") as HTMLButtonElement;
 const btnSelect = document.getElementById("btn-select") as HTMLButtonElement;
+const btnQuadSelect = document.getElementById(
+  "btn-quad-select",
+) as HTMLButtonElement;
+const btnQuadConfirm = document.getElementById(
+  "btn-quad-confirm",
+) as HTMLButtonElement;
 const btnOcrAll = document.getElementById("btn-ocr-all") as HTMLButtonElement;
 const fileInput = document.getElementById("file-input") as HTMLInputElement;
+const quadPreviewPanel = document.getElementById(
+  "quad-preview-panel",
+) as HTMLDivElement;
+const quadPreviewCanvas = document.getElementById(
+  "quad-preview",
+) as HTMLCanvasElement;
+const QUAD_PREVIEW_MAX_PX = 240;
 const canvasArea = document.getElementById("canvas-area")!;
 const dropzone = document.getElementById("dropzone")!;
 const canvas = document.getElementById("canvas") as HTMLCanvasElement;
@@ -58,11 +85,19 @@ document
 
 let img: HTMLImageElement | null = null;
 let ctx: CanvasRenderingContext2D | null = null;
-let selectMode = false; // whether selection mode is active
+let selectMode = false; // rectangular selection mode
 let dragging = false;
 let startX = 0;
 let startY = 0;
 let selRect: { x: number; y: number; w: number; h: number } | null = null;
+
+// "Deskew & select" mode — a perspective-corrected quad selection.
+let quadMode = false;
+let quadState: QuadState | null = null;
+// Cached source pixels for the live preview, captured once when quad mode
+// starts so each drag update doesn't re-read the full main canvas.
+let quadSrcData: ImageData | null = null;
+let quadPreviewRafPending = false;
 
 // PDF mode state: null when a plain image is loaded.
 let pdfDoc: PdfDocument | null = null;
@@ -121,8 +156,13 @@ function loadImageFile(file: File): void {
     canvas.style.display = "block";
     canvas.style.cursor = "default";
     btnSelect.disabled = false;
+    btnQuadSelect.disabled = false;
     btnOcrAll.disabled = false;
     selectMode = false;
+    quadMode = false;
+    quadState = null;
+    btnQuadConfirm.style.display = "none";
+    hideQuadPreview();
     statusEl.textContent = `${image.naturalWidth}×${image.naturalHeight}`;
     URL.revokeObjectURL(url);
   };
@@ -209,8 +249,13 @@ async function renderPdfPage(pageNumber: number): Promise<void> {
     canvas.style.display = "block";
     canvas.style.cursor = "default";
     btnSelect.disabled = false;
+    btnQuadSelect.disabled = false;
     btnOcrAll.disabled = false;
     selectMode = false;
+    quadMode = false;
+    quadState = null;
+    btnQuadConfirm.style.display = "none";
+    hideQuadPreview();
     selRect = null;
     URL.revokeObjectURL(url);
     // Show 1-indexed pageName so OCR history captures which page a result
@@ -250,7 +295,7 @@ btnPdfNext.addEventListener("click", () => {
 // Arrow keys navigate pages when a PDF is loaded and we're not in the middle
 // of a selection.
 document.addEventListener("keydown", (e) => {
-  if (!pdfDoc || selectMode || dragging) return;
+  if (!pdfDoc || selectMode || dragging || quadMode) return;
   if (e.key === "ArrowLeft" || e.key === "PageUp") {
     e.preventDefault();
     void goToPdfPage(pdfCurrentPage - 1);
@@ -279,6 +324,93 @@ function drawSelection(): void {
   ctx.fillRect(x, y, w, h);
 }
 
+/**
+ * Render the perspective-corrected quad into the top-right preview panel.
+ * Runs on every drag — rAF-coalesced so a fast drag doesn't queue up more
+ * work than the compositor can flush, and clamped to QUAD_PREVIEW_MAX_PX so
+ * the warp stays cheap even on multi-megapixel source images.
+ */
+function updateQuadPreview(): void {
+  if (quadPreviewRafPending) return;
+  quadPreviewRafPending = true;
+  requestAnimationFrame(() => {
+    quadPreviewRafPending = false;
+    if (!quadMode || !quadState || !quadSrcData) return;
+    const size = suggestOutputSize(quadState);
+    const scale = Math.min(
+      1,
+      QUAD_PREVIEW_MAX_PX / size.w,
+      QUAD_PREVIEW_MAX_PX / size.h,
+    );
+    const outW = Math.max(2, Math.round(size.w * scale));
+    const outH = Math.max(2, Math.round(size.h * scale));
+    const dst: [Point, Point, Point, Point] = [
+      { x: 0, y: 0 },
+      { x: outW, y: 0 },
+      { x: outW, y: outH },
+      { x: 0, y: outH },
+    ];
+    try {
+      const H = computeHomography(
+        quadState.corners as unknown as Point[],
+        dst as unknown as Point[],
+      );
+      const warped = applyPerspective(quadSrcData, H, outW, outH);
+      quadPreviewCanvas.width = outW;
+      quadPreviewCanvas.height = outH;
+      const pctx = quadPreviewCanvas.getContext("2d");
+      if (pctx) pctx.putImageData(warped, 0, 0);
+    } catch {
+      // computeHomography can throw on degenerate quads — silently keep the
+      // previous preview; the convexity constraint on moveCorner should
+      // normally keep us out of this branch.
+    }
+  });
+}
+
+function showQuadPreview(): void {
+  if (!ctx) return;
+  quadSrcData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+  quadPreviewPanel.classList.add("active");
+  updateQuadPreview();
+}
+
+function hideQuadPreview(): void {
+  quadPreviewPanel.classList.remove("active");
+  quadSrcData = null;
+}
+
+function drawQuad(): void {
+  if (!ctx || !img || !quadState) return;
+  drawImage();
+  const c = quadState.corners;
+  ctx.fillStyle = "rgba(91,155,213,0.15)";
+  ctx.beginPath();
+  ctx.moveTo(c[0].x, c[0].y);
+  for (let i = 1; i < 4; i++) ctx.lineTo(c[i].x, c[i].y);
+  ctx.closePath();
+  ctx.fill();
+  ctx.strokeStyle = "#5B9BD5";
+  ctx.lineWidth = 2;
+  ctx.setLineDash([6, 3]);
+  ctx.stroke();
+  ctx.setLineDash([]);
+  // Corner handles — radius in canvas-space, scaled so on-screen size stays constant.
+  const rect = canvas.getBoundingClientRect();
+  const displayScale = rect.width > 0 ? canvas.width / rect.width : 1;
+  const handleR = 8 * displayScale;
+  ctx.lineWidth = 2 * displayScale;
+  for (let i = 0; i < 4; i++) {
+    const p = c[i];
+    ctx.fillStyle = i === quadState.draggingIndex ? "#3892ee" : "#5B9BD5";
+    ctx.strokeStyle = "#fff";
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, handleR, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+  }
+}
+
 // ── Canvas coordinate conversion ──
 
 function canvasCoords(e: MouseEvent): { cx: number; cy: number } {
@@ -294,8 +426,23 @@ function canvasCoords(e: MouseEvent): { cx: number; cy: number } {
 // ── Selection handlers ──
 
 canvas.addEventListener("mousedown", (e) => {
-  if (!img || !selectMode) return;
+  if (!img) return;
   const { cx, cy } = canvasCoords(e);
+  if (quadMode && quadState) {
+    const rect = canvas.getBoundingClientRect();
+    const displayScale = rect.width > 0 ? canvas.width / rect.width : 1;
+    const idx = hitTestCorner(
+      quadState,
+      { x: cx, y: cy },
+      16 * displayScale,
+    );
+    if (idx !== -1) {
+      quadState = { corners: quadState.corners, draggingIndex: idx };
+      drawQuad();
+    }
+    return;
+  }
+  if (!selectMode) return;
   dragging = true;
   startX = cx;
   startY = cy;
@@ -303,8 +450,20 @@ canvas.addEventListener("mousedown", (e) => {
 });
 
 canvas.addEventListener("mousemove", (e) => {
-  if (!dragging) return;
   const { cx, cy } = canvasCoords(e);
+  if (quadMode && quadState && quadState.draggingIndex !== -1) {
+    quadState = moveCorner(
+      quadState,
+      quadState.draggingIndex as Corner,
+      { x: cx, y: cy },
+      canvas.width,
+      canvas.height,
+    );
+    drawQuad();
+    updateQuadPreview();
+    return;
+  }
+  if (!dragging) return;
   selRect = {
     x: Math.min(startX, cx),
     y: Math.min(startY, cy),
@@ -315,6 +474,11 @@ canvas.addEventListener("mousemove", (e) => {
 });
 
 canvas.addEventListener("mouseup", (e) => {
+  if (quadMode && quadState && quadState.draggingIndex !== -1) {
+    quadState = { corners: quadState.corners, draggingIndex: -1 };
+    drawQuad();
+    return;
+  }
   if (!dragging) return;
   dragging = false;
   const { cx, cy } = canvasCoords(e);
@@ -332,14 +496,31 @@ canvas.addEventListener("mouseup", (e) => {
   }
 });
 
-// Esc to cancel selection
+// Esc to cancel selection / quad mode; Enter to confirm quad OCR
 document.addEventListener("keydown", (e) => {
   if (e.key === "Escape") {
     selectMode = false;
     dragging = false;
+    quadMode = false;
+    quadState = null;
+    btnQuadConfirm.style.display = "none";
+    hideQuadPreview();
     canvas.style.cursor = "default";
     selRect = null;
     drawImage();
+    return;
+  }
+  if (
+    e.key === "Enter" &&
+    quadMode &&
+    quadState &&
+    quadState.draggingIndex === -1
+  ) {
+    // If the confirm button happens to have focus, let its native click fire
+    // instead of double-triggering confirmQuad.
+    if (e.target === btnQuadConfirm) return;
+    e.preventDefault();
+    void confirmQuad();
   }
 });
 
@@ -347,31 +528,59 @@ document.addEventListener("keydown", (e) => {
 
 async function runOcr(): Promise<void> {
   if (!ctx || !img || !selRect) return;
+  await sendImageToOcr(canvas, selRect);
+}
 
+/**
+ * Feed a source canvas + crop rect through the padding + PNG + offscreen-OCR
+ * pipeline. Shared between rectangular selection and four-corner (warped)
+ * selection — the warped path passes an OffscreenCanvas containing the already
+ * perspective-corrected image, with a full-image crop rect.
+ */
+async function sendImageToOcr(
+  source: HTMLCanvasElement | OffscreenCanvas,
+  crop: { x: number; y: number; w: number; h: number },
+): Promise<void> {
   showToast(t("progressOcrRunning") || "OCR実行中…");
 
-  // Crop the selected region with adjacent-color padding
-  const pad = calcPadding(selRect.w, selRect.h);
-  const cropX = Math.round(selRect.x);
-  const cropY = Math.round(selRect.y);
-  const cropW = Math.round(selRect.w);
-  const cropH = Math.round(selRect.h);
+  const pad = calcPadding(crop.w, crop.h);
+  const cropX = Math.round(crop.x);
+  const cropY = Math.round(crop.y);
+  const cropW = Math.round(crop.w);
+  const cropH = Math.round(crop.h);
 
   const outW = cropW + pad * 2;
   const outH = cropH + pad * 2;
   const offscreen = new OffscreenCanvas(outW, outH);
   const offCtx = offscreen.getContext("2d")!;
 
-  // Draw the cropped region in the center
-  offCtx.drawImage(canvas, cropX, cropY, cropW, cropH, pad, pad, cropW, cropH);
+  offCtx.drawImage(source, cropX, cropY, cropW, cropH, pad, pad, cropW, cropH);
 
-  // Stretch edge pixels for adjacent-color padding
   offCtx.drawImage(offscreen, pad, pad, cropW, 1, pad, 0, cropW, pad);
-  offCtx.drawImage(offscreen, pad, pad + cropH - 1, cropW, 1, pad, pad + cropH, cropW, pad);
+  offCtx.drawImage(
+    offscreen,
+    pad,
+    pad + cropH - 1,
+    cropW,
+    1,
+    pad,
+    pad + cropH,
+    cropW,
+    pad,
+  );
   offCtx.drawImage(offscreen, pad, 0, 1, outH, 0, 0, pad, outH);
-  offCtx.drawImage(offscreen, pad + cropW - 1, 0, 1, outH, pad + cropW, 0, pad, outH);
+  offCtx.drawImage(
+    offscreen,
+    pad + cropW - 1,
+    0,
+    1,
+    outH,
+    pad + cropW,
+    0,
+    pad,
+    outH,
+  );
 
-  // Convert to data URL for the offscreen OCR pipeline
   const blob = await offscreen.convertToBlob({ type: "image/png" });
   const dataUrl = await new Promise<string>((resolve) => {
     const reader = new FileReader();
@@ -379,7 +588,6 @@ async function runOcr(): Promise<void> {
     reader.readAsDataURL(blob);
   });
 
-  // Notify background to set activeOcrTabId for result routing
   const currentTab = await chrome.tabs.getCurrent();
   await chrome.runtime.sendMessage({
     target: "background",
@@ -387,7 +595,6 @@ async function runOcr(): Promise<void> {
     tabId: currentTab?.id,
   });
 
-  // Send to offscreen OCR (reuse existing pipeline)
   await ensureOffscreenDocument();
   await chrome.runtime.sendMessage({
     target: "offscreen",
@@ -396,6 +603,32 @@ async function runOcr(): Promise<void> {
     rect: { x: 0, y: 0, width: outW, height: outH },
     devicePixelRatio: 1,
   });
+}
+
+async function confirmQuad(): Promise<void> {
+  if (!ctx || !img || !quadState) return;
+  const { w: outW, h: outH } = suggestOutputSize(quadState);
+  const dstCorners = outputCorners(outW, outH);
+  const H = computeHomography(
+    quadState.corners as unknown as Point[],
+    dstCorners as unknown as Point[],
+  );
+  const srcData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+  const warped = applyPerspective(srcData, H, outW, outH);
+
+  const warpedCanvas = new OffscreenCanvas(outW, outH);
+  const wCtx = warpedCanvas.getContext("2d")!;
+  wCtx.putImageData(warped, 0, 0);
+
+  // Exit quad mode before firing OCR — the result handler resets shared state.
+  quadMode = false;
+  quadState = null;
+  btnQuadConfirm.style.display = "none";
+  hideQuadPreview();
+  canvas.style.cursor = "default";
+  drawImage();
+
+  await sendImageToOcr(warpedCanvas, { x: 0, y: 0, w: outW, h: outH });
 }
 
 async function ensureOffscreenDocument(): Promise<void> {
@@ -457,10 +690,18 @@ chrome.runtime.onMessage.addListener((message) => {
       }
     });
     selRect = null;
+    quadMode = false;
+    quadState = null;
+    btnQuadConfirm.style.display = "none";
+    hideQuadPreview();
     drawImage();
   } else if (message.type === "ocr-error") {
     showToast(`${t("errorPrefix", [message.message]) || message.message}`, 5000);
     selRect = null;
+    quadMode = false;
+    quadState = null;
+    btnQuadConfirm.style.display = "none";
+    hideQuadPreview();
     drawImage();
   }
 });
@@ -471,11 +712,37 @@ btnOpen.addEventListener("click", () => fileInput.click());
 
 btnSelect.addEventListener("click", () => {
   if (!img) return;
+  quadMode = false;
+  quadState = null;
+  btnQuadConfirm.style.display = "none";
+  hideQuadPreview();
   selectMode = true;
   canvas.style.cursor = "crosshair";
   selRect = null;
   drawImage();
   statusEl.textContent = t("viewerSelectHint") || "ドラッグでOCRしたい範囲を選択";
+});
+
+btnQuadSelect.addEventListener("click", () => {
+  if (!img) return;
+  // Blur so Enter doesn't re-fire this handler (which would reset the quad).
+  btnQuadSelect.blur();
+  selectMode = false;
+  selRect = null;
+  quadMode = true;
+  quadState = initQuad(canvas.width, canvas.height);
+  btnQuadConfirm.style.display = "";
+  btnQuadConfirm.disabled = false;
+  canvas.style.cursor = "grab";
+  drawQuad();
+  showQuadPreview();
+  statusEl.textContent =
+    t("viewerQuadHint") ||
+    "4つのハンドルを文字の四隅に合わせて [この範囲でOCR] (Enter) を押してください";
+});
+
+btnQuadConfirm.addEventListener("click", () => {
+  void confirmQuad();
 });
 
 btnOcrAll.addEventListener("click", () => {

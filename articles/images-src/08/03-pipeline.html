@@ -1,0 +1,267 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="utf-8" />
+    <title>Pipeline + homography</title>
+    <style>
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      body {
+        width: 1200px;
+        height: 720px;
+        background: #fafafa;
+        font-family: "Hiragino Sans", "Yu Gothic", "Noto Sans JP", sans-serif;
+        color: #222;
+        padding: 40px 48px;
+      }
+
+      h2 {
+        font-size: 20px;
+        font-weight: 700;
+        color: #333;
+        margin-bottom: 24px;
+      }
+      h3 {
+        font-size: 14px;
+        font-weight: 700;
+        color: #555;
+        letter-spacing: 0.05em;
+        margin-bottom: 10px;
+      }
+
+      /* --- Top row: homography + inverse mapping --- */
+      .math-row {
+        display: flex;
+        gap: 32px;
+        margin-bottom: 32px;
+      }
+
+      .math-card {
+        flex: 1;
+        background: #fff;
+        border: 1px solid #e3e3e3;
+        border-radius: 10px;
+        padding: 20px;
+        box-shadow: 0 2px 6px rgba(0,0,0,0.03);
+      }
+
+      /* 4-points → homography matrix */
+      .points-to-matrix {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+      }
+      .quad-src, .quad-dst {
+        width: 150px;
+        height: 150px;
+        border: 2px dashed #5B9BD5;
+        position: relative;
+        background: #f8fcff;
+      }
+      .quad-src {
+        /* draw a tilted quad */
+        clip-path: polygon(12% 20%, 86% 10%, 92% 82%, 8% 72%);
+        background: linear-gradient(135deg, #d0e4f7, #a8c9ea);
+      }
+      .quad-dst {
+        background: linear-gradient(135deg, #e8f5e9, #c3e6ca);
+      }
+      .quad-label {
+        font-size: 11px;
+        color: #777;
+        text-align: center;
+        margin-top: 6px;
+      }
+      .mapping-arrow {
+        font-size: 26px;
+        color: #999;
+      }
+      .matrix {
+        font-family: "SF Mono", Menlo, Consolas, monospace;
+        font-size: 13px;
+        color: #333;
+        white-space: pre;
+        padding: 12px 14px;
+        background: #f3f3f3;
+        border-radius: 6px;
+        border: 1px solid #e0e0e0;
+      }
+
+      /* Inverse mapping diagram */
+      .inv-wrap {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+      }
+      .inv-dst, .inv-src {
+        width: 150px;
+        height: 150px;
+        border: 1px solid #bbb;
+        position: relative;
+      }
+      .inv-dst {
+        background: repeating-linear-gradient(0deg, #fff 0 24px, #f0f0f0 24px 25px),
+                    repeating-linear-gradient(90deg, #fff 0 24px, #f0f0f0 24px 25px);
+      }
+      .inv-src {
+        background:
+          linear-gradient(135deg, #f5e9d9, #e8d4b8);
+      }
+      .inv-src::before {
+        content: "";
+        position: absolute;
+        inset: 0;
+        clip-path: polygon(14% 24%, 82% 12%, 90% 80%, 10% 68%);
+        background: repeating-linear-gradient(0deg, rgba(0,0,0,0.08) 0 24px, transparent 24px 25px),
+                    repeating-linear-gradient(90deg, rgba(0,0,0,0.08) 0 24px, transparent 24px 25px);
+      }
+      .dot {
+        position: absolute;
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+      }
+      .dst-dot { background: #d84340; top: 60px; left: 72px; }
+      .src-dot { background: #d84340; top: 60px; left: 56px; }
+      .bilinear-grid {
+        position: absolute;
+        width: 20px; height: 20px;
+        border: 2px solid #d84340;
+        top: 50px; left: 46px;
+        background: rgba(216,67,64,0.08);
+      }
+      .inv-arrow {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        color: #d84340;
+        font-size: 11px;
+        font-weight: 600;
+      }
+      .inv-arrow .ar {
+        width: 44px;
+        height: 2px;
+        background: #d84340;
+        position: relative;
+      }
+      .inv-arrow .ar::after {
+        content: "";
+        position: absolute;
+        left: -1px;
+        top: -4px;
+        border-right: 8px solid #d84340;
+        border-top: 5px solid transparent;
+        border-bottom: 5px solid transparent;
+      }
+      .note { font-size: 12px; color: #777; margin-top: 10px; }
+
+      /* --- Bottom row: pipeline flow --- */
+      .pipeline {
+        background: #fff;
+        border: 1px solid #e3e3e3;
+        border-radius: 10px;
+        padding: 24px;
+        box-shadow: 0 2px 6px rgba(0,0,0,0.03);
+      }
+      .stages {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-top: 10px;
+      }
+      .stage {
+        flex: 1;
+        padding: 14px 10px;
+        text-align: center;
+        border-radius: 8px;
+        border: 1.5px solid;
+        font-size: 13px;
+        font-weight: 600;
+      }
+      .stage small {
+        display: block;
+        font-weight: 400;
+        color: #777;
+        margin-top: 4px;
+        font-size: 11px;
+      }
+      .st-new { background: #fff4e8; border-color: #ff8c42; color: #c2541b; }
+      .st-exist { background: #f0f6ff; border-color: #5B9BD5; color: #2e5f8f; }
+      .st-ocr { background: #e8f5e9; border-color: #4caf50; color: #2e7d32; }
+      .arrow-sm {
+        color: #999;
+        font-size: 20px;
+      }
+    </style>
+  </head>
+  <body>
+    <h2>透視変換 — 数式と、既存パイプラインへの合流</h2>
+
+    <div class="math-row">
+      <div class="math-card">
+        <h3>① ホモグラフィ: 4点対応 → 3×3行列</h3>
+        <div class="points-to-matrix">
+          <div>
+            <div class="quad-src"></div>
+            <div class="quad-label">src (歪んだ4隅)</div>
+          </div>
+          <div class="mapping-arrow">→</div>
+          <div>
+            <div class="quad-dst"></div>
+            <div class="quad-label">dst (平面)</div>
+          </div>
+          <div class="mapping-arrow">⇒</div>
+          <div class="matrix">H = [[h0, h1, h2],
+     [h3, h4, h5],
+     [h6, h7,  1]]</div>
+        </div>
+        <div class="note">8変数 ×8方程式を Gauss 消去 (partial pivoting) で解く</div>
+      </div>
+
+      <div class="math-card">
+        <h3>② 逆写像 + 双一次補間</h3>
+        <div class="inv-wrap">
+          <div>
+            <div class="inv-dst">
+              <div class="dot dst-dot"></div>
+            </div>
+            <div class="quad-label">dst (出力整数格子)</div>
+          </div>
+          <div class="inv-arrow">
+            <div style="margin-bottom:4px;">H⁻¹</div>
+            <div class="ar"></div>
+          </div>
+          <div>
+            <div class="inv-src">
+              <div class="bilinear-grid"></div>
+              <div class="dot src-dot"></div>
+            </div>
+            <div class="quad-label">src (実数座標 + 4画素合成)</div>
+          </div>
+        </div>
+        <div class="note">順写像だと穴が開くので dst→src 逆引き</div>
+      </div>
+    </div>
+
+    <div class="pipeline">
+      <h3>既存 OCR パイプラインに合流 (「ゆがみ補正」の 1 ステップを前に挟むだけ)</h3>
+      <div class="stages">
+        <div class="stage st-new">① 4隅を取得<small>QuadState.corners</small></div>
+        <div class="arrow-sm">→</div>
+        <div class="stage st-new">② applyPerspective<small>平面化 Canvas</small></div>
+        <div class="arrow-sm">→</div>
+        <div class="stage st-exist">③ 隣接色パディング<small>既存 (v0.2.0〜)</small></div>
+        <div class="arrow-sm">→</div>
+        <div class="stage st-exist">④ PNG + sendMessage<small>既存</small></div>
+        <div class="arrow-sm">→</div>
+        <div class="stage st-ocr">⑤ offscreen OCR<small>DEIM + PARSeq</small></div>
+      </div>
+      <div class="note">
+        <span style="color:#c2541b; font-weight:600;">■</span> 新規追加
+        &nbsp;&nbsp;
+        <span style="color:#2e5f8f; font-weight:600;">■</span> 既存 (v0.7.1 row-ink / v0.8.1 CTC loop 検出 などがそのまま効く)
+        &nbsp;&nbsp;
+        <span style="color:#2e7d32; font-weight:600;">■</span> OCR 本体
+      </div>
+    </div>
+  </body>
+</html>
