@@ -50,6 +50,13 @@ const btnQuadConfirm = document.getElementById(
 ) as HTMLButtonElement;
 const btnOcrAll = document.getElementById("btn-ocr-all") as HTMLButtonElement;
 const fileInput = document.getElementById("file-input") as HTMLInputElement;
+const quadPreviewPanel = document.getElementById(
+  "quad-preview-panel",
+) as HTMLDivElement;
+const quadPreviewCanvas = document.getElementById(
+  "quad-preview",
+) as HTMLCanvasElement;
+const QUAD_PREVIEW_MAX_PX = 240;
 const canvasArea = document.getElementById("canvas-area")!;
 const dropzone = document.getElementById("dropzone")!;
 const canvas = document.getElementById("canvas") as HTMLCanvasElement;
@@ -84,9 +91,13 @@ let startX = 0;
 let startY = 0;
 let selRect: { x: number; y: number; w: number; h: number } | null = null;
 
-// "Four-corner selection" mode — a perspective-corrected quad selection.
+// "Deskew & select" mode — a perspective-corrected quad selection.
 let quadMode = false;
 let quadState: QuadState | null = null;
+// Cached source pixels for the live preview, captured once when quad mode
+// starts so each drag update doesn't re-read the full main canvas.
+let quadSrcData: ImageData | null = null;
+let quadPreviewRafPending = false;
 
 // PDF mode state: null when a plain image is loaded.
 let pdfDoc: PdfDocument | null = null;
@@ -151,6 +162,7 @@ function loadImageFile(file: File): void {
     quadMode = false;
     quadState = null;
     btnQuadConfirm.style.display = "none";
+    hideQuadPreview();
     statusEl.textContent = `${image.naturalWidth}×${image.naturalHeight}`;
     URL.revokeObjectURL(url);
   };
@@ -243,6 +255,7 @@ async function renderPdfPage(pageNumber: number): Promise<void> {
     quadMode = false;
     quadState = null;
     btnQuadConfirm.style.display = "none";
+    hideQuadPreview();
     selRect = null;
     URL.revokeObjectURL(url);
     // Show 1-indexed pageName so OCR history captures which page a result
@@ -309,6 +322,62 @@ function drawSelection(): void {
   ctx.setLineDash([]);
   ctx.fillStyle = "rgba(91,155,213,0.15)";
   ctx.fillRect(x, y, w, h);
+}
+
+/**
+ * Render the perspective-corrected quad into the top-right preview panel.
+ * Runs on every drag — rAF-coalesced so a fast drag doesn't queue up more
+ * work than the compositor can flush, and clamped to QUAD_PREVIEW_MAX_PX so
+ * the warp stays cheap even on multi-megapixel source images.
+ */
+function updateQuadPreview(): void {
+  if (quadPreviewRafPending) return;
+  quadPreviewRafPending = true;
+  requestAnimationFrame(() => {
+    quadPreviewRafPending = false;
+    if (!quadMode || !quadState || !quadSrcData) return;
+    const size = suggestOutputSize(quadState);
+    const scale = Math.min(
+      1,
+      QUAD_PREVIEW_MAX_PX / size.w,
+      QUAD_PREVIEW_MAX_PX / size.h,
+    );
+    const outW = Math.max(2, Math.round(size.w * scale));
+    const outH = Math.max(2, Math.round(size.h * scale));
+    const dst: [Point, Point, Point, Point] = [
+      { x: 0, y: 0 },
+      { x: outW, y: 0 },
+      { x: outW, y: outH },
+      { x: 0, y: outH },
+    ];
+    try {
+      const H = computeHomography(
+        quadState.corners as unknown as Point[],
+        dst as unknown as Point[],
+      );
+      const warped = applyPerspective(quadSrcData, H, outW, outH);
+      quadPreviewCanvas.width = outW;
+      quadPreviewCanvas.height = outH;
+      const pctx = quadPreviewCanvas.getContext("2d");
+      if (pctx) pctx.putImageData(warped, 0, 0);
+    } catch {
+      // computeHomography can throw on degenerate quads — silently keep the
+      // previous preview; the convexity constraint on moveCorner should
+      // normally keep us out of this branch.
+    }
+  });
+}
+
+function showQuadPreview(): void {
+  if (!ctx) return;
+  quadSrcData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+  quadPreviewPanel.classList.add("active");
+  updateQuadPreview();
+}
+
+function hideQuadPreview(): void {
+  quadPreviewPanel.classList.remove("active");
+  quadSrcData = null;
 }
 
 function drawQuad(): void {
@@ -391,6 +460,7 @@ canvas.addEventListener("mousemove", (e) => {
       canvas.height,
     );
     drawQuad();
+    updateQuadPreview();
     return;
   }
   if (!dragging) return;
@@ -434,6 +504,7 @@ document.addEventListener("keydown", (e) => {
     quadMode = false;
     quadState = null;
     btnQuadConfirm.style.display = "none";
+    hideQuadPreview();
     canvas.style.cursor = "default";
     selRect = null;
     drawImage();
@@ -540,6 +611,7 @@ async function confirmQuad(): Promise<void> {
   quadMode = false;
   quadState = null;
   btnQuadConfirm.style.display = "none";
+  hideQuadPreview();
   canvas.style.cursor = "default";
   drawImage();
 
@@ -608,6 +680,7 @@ chrome.runtime.onMessage.addListener((message) => {
     quadMode = false;
     quadState = null;
     btnQuadConfirm.style.display = "none";
+    hideQuadPreview();
     drawImage();
   } else if (message.type === "ocr-error") {
     showToast(`${t("errorPrefix", [message.message]) || message.message}`, 5000);
@@ -615,6 +688,7 @@ chrome.runtime.onMessage.addListener((message) => {
     quadMode = false;
     quadState = null;
     btnQuadConfirm.style.display = "none";
+    hideQuadPreview();
     drawImage();
   }
 });
@@ -628,6 +702,7 @@ btnSelect.addEventListener("click", () => {
   quadMode = false;
   quadState = null;
   btnQuadConfirm.style.display = "none";
+  hideQuadPreview();
   selectMode = true;
   canvas.style.cursor = "crosshair";
   selRect = null;
@@ -645,9 +720,10 @@ btnQuadSelect.addEventListener("click", () => {
   btnQuadConfirm.disabled = false;
   canvas.style.cursor = "grab";
   drawQuad();
+  showQuadPreview();
   statusEl.textContent =
     t("viewerQuadHint") ||
-    "4隅ハンドルをドラッグして枠を歪め、[この範囲でOCR] を押してください";
+    "4つのハンドルを文字の四隅に合わせて [この範囲でOCR] を押してください";
 });
 
 btnQuadConfirm.addEventListener("click", () => {

@@ -102,6 +102,33 @@
         pointer-events: none;
       }
       .toast.show { opacity: 1; pointer-events: auto; }
+      /* Live preview of the perspective-corrected quad region */
+      #quad-preview-panel {
+        position: absolute;
+        top: 12px;
+        right: 12px;
+        background: rgba(37, 37, 37, 0.95);
+        border: 1px solid #444;
+        border-radius: 8px;
+        padding: 8px 10px 10px;
+        z-index: 100;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+        display: none;
+      }
+      #quad-preview-panel.active { display: block; }
+      #quad-preview-label {
+        font-size: 11px;
+        color: #ccc;
+        margin-bottom: 6px;
+        text-align: center;
+      }
+      #quad-preview {
+        display: block;
+        max-width: 240px;
+        max-height: 240px;
+        background: #000;
+        border-radius: 4px;
+      }
       /* Drop zone */
       .dropzone {
         display: flex;
@@ -137,6 +164,10 @@
         <span data-i18n="viewerDropHint"></span>
       </div>
       <canvas id="canvas" style="display:none;"></canvas>
+      <div id="quad-preview-panel">
+        <div id="quad-preview-label" data-i18n="viewerQuadPreviewLabel"></div>
+        <canvas id="quad-preview" width="2" height="2"></canvas>
+      </div>
     </div>
     <div class="toast" id="toast"></div>
     <script type="module" src="./viewer.ts"></script>

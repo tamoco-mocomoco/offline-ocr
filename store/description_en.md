@@ -13,7 +13,7 @@ All processing happens entirely in your browser. No internet connection required
 - Regex cleaning rules — auto-remove commas, spaces, or line breaks before copying. Create your own custom rules to fit your workflow, such as stripping digit separators from invoice amounts
 - Image viewer — open local images or clipboard images for OCR, with zoom and region selection
 - PDF viewer — open local PDFs and OCR any page (v0.8.0+)
-- Four-corner select — for angled photos or documents with visible perspective, fit a quadrilateral with four draggable corners and OCR the unwarped result (v0.9.0+)
+- Deskew & select — for angled photos or documents with visible perspective, fit a quadrilateral with four draggable corners and OCR the unwarped result, with a live "corrected preview" updating as you drag (v0.9.0+)
 - Multilingual UI — automatically switches between Japanese and English
 
 ■ How to Use
@@ -58,7 +58,8 @@ We sincerely thank the National Diet Library for making their high-accuracy Japa
 ■ Changelog
 
 v0.9.0
-- Added "Four-corner Select" mode. For angled photos or documents with visible perspective, drag the four corner handles in the viewer to fit the region — it's then unwarped with a perspective transform before OCR
+- Added "Deskew & Select" mode. For angled photos or documents with visible perspective, drag the four corner handles in the viewer to fit the region — it's then unwarped with a perspective transform before OCR
+- Live "corrected preview" in the top-right updates as you drag, so you see exactly what will be fed to OCR before committing
 - Corner drags are constrained to keep the quad convex, so the selection is always a valid region
 - Output resolution is chosen automatically from the four edge lengths so small text isn't compressed
 - The unwarped image flows through the same downstream pipeline as rectangular selection, so all prior accuracy work (v0.7.1 row-ink profile, v0.8.1 CTC loop detection, dark-bg inversion) applies with no extra plumbing
