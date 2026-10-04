@@ -10,6 +10,12 @@ import {
   PdfPasswordError,
   PdfLoadError,
 } from "../../../src/pdf/pdf-loader";
+import {
+  computeHomography,
+  applyPerspective,
+  type Point,
+} from "../../../src/ocr/engine/perspective";
+import { suggestOutputSize, outputCorners } from "../../../src/viewer/quad-selection";
 
 type OcrLine = {
   text: string;
@@ -99,6 +105,18 @@ declare global {
       expectPasswordError: (url: string) => Promise<boolean>;
       expectLoadError: (bytes: number[]) => Promise<boolean>;
     };
+    __warp: {
+      /**
+       * Given a PNG's raw bytes and 4 source-image corners (TL, TR, BR, BL in
+       * source-image coordinates), unwarp the quad to an axis-aligned image
+       * and return the resulting PNG bytes. Useful for E2E tests that want to
+       * feed a perspective-corrected region into the OCR pipeline.
+       */
+      unwarp: (
+        pngBytes: number[],
+        corners: [Point, Point, Point, Point],
+      ) => Promise<{ width: number; height: number; bytes: number[] }>;
+    };
   }
 }
 
@@ -107,6 +125,29 @@ window.__ocr = {
   whenReady: () => readyPromise,
   run: (bytes) =>
     runOcr(bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes)),
+};
+
+window.__warp = {
+  async unwarp(pngBytes, corners) {
+    const blob = new Blob([new Uint8Array(pngBytes)], { type: "image/png" });
+    const bitmap = await createImageBitmap(blob);
+    const srcCanvas = new OffscreenCanvas(bitmap.width, bitmap.height);
+    const sctx = srcCanvas.getContext("2d")!;
+    sctx.drawImage(bitmap, 0, 0);
+    const srcData = sctx.getImageData(0, 0, bitmap.width, bitmap.height);
+    const size = suggestOutputSize({ corners, draggingIndex: -1 });
+    const H = computeHomography(
+      corners as unknown as Point[],
+      outputCorners(size.w, size.h) as unknown as Point[],
+    );
+    const warped = applyPerspective(srcData, H, size.w, size.h);
+    const outCanvas = new OffscreenCanvas(size.w, size.h);
+    const octx = outCanvas.getContext("2d")!;
+    octx.putImageData(warped, 0, 0);
+    const outBlob = await outCanvas.convertToBlob({ type: "image/png" });
+    const bytes = new Uint8Array(await outBlob.arrayBuffer());
+    return { width: size.w, height: size.h, bytes: Array.from(bytes) };
+  },
 };
 
 window.__pdf = {

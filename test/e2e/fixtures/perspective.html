@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="utf-8" />
+    <title>OCR fixture: perspective</title>
+    <style>
+      body {
+        margin: 0;
+        padding: 60px;
+        background: #ffffff;
+        font-family: "Hiragino Sans", "Yu Gothic", "Noto Sans JP", "Meiryo",
+          sans-serif;
+        color: #111;
+      }
+      /* Frame containing the text, laid out under a 3D perspective so the
+         "page" appears photographed at an angle. The four corners the
+         perspective test targets are the corners of #target, but expressed
+         in *page* (post-transform) coordinates via getBoundingClientRect's
+         per-corner mapping. */
+      #stage {
+        width: 800px;
+        height: 400px;
+        perspective: 900px;
+        perspective-origin: 50% 50%;
+        background: #ffffff;
+      }
+      #target {
+        width: 100%;
+        height: 100%;
+        transform: rotateY(-28deg) rotateX(6deg);
+        transform-origin: 50% 50%;
+        background: #ffffff;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 44px;
+        font-weight: 700;
+        color: #111;
+        letter-spacing: 0.05em;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="stage">
+      <div id="target">オフライン処理</div>
+    </div>
+    <script>
+      // Expose the four post-transform corners of #target in viewport
+      // coordinates so the E2E test can pull them and feed them to unwarp().
+      window.__cornersInViewport = () => {
+        const el = document.getElementById("target");
+        // getBoundingClientRect() gives the axis-aligned bbox — not what we
+        // want. Instead, apply the current transform matrix to the local
+        // corners (0,0)..(w,h) so we get the actual on-screen quad.
+        const rect = el.getBoundingClientRect();
+        const style = getComputedStyle(el);
+        const mStr = style.transform;
+        // Parse "matrix3d(...)" or "matrix(...)"
+        const m = new DOMMatrixReadOnly(mStr);
+        // Local corners at (0,0)..(w,h) — element's untransformed layout box
+        const w = el.offsetWidth;
+        const h = el.offsetHeight;
+        const local = [
+          { x: 0, y: 0 },
+          { x: w, y: 0 },
+          { x: w, y: h },
+          { x: 0, y: h },
+        ];
+        // Origin of the local coordinate system in viewport space: the
+        // element's untransformed top-left, i.e. its parent's client rect +
+        // offsetLeft/Top. Since the stage is at (60,60) with no scroll and
+        // #target has no offset within the stage, use stage's rect.
+        const parent = el.parentElement.getBoundingClientRect();
+        const originX = parent.left + el.offsetLeft;
+        const originY = parent.top + el.offsetTop;
+        const cx = w / 2;
+        const cy = h / 2;
+        // 3D transforms with perspective mean transformPoint is the correct
+        // way to project the local corners.
+        const parentEl = el.parentElement;
+        const parentPersp = getComputedStyle(parentEl).perspective;
+        const perspective =
+          parentPersp && parentPersp !== "none"
+            ? parseFloat(parentPersp)
+            : 0;
+        // Build the combined "translate to center → transform → translate back"
+        // and apply the parent's perspective as a post step.
+        const T1 = new DOMMatrix().translate(cx, cy);
+        const T2 = new DOMMatrix().translate(-cx, -cy);
+        const inner = T1.multiply(m).multiply(T2);
+        let outer = inner;
+        if (perspective > 0) {
+          // Perspective divides w by (1 - z/perspective) — DOMMatrix can't
+          // apply the divide directly here, so we project manually below.
+        }
+        const project = (p) => {
+          const v = inner.transformPoint(new DOMPoint(p.x, p.y, 0, 1));
+          if (perspective > 0) {
+            const denom = 1 - v.z / perspective;
+            const px = (v.x - cx) / denom + cx;
+            const py = (v.y - cy) / denom + cy;
+            return { x: originX + px, y: originY + py };
+          }
+          return { x: originX + v.x, y: originY + v.y };
+        };
+        return local.map(project);
+      };
+    </script>
+  </body>
+</html>
