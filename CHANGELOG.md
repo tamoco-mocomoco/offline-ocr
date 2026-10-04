@@ -2,6 +2,19 @@
 
 [日本語版はこちら](CHANGELOG_ja.md)
 
+## v0.9.1 (2026-10-04)
+
+- **Eraser in the viewer**. Paint over anything you don't want OCR'd — stamps, handwritten notes, figures, page numbers — before running OCR. Areas a single rectangle can't express ("everything except this part") now take one erase plus "OCR Entire Image"
+  - Erased areas are **filled with the surrounding background color** (not plain white), so erasing on a dark background or cream-colored paper doesn't leave an outline that gets detected as text
+  - Three brush sizes (S / M / L) that keep the same on-screen size at any zoom level
+  - **Ctrl+Z (Cmd+Z) undoes one stroke at a time**; "Restore all" brings back the original image
+  - In PDFs, edits are kept per page (paging back and forth doesn't lose them)
+  - The erased image is what "Start Selection", "Deskew & Select" and "OCR Entire Image" all read
+- **Fixed: in the viewer, the selection's blue fill, dashed outline and corner handles were baked into the image sent to OCR** when using rectangular selection or Deskew & Select. The edge padding stretched the dashed outline into stripes, which wrecked results especially for small text selected tightly (e.g. `Settings` came back as `一一、`)
+  - The on-screen canvas and the image used for OCR are now separate; OCR and the preview always read the latter
+  - The "Corrected preview" had the same overlay in it; fixed as well
+  - Added E2E tests that open the real viewer and inspect the image handed to OCR, to keep this from regressing
+
 ## v0.9.0 (2026-09-30)
 
 - **"Deskew & Select" mode**. For photos taken at an angle or documents lying on a desk with visible perspective, the viewer now lets you fit a quadrilateral to the region with four draggable corner handles, then **unwarps the region with a perspective transform before feeding it to OCR** — as if you had taken the photo straight down

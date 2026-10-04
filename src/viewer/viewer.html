@@ -23,6 +23,7 @@
         display: flex;
         align-items: center;
         gap: 12px;
+        flex-wrap: wrap;
         flex-shrink: 0;
       }
       .toolbar button {
@@ -68,6 +69,29 @@
         background: #555;
       }
       .pdf-nav button:hover { background: #666; }
+      /* Eraser: toggle button + options (only shown while erasing) */
+      #btn-erase.active,
+      #btn-erase.active:hover {
+        background: #2a6fc0;
+        box-shadow: inset 0 0 0 2px #fff;
+      }
+      .eraser-tools {
+        display: none;
+        align-items: center;
+        gap: 6px;
+      }
+      .eraser-tools.active { display: flex; }
+      .eraser-label { font-size: 12px; color: #aaa; }
+      .eraser-sizes { display: flex; }
+      .toolbar .eraser-sizes button {
+        padding: 4px 10px;
+        background: #444;
+        border-radius: 0;
+      }
+      .toolbar .eraser-sizes button:first-child { border-radius: 6px 0 0 6px; }
+      .toolbar .eraser-sizes button:last-child { border-radius: 0 6px 6px 0; }
+      .toolbar .eraser-sizes button:hover { background: #555; }
+      .toolbar .eraser-sizes button.active { background: #2a6fc0; }
       /* Canvas area */
       .canvas-area {
         flex: 1;
@@ -150,6 +174,17 @@
       <button id="btn-quad-select" disabled data-i18n="viewerQuadSelectButton"></button>
       <button id="btn-quad-confirm" style="display:none;" data-i18n="viewerQuadConfirmButton"></button>
       <button id="btn-ocr-all" disabled data-i18n="viewerOcrAllButton"></button>
+      <button id="btn-erase" class="secondary" disabled aria-pressed="false" data-i18n="viewerEraserButton" data-i18n-title="viewerEraserTooltip"></button>
+      <div class="eraser-tools" id="eraser-tools">
+        <span class="eraser-label" data-i18n="viewerEraserSizeLabel"></span>
+        <div class="eraser-sizes" role="group">
+          <button class="eraser-size" data-size="s" aria-pressed="false" data-i18n="viewerEraserSizeSmall"></button>
+          <button class="eraser-size active" data-size="m" aria-pressed="true" data-i18n="viewerEraserSizeMedium"></button>
+          <button class="eraser-size" data-size="l" aria-pressed="false" data-i18n="viewerEraserSizeLarge"></button>
+        </div>
+        <button id="btn-erase-undo" class="secondary" disabled data-i18n="viewerEraserUndo" data-i18n-title="viewerEraserUndoTooltip"></button>
+        <button id="btn-erase-reset" class="secondary" disabled data-i18n="viewerEraserReset"></button>
+      </div>
       <div class="pdf-nav" id="pdf-nav">
         <button id="btn-pdf-prev" data-i18n-title="viewerPdfPrevButton" aria-label="prev">◀</button>
         <span class="page-indicator" id="pdf-page-indicator"></span>

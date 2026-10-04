@@ -18,6 +18,8 @@ automatically copied to your clipboard. No data ever leaves your browser.
 - Models are cached in IndexedDB after the first load for fast subsequent runs
 - **Image viewer**: open local images or clipboard images for OCR (zoom + region select supported)
 - **PDF viewer**: open a local PDF and OCR any page you like via page navigation (password-protected PDFs not supported)
+- **Deskew & Select**: fit four corner handles to a page photographed at an angle; it's flattened before OCR (viewer)
+- **Eraser**: paint over stamps, handwritten notes or anything else you don't want OCR'd before running OCR, with Ctrl+Z undo (viewer)
 - **OCR history**: results are automatically saved to `chrome.storage.local` for later re-copy, edit, search, and delete
 - **Cleaning rules**: customize regex-based post-processing rules
 - Same-row detection for tables/receipts produces tab-separated output
