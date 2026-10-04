@@ -35,6 +35,15 @@ import {
   applyPerspective,
   type Point,
 } from "../ocr/engine/perspective";
+import {
+  EraseLog,
+  dominantColor,
+  eraserRadius,
+  paintStroke,
+  samplingRect,
+  type EraseStroke,
+  type EraserSize,
+} from "./eraser";
 
 const t = chrome.i18n.getMessage;
 
@@ -49,6 +58,17 @@ const btnQuadConfirm = document.getElementById(
   "btn-quad-confirm",
 ) as HTMLButtonElement;
 const btnOcrAll = document.getElementById("btn-ocr-all") as HTMLButtonElement;
+const btnErase = document.getElementById("btn-erase") as HTMLButtonElement;
+const eraserTools = document.getElementById("eraser-tools")!;
+const eraserSizeButtons = Array.from(
+  document.querySelectorAll<HTMLButtonElement>(".eraser-size"),
+);
+const btnEraseUndo = document.getElementById(
+  "btn-erase-undo",
+) as HTMLButtonElement;
+const btnEraseReset = document.getElementById(
+  "btn-erase-reset",
+) as HTMLButtonElement;
 const fileInput = document.getElementById("file-input") as HTMLInputElement;
 const quadPreviewPanel = document.getElementById(
   "quad-preview-panel",
@@ -85,14 +105,22 @@ document
 
 let img: HTMLImageElement | null = null;
 let ctx: CanvasRenderingContext2D | null = null;
-let selectMode = false; // rectangular selection mode
+// The image as OCR sees it: the loaded image plus any eraser strokes. The
+// on-screen canvas is this plus the selection UI (fill, outline, handles,
+// eraser cursor) drawn on top, so OCR and the quad preview must always read
+// from here, never from `canvas`.
+let workCanvas: OffscreenCanvas | null = null;
+let workCtx: OffscreenCanvasRenderingContext2D | null = null;
+
+// rect: rectangular selection, quad: "Deskew & select" (perspective-corrected
+// quad selection), erase: eraser.
+type ViewerMode = "idle" | "rect" | "quad" | "erase";
+let mode: ViewerMode = "idle";
 let dragging = false;
 let startX = 0;
 let startY = 0;
 let selRect: { x: number; y: number; w: number; h: number } | null = null;
 
-// "Deskew & select" mode — a perspective-corrected quad selection.
-let quadMode = false;
 let quadState: QuadState | null = null;
 // Cached source pixels for the live preview, captured once when quad mode
 // starts so each drag update doesn't re-read the full main canvas.
@@ -103,6 +131,16 @@ let quadPreviewRafPending = false;
 let pdfDoc: PdfDocument | null = null;
 let pdfCurrentPage = 1;
 let pdfSourceName: string | null = null;
+
+// Eraser state. Strokes are logged per PDF page (0 for a plain image).
+const eraseLog = new EraseLog();
+let eraserSize: EraserSize = "m";
+let erasing: EraseStroke | null = null; // stroke in progress
+let eraserCursor: Point | null = null;
+
+function pageKey(): number {
+  return pdfDoc ? pdfCurrentPage : 0;
+}
 
 // ── Toast ──
 
@@ -147,26 +185,75 @@ function loadImageFile(file: File): void {
   const image = new Image();
   currentImageName = file.name || null;
   image.onload = () => {
-    img = image;
-    canvas.width = image.naturalWidth;
-    canvas.height = image.naturalHeight;
-    ctx = canvas.getContext("2d")!;
-    drawImage();
-    dropzone.style.display = "none";
-    canvas.style.display = "block";
-    canvas.style.cursor = "default";
-    btnSelect.disabled = false;
-    btnQuadSelect.disabled = false;
-    btnOcrAll.disabled = false;
-    selectMode = false;
-    quadMode = false;
-    quadState = null;
-    btnQuadConfirm.style.display = "none";
-    hideQuadPreview();
+    eraseLog.clearAll();
+    showImage(image);
     statusEl.textContent = `${image.naturalWidth}×${image.naturalHeight}`;
     URL.revokeObjectURL(url);
   };
   image.src = url;
+}
+
+/**
+ * Make `image` the current image (a loaded file or a rendered PDF page):
+ * size the canvases, re-apply this page's eraser strokes, and leave any mode.
+ */
+function showImage(image: HTMLImageElement): void {
+  // A stroke still in progress belongs to the previous image — drop it.
+  erasing = null;
+  img = image;
+  canvas.width = image.naturalWidth;
+  canvas.height = image.naturalHeight;
+  ctx = canvas.getContext("2d")!;
+  workCanvas = new OffscreenCanvas(image.naturalWidth, image.naturalHeight);
+  workCtx = workCanvas.getContext("2d")!;
+  dropzone.style.display = "none";
+  canvas.style.display = "block";
+  btnSelect.disabled = false;
+  btnQuadSelect.disabled = false;
+  btnOcrAll.disabled = false;
+  btnErase.disabled = false;
+  setMode("idle");
+  rebuildWorkImage();
+  drawImage();
+}
+
+/** Redraw the work image from the original plus this page's eraser strokes. */
+function rebuildWorkImage(): void {
+  if (!workCtx || !workCanvas || !img) return;
+  workCtx.clearRect(0, 0, workCanvas.width, workCanvas.height);
+  workCtx.drawImage(img, 0, 0);
+  for (const s of eraseLog.strokes(pageKey())) paintStroke(workCtx, s);
+  updateEraserButtons();
+}
+
+/**
+ * Switch modes, tearing down whatever the previous mode left on screen
+ * (selection rect, quad handles + preview, eraser cursor). Callers set up the
+ * new mode's own state and redraw.
+ */
+function setMode(next: ViewerMode): void {
+  if (erasing) finishStroke();
+  mode = next;
+  dragging = false;
+  selRect = null;
+  if (next !== "quad") {
+    quadState = null;
+    btnQuadConfirm.style.display = "none";
+    hideQuadPreview();
+  }
+  if (next !== "erase") eraserCursor = null;
+  const erasingMode = next === "erase";
+  btnErase.classList.toggle("active", erasingMode);
+  btnErase.setAttribute("aria-pressed", String(erasingMode));
+  eraserTools.classList.toggle("active", erasingMode);
+  canvas.style.cursor =
+    next === "rect"
+      ? "crosshair"
+      : next === "quad"
+        ? "grab"
+        : next === "erase"
+          ? "none"
+          : "default";
 }
 
 // ── PDF handling ──
@@ -202,6 +289,7 @@ function updatePdfNavUi(): void {
 
 async function loadPdfFile(file: File): Promise<void> {
   await disposePdfDoc();
+  eraseLog.clearAll();
   showToast(t("statusLoading") || "読み込み中…");
   try {
     const bytes = new Uint8Array(await file.arrayBuffer());
@@ -240,23 +328,7 @@ async function renderPdfPage(pageNumber: number): Promise<void> {
       image.onerror = () => reject(new Error("failed to load rendered page"));
       image.src = url;
     });
-    img = image;
-    canvas.width = image.naturalWidth;
-    canvas.height = image.naturalHeight;
-    ctx = canvas.getContext("2d")!;
-    drawImage();
-    dropzone.style.display = "none";
-    canvas.style.display = "block";
-    canvas.style.cursor = "default";
-    btnSelect.disabled = false;
-    btnQuadSelect.disabled = false;
-    btnOcrAll.disabled = false;
-    selectMode = false;
-    quadMode = false;
-    quadState = null;
-    btnQuadConfirm.style.display = "none";
-    hideQuadPreview();
-    selRect = null;
+    showImage(image);
     URL.revokeObjectURL(url);
     // Show 1-indexed pageName so OCR history captures which page a result
     // came from, e.g. "invoice.pdf#p2".
@@ -295,7 +367,7 @@ btnPdfNext.addEventListener("click", () => {
 // Arrow keys navigate pages when a PDF is loaded and we're not in the middle
 // of a selection.
 document.addEventListener("keydown", (e) => {
-  if (!pdfDoc || selectMode || dragging || quadMode) return;
+  if (!pdfDoc || mode !== "idle" || dragging) return;
   if (e.key === "ArrowLeft" || e.key === "PageUp") {
     e.preventDefault();
     void goToPdfPage(pdfCurrentPage - 1);
@@ -306,9 +378,23 @@ document.addEventListener("keydown", (e) => {
 });
 
 function drawImage(): void {
-  if (!ctx || !img) return;
+  if (!ctx || !workCanvas) return;
   ctx.clearRect(0, 0, canvas.width, canvas.height);
-  ctx.drawImage(img, 0, 0);
+  ctx.drawImage(workCanvas, 0, 0);
+}
+
+/** Redraw the screen for the current mode. */
+function redraw(): void {
+  if (mode === "quad") drawQuad();
+  else if (mode === "erase") drawEraserCursor();
+  else if (selRect) drawSelection();
+  else drawImage();
+}
+
+/** Canvas pixels per CSS pixel, for UI that should keep a constant on-screen size. */
+function displayScale(): number {
+  const rect = canvas.getBoundingClientRect();
+  return rect.width > 0 ? canvas.width / rect.width : 1;
 }
 
 function drawSelection(): void {
@@ -335,7 +421,7 @@ function updateQuadPreview(): void {
   quadPreviewRafPending = true;
   requestAnimationFrame(() => {
     quadPreviewRafPending = false;
-    if (!quadMode || !quadState || !quadSrcData) return;
+    if (mode !== "quad" || !quadState || !quadSrcData) return;
     const size = suggestOutputSize(quadState);
     const scale = Math.min(
       1,
@@ -369,8 +455,8 @@ function updateQuadPreview(): void {
 }
 
 function showQuadPreview(): void {
-  if (!ctx) return;
-  quadSrcData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+  if (!workCtx) return;
+  quadSrcData = workCtx.getImageData(0, 0, canvas.width, canvas.height);
   quadPreviewPanel.classList.add("active");
   updateQuadPreview();
 }
@@ -396,10 +482,9 @@ function drawQuad(): void {
   ctx.stroke();
   ctx.setLineDash([]);
   // Corner handles — radius in canvas-space, scaled so on-screen size stays constant.
-  const rect = canvas.getBoundingClientRect();
-  const displayScale = rect.width > 0 ? canvas.width / rect.width : 1;
-  const handleR = 8 * displayScale;
-  ctx.lineWidth = 2 * displayScale;
+  const scale = displayScale();
+  const handleR = 8 * scale;
+  ctx.lineWidth = 2 * scale;
   for (let i = 0; i < 4; i++) {
     const p = c[i];
     ctx.fillStyle = i === quadState.draggingIndex ? "#3892ee" : "#5B9BD5";
@@ -409,6 +494,70 @@ function drawQuad(): void {
     ctx.fill();
     ctx.stroke();
   }
+}
+
+// ── Eraser ──
+
+/** Screen = work image + a ring showing the brush size under the pointer. */
+function drawEraserCursor(): void {
+  drawImage();
+  if (!ctx || !eraserCursor) return;
+  const scale = displayScale();
+  const r = eraserRadius(eraserSize, scale);
+  ctx.save();
+  ctx.beginPath();
+  ctx.arc(eraserCursor.x, eraserCursor.y, r, 0, Math.PI * 2);
+  ctx.lineWidth = 3 * scale;
+  ctx.strokeStyle = "#5B9BD5";
+  ctx.stroke();
+  ctx.lineWidth = 1 * scale;
+  ctx.strokeStyle = "#fff";
+  ctx.stroke();
+  ctx.restore();
+}
+
+function startStroke(p: Point): void {
+  if (!workCtx || !workCanvas) return;
+  const radius = eraserRadius(eraserSize, displayScale());
+  // Fill with the surrounding background so the erased patch blends in
+  // instead of leaving an edge for DEIM to detect.
+  const s = samplingRect(p, radius, workCanvas.width, workCanvas.height);
+  const color = dominantColor(workCtx.getImageData(s.x, s.y, s.w, s.h).data);
+  erasing = { points: [p], radius, color };
+  paintStroke(workCtx, erasing);
+}
+
+function extendStroke(p: Point): void {
+  if (!workCtx || !erasing) return;
+  erasing.points.push(p);
+  paintStroke(workCtx, erasing, erasing.points.length - 1);
+}
+
+function finishStroke(): void {
+  if (!erasing) return;
+  eraseLog.push(pageKey(), erasing);
+  erasing = null;
+  updateEraserButtons();
+}
+
+function undoErase(): void {
+  if (erasing) finishStroke();
+  if (!eraseLog.undo(pageKey())) return;
+  rebuildWorkImage();
+  redraw();
+}
+
+function resetErase(): void {
+  if (erasing) finishStroke();
+  eraseLog.clearPage(pageKey());
+  rebuildWorkImage();
+  redraw();
+}
+
+function updateEraserButtons(): void {
+  const none = eraseLog.count(pageKey()) === 0;
+  btnEraseUndo.disabled = none;
+  btnEraseReset.disabled = none;
 }
 
 // ── Canvas coordinate conversion ──
@@ -428,13 +577,18 @@ function canvasCoords(e: MouseEvent): { cx: number; cy: number } {
 canvas.addEventListener("mousedown", (e) => {
   if (!img) return;
   const { cx, cy } = canvasCoords(e);
-  if (quadMode && quadState) {
-    const rect = canvas.getBoundingClientRect();
-    const displayScale = rect.width > 0 ? canvas.width / rect.width : 1;
+  if (mode === "erase") {
+    if (e.button !== 0) return;
+    eraserCursor = { x: cx, y: cy };
+    startStroke(eraserCursor);
+    drawEraserCursor();
+    return;
+  }
+  if (mode === "quad" && quadState) {
     const idx = hitTestCorner(
       quadState,
       { x: cx, y: cy },
-      16 * displayScale,
+      16 * displayScale(),
     );
     if (idx !== -1) {
       quadState = { corners: quadState.corners, draggingIndex: idx };
@@ -442,7 +596,7 @@ canvas.addEventListener("mousedown", (e) => {
     }
     return;
   }
-  if (!selectMode) return;
+  if (mode !== "rect") return;
   dragging = true;
   startX = cx;
   startY = cy;
@@ -451,7 +605,13 @@ canvas.addEventListener("mousedown", (e) => {
 
 canvas.addEventListener("mousemove", (e) => {
   const { cx, cy } = canvasCoords(e);
-  if (quadMode && quadState && quadState.draggingIndex !== -1) {
+  if (mode === "erase") {
+    eraserCursor = { x: cx, y: cy };
+    if (erasing) extendStroke(eraserCursor);
+    drawEraserCursor();
+    return;
+  }
+  if (mode === "quad" && quadState && quadState.draggingIndex !== -1) {
     quadState = moveCorner(
       quadState,
       quadState.draggingIndex as Corner,
@@ -474,7 +634,11 @@ canvas.addEventListener("mousemove", (e) => {
 });
 
 canvas.addEventListener("mouseup", (e) => {
-  if (quadMode && quadState && quadState.draggingIndex !== -1) {
+  if (mode === "erase") {
+    finishStroke();
+    return;
+  }
+  if (mode === "quad" && quadState && quadState.draggingIndex !== -1) {
     quadState = { corners: quadState.corners, draggingIndex: -1 };
     drawQuad();
     return;
@@ -490,29 +654,46 @@ canvas.addEventListener("mouseup", (e) => {
   };
   drawSelection();
   if (selRect.w > 5 && selRect.h > 5) {
-    selectMode = false;
-    canvas.style.cursor = "default";
+    // Leave selection mode but keep the rect on screen while OCR runs.
+    const rect = selRect;
+    setMode("idle");
+    selRect = rect;
     void runOcr();
   }
 });
 
-// Esc to cancel selection / quad mode; Enter to confirm quad OCR
+// A stroke ends when the pointer leaves the canvas, so re-entering elsewhere
+// doesn't draw a straight line across the image.
+canvas.addEventListener("mouseleave", () => {
+  if (mode !== "erase") return;
+  finishStroke();
+  eraserCursor = null;
+  drawEraserCursor();
+});
+
+// Esc to cancel selection / quad / eraser mode; Enter to confirm quad OCR;
+// Ctrl+Z (Cmd+Z) to undo the last eraser stroke.
 document.addEventListener("keydown", (e) => {
   if (e.key === "Escape") {
-    selectMode = false;
-    dragging = false;
-    quadMode = false;
-    quadState = null;
-    btnQuadConfirm.style.display = "none";
-    hideQuadPreview();
-    canvas.style.cursor = "default";
-    selRect = null;
+    setMode("idle");
     drawImage();
     return;
   }
   if (
+    (e.ctrlKey || e.metaKey) &&
+    !e.shiftKey &&
+    !e.altKey &&
+    e.key.toLowerCase() === "z"
+  ) {
+    if (mode !== "idle" && mode !== "erase") return;
+    if (!erasing && eraseLog.count(pageKey()) === 0) return;
+    e.preventDefault();
+    undoErase();
+    return;
+  }
+  if (
     e.key === "Enter" &&
-    quadMode &&
+    mode === "quad" &&
     quadState &&
     quadState.draggingIndex === -1
   ) {
@@ -527,8 +708,8 @@ document.addEventListener("keydown", (e) => {
 // ── OCR ──
 
 async function runOcr(): Promise<void> {
-  if (!ctx || !img || !selRect) return;
-  await sendImageToOcr(canvas, selRect);
+  if (!workCanvas || !selRect) return;
+  await sendImageToOcr(workCanvas, selRect);
 }
 
 /**
@@ -536,6 +717,10 @@ async function runOcr(): Promise<void> {
  * pipeline. Shared between rectangular selection and four-corner (warped)
  * selection — the warped path passes an OffscreenCanvas containing the already
  * perspective-corrected image, with a full-image crop rect.
+ *
+ * `source` must be the work image (or derived from it), never the on-screen
+ * canvas: the selection UI drawn there would end up in the OCR input, and the
+ * edge padding would stretch its outline into stripes.
  */
 async function sendImageToOcr(
   source: HTMLCanvasElement | OffscreenCanvas,
@@ -606,26 +791,21 @@ async function sendImageToOcr(
 }
 
 async function confirmQuad(): Promise<void> {
-  if (!ctx || !img || !quadState) return;
+  if (!workCtx || !quadState) return;
   const { w: outW, h: outH } = suggestOutputSize(quadState);
   const dstCorners = outputCorners(outW, outH);
   const H = computeHomography(
     quadState.corners as unknown as Point[],
     dstCorners as unknown as Point[],
   );
-  const srcData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+  const srcData = workCtx.getImageData(0, 0, canvas.width, canvas.height);
   const warped = applyPerspective(srcData, H, outW, outH);
 
   const warpedCanvas = new OffscreenCanvas(outW, outH);
   const wCtx = warpedCanvas.getContext("2d")!;
   wCtx.putImageData(warped, 0, 0);
 
-  // Exit quad mode before firing OCR — the result handler resets shared state.
-  quadMode = false;
-  quadState = null;
-  btnQuadConfirm.style.display = "none";
-  hideQuadPreview();
-  canvas.style.cursor = "default";
+  setMode("idle");
   drawImage();
 
   await sendImageToOcr(warpedCanvas, { x: 0, y: 0, w: outW, h: outH });
@@ -689,20 +869,14 @@ chrome.runtime.onMessage.addListener((message) => {
         window.alert(`${header}\n\n${cleaned}`);
       }
     });
+    // Clear the selection shown while OCR ran. A mode the user entered in the
+    // meantime (e.g. the eraser) is left alone.
     selRect = null;
-    quadMode = false;
-    quadState = null;
-    btnQuadConfirm.style.display = "none";
-    hideQuadPreview();
-    drawImage();
+    redraw();
   } else if (message.type === "ocr-error") {
     showToast(`${t("errorPrefix", [message.message]) || message.message}`, 5000);
     selRect = null;
-    quadMode = false;
-    quadState = null;
-    btnQuadConfirm.style.display = "none";
-    hideQuadPreview();
-    drawImage();
+    redraw();
   }
 });
 
@@ -712,13 +886,7 @@ btnOpen.addEventListener("click", () => fileInput.click());
 
 btnSelect.addEventListener("click", () => {
   if (!img) return;
-  quadMode = false;
-  quadState = null;
-  btnQuadConfirm.style.display = "none";
-  hideQuadPreview();
-  selectMode = true;
-  canvas.style.cursor = "crosshair";
-  selRect = null;
+  setMode("rect");
   drawImage();
   statusEl.textContent = t("viewerSelectHint") || "ドラッグでOCRしたい範囲を選択";
 });
@@ -727,13 +895,10 @@ btnQuadSelect.addEventListener("click", () => {
   if (!img) return;
   // Blur so Enter doesn't re-fire this handler (which would reset the quad).
   btnQuadSelect.blur();
-  selectMode = false;
-  selRect = null;
-  quadMode = true;
+  setMode("quad");
   quadState = initQuad(canvas.width, canvas.height);
   btnQuadConfirm.style.display = "";
   btnQuadConfirm.disabled = false;
-  canvas.style.cursor = "grab";
   drawQuad();
   showQuadPreview();
   statusEl.textContent =
@@ -747,9 +912,43 @@ btnQuadConfirm.addEventListener("click", () => {
 
 btnOcrAll.addEventListener("click", () => {
   if (!img) return;
+  setMode("idle");
+  drawImage();
   selRect = { x: 0, y: 0, w: canvas.width, h: canvas.height };
   void runOcr();
 });
+
+btnErase.addEventListener("click", () => {
+  if (!img) return;
+  // Blur so Space/Enter while painting doesn't toggle the mode back off.
+  btnErase.blur();
+  if (mode === "erase") {
+    setMode("idle");
+    drawImage();
+    statusEl.textContent = `${canvas.width}×${canvas.height}`;
+    return;
+  }
+  setMode("erase");
+  drawEraserCursor();
+  statusEl.textContent =
+    t("viewerEraserHint") ||
+    "OCRしたくない部分をなぞって消してください (Ctrl+Z で元に戻す / Escで終了)";
+});
+
+for (const btn of eraserSizeButtons) {
+  btn.addEventListener("click", () => {
+    eraserSize = btn.dataset.size as EraserSize;
+    for (const b of eraserSizeButtons) {
+      const on = b === btn;
+      b.classList.toggle("active", on);
+      b.setAttribute("aria-pressed", String(on));
+    }
+    btn.blur();
+  });
+}
+
+btnEraseUndo.addEventListener("click", () => undoErase());
+btnEraseReset.addEventListener("click", () => resetErase());
 fileInput.addEventListener("change", () => {
   const file = fileInput.files?.[0];
   if (file) loadFile(file);
