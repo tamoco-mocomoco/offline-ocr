@@ -14,6 +14,7 @@ All processing happens entirely in your browser. No internet connection required
 - Image viewer — open local images or clipboard images for OCR, with zoom and region selection
 - PDF viewer — open local PDFs and OCR any page (v0.8.0+)
 - Deskew & select — for angled photos or documents with visible perspective, fit a quadrilateral with four draggable corners and OCR the unwarped result, with a live "corrected preview" updating as you drag (v0.9.0+)
+- Eraser — in the viewer, paint over stamps, handwritten notes or anything else you don't want OCR'd. Erased areas blend into the surrounding background, and Ctrl+Z undoes (v0.9.1+)
 - Multilingual UI — automatically switches between Japanese and English
 
 ■ How to Use
@@ -56,6 +57,12 @@ The OCR engine and models used in this extension are based on NDLOCR, researched
 We sincerely thank the National Diet Library for making their high-accuracy Japanese OCR technology openly available.
 
 ■ Changelog
+
+v0.9.1
+- Added an eraser to the viewer: paint over stamps, handwritten notes, figures or anything else you don't want OCR'd, then run OCR
+- Erased areas are filled with the surrounding background color, so erasing on dark or colored paper doesn't leave an outline that gets read as text
+- Three brush sizes; Ctrl+Z undoes one stroke at a time and "Restore all" brings back the original image
+- Fixed a bug where the selection's blue fill and dashed outline were baked into the image sent to OCR when using rectangular selection or Deskew & Select in the viewer, which broke recognition of small text
 
 v0.9.0
 - Added "Deskew & Select" mode. For angled photos or documents with visible perspective, drag the four corner handles in the viewer to fit the region — it's then unwarped with a perspective transform before OCR
