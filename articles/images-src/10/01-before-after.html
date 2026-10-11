@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="utf-8" />
+    <title>Eraser before / after</title>
+    <style>
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      body {
+        width: 1200px;
+        height: 640px;
+        background: #fafafa;
+        font-family: "Hiragino Sans", "Yu Gothic", "Noto Sans JP", sans-serif;
+        color: #222;
+        padding: 32px 40px;
+      }
+      .row { display: flex; gap: 28px; align-items: stretch; }
+      .card {
+        flex: 1;
+        background: #fff;
+        border: 1px solid #e3e3e3;
+        border-radius: 10px;
+        padding: 18px 18px 16px;
+        box-shadow: 0 2px 6px rgba(0,0,0,0.03);
+      }
+      h3 {
+        font-size: 16px;
+        font-weight: 700;
+        color: #444;
+        margin-bottom: 12px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+      .badge {
+        font-size: 12px;
+        font-weight: 700;
+        color: #fff;
+        background: #999;
+        border-radius: 4px;
+        padding: 2px 8px;
+      }
+      .badge.after { background: #3a9d5d; }
+      /* Crop the canvas out of the 1280×800 viewer screenshot:
+         the image area is x 78..1203, y 53..800 (1125×747). */
+      .shot {
+        width: 480px;
+        height: 319px;
+        overflow: hidden;
+        border-radius: 6px;
+        border: 1px solid #ddd;
+        position: relative;
+      }
+      .shot img {
+        position: absolute;
+        width: calc(1280px * 480 / 1125);
+        left: calc(-81px * 480 / 1125);
+        top: calc(-53px * 480 / 1125);
+      }
+      .label {
+        font-size: 12px;
+        color: #777;
+        margin: 14px 0 6px;
+      }
+      pre {
+        font-family: "Hiragino Sans", sans-serif;
+        font-size: 13px;
+        line-height: 1.6;
+        background: #f6f6f6;
+        border-radius: 6px;
+        padding: 10px 12px;
+        white-space: pre-wrap;
+        height: 160px;
+      }
+      mark {
+        background: #ffd9d9;
+        color: #c22;
+        font-weight: 700;
+        padding: 0 3px;
+        border-radius: 3px;
+      }
+      .arrow {
+        align-self: center;
+        font-size: 30px;
+        color: #aaa;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="row">
+      <div class="card">
+        <h3><span class="badge">消す前</span>はんこまで読まれてしまう</h3>
+        <div class="shot"><img src="raw/invoice-before.png" /></div>
+        <div class="label">「画像全体をOCR」の結果</div>
+        <pre>請求書
+株式会社サンプル御中
+品名:オフラインOCRライセンス
+金額:0円(無料)
+発行日:2026年10月11日
+オフラインOCR開発室	<mark>承認</mark></pre>
+      </div>
+      <div class="arrow">→</div>
+      <div class="card">
+        <h3><span class="badge after">消した後</span>欲しい文字だけになる</h3>
+        <div class="shot"><img src="raw/invoice-after.png" /></div>
+        <div class="label">「画像全体をOCR」の結果</div>
+        <pre>請求書
+株式会社サンプル御中
+品名:オフラインOCRライセンス
+金額:0円(無料)
+発行日:2026年10月11日
+オフラインOCR開発室</pre>
+      </div>
+    </div>
+  </body>
+</html>

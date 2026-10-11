@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="utf-8" />
+    <title>Eraser UI</title>
+    <style>
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      body {
+        width: 1280px;
+        height: 900px;
+        background: #fafafa;
+        font-family: "Hiragino Sans", "Yu Gothic", "Noto Sans JP", sans-serif;
+        color: #222;
+        position: relative;
+      }
+      .shot {
+        position: absolute;
+        left: 0;
+        top: 100px;
+        width: 1280px;
+        height: 800px;
+        background: url(raw/invoice-erasing.png);
+      }
+      /* Callouts: a box above the screenshot + a line down to the target. */
+      .callout {
+        position: absolute;
+        top: 14px;
+        background: #fff;
+        border: 2px solid #ff8c42;
+        border-radius: 8px;
+        padding: 6px 10px;
+        font-size: 14px;
+        line-height: 1.45;
+        box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+      }
+      .callout b { color: #d4621d; }
+      .line {
+        position: absolute;
+        width: 2px;
+        background: #ff8c42;
+      }
+      .ring {
+        position: absolute;
+        border: 3px solid #ff8c42;
+        border-radius: 8px;
+      }
+      .cursor-note {
+        position: absolute;
+        background: #fff;
+        border: 2px solid #ff8c42;
+        border-radius: 8px;
+        padding: 6px 10px;
+        font-size: 14px;
+        line-height: 1.45;
+        box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+      }
+      .cursor-note b { color: #d4621d; }
+    </style>
+  </head>
+  <body>
+    <div class="shot"></div>
+
+    <!-- 消しゴム button: x 520..600, y 11..41 in the screenshot -->
+    <div class="ring" style="left: 515px; top: 106px; width: 90px; height: 40px;"></div>
+    <div class="line" style="left: 559px; top: 70px; height: 36px;"></div>
+    <div class="callout" style="left: 330px;"><b>消しゴム</b>でモード切り替え<br />Esc で終了（消した内容は残る）</div>
+
+    <!-- 太さ: x 610..738 -->
+    <div class="ring" style="left: 606px; top: 106px; width: 136px; height: 40px;"></div>
+    <div class="line" style="left: 673px; top: 70px; height: 36px;"></div>
+    <div class="callout" style="left: 640px; top: 14px;"><b>太さ</b> 細 / 中 / 太</div>
+
+    <!-- 元に戻す / すべて戻す: x 743..921 -->
+    <div class="ring" style="left: 738px; top: 106px; width: 188px; height: 40px;"></div>
+    <div class="line" style="left: 831px; top: 70px; height: 36px;"></div>
+    <div class="callout" style="left: 790px;"><b>元に戻す</b>（Ctrl+Z）<br /><b>すべて戻す</b></div>
+
+    <!-- brush cursor around (1090, 742) -->
+    <div class="ring" style="left: 1052px; top: 704px; width: 76px; height: 76px; border-radius: 50%;"></div>
+    <div class="cursor-note" style="left: 800px; top: 800px;">丸いカーソル = <b>ブラシの大きさ</b><br />なぞった所が周りの紙の色で埋まる</div>
+  </body>
+</html>

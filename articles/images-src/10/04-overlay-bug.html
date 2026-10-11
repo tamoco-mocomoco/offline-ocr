@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="utf-8" />
+    <title>Selection overlay leaked into OCR input</title>
+    <style>
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      body {
+        width: 1200px;
+        height: 520px;
+        background: #fafafa;
+        font-family: "Hiragino Sans", "Yu Gothic", "Noto Sans JP", sans-serif;
+        color: #222;
+        padding: 32px 40px;
+      }
+      h2 { font-size: 20px; font-weight: 700; color: #333; margin-bottom: 8px; }
+      .sub { font-size: 13px; color: #666; margin-bottom: 20px; }
+      table {
+        width: 100%;
+        border-collapse: separate;
+        border-spacing: 0;
+        background: #fff;
+        border: 1px solid #e3e3e3;
+        border-radius: 10px;
+        overflow: hidden;
+      }
+      th, td {
+        padding: 14px 18px;
+        border-bottom: 1px solid #eee;
+        text-align: left;
+        vertical-align: middle;
+        font-size: 14px;
+      }
+      tr:last-child td { border-bottom: 0; }
+      th { background: #f4f4f4; color: #555; font-size: 13px; }
+      th.old, td.old { background: #fff7f7; }
+      th.new, td.new { background: #f5fbf6; }
+      img {
+        image-rendering: pixelated;
+        height: 108px;
+        display: block;
+        border: 1px solid #ddd;
+      }
+      .res { font-weight: 700; margin-top: 8px; }
+      .bad { color: #c22; }
+      .good { color: #2a7d47; }
+      .src { font-family: "SF Mono", Menlo, monospace; font-size: 15px; }
+    </style>
+  </head>
+  <body>
+    <h2>範囲選択で OCR に渡っていた画像（実物、4 倍拡大）</h2>
+    <p class="sub">小さい文字を上下左右 2px の余白でぴったり選択。選択枠の点線がパディングで縞模様に引き伸ばされていた</p>
+    <table>
+      <tr>
+        <th>選択した文字</th>
+        <th class="old">修正前（v0.9.0 まで）</th>
+        <th class="new">修正後（v0.9.1）</th>
+      </tr>
+      <tr>
+        <td class="src">Settings<br /><small>14px</small></td>
+        <td class="old">
+          <img src="raw/bug-settings-old.png" />
+          <div class="res bad">→ 群の中には、その</div>
+        </td>
+        <td class="new">
+          <img src="raw/bug-settings-new.png" />
+          <div class="res good">→ Settings</div>
+        </td>
+      </tr>
+      <tr>
+        <td class="src">cfa8b33<br /><small>18px</small></td>
+        <td class="old">
+          <img src="raw/bug-hash-old.png" />
+          <div class="res bad">→ $1</div>
+        </td>
+        <td class="new">
+          <img src="raw/bug-hash-new.png" />
+          <div class="res good">→ cfarb3</div>
+        </td>
+      </tr>
+    </table>
+  </body>
+</html>
