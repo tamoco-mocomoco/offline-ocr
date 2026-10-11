@@ -49,7 +49,7 @@ No personal data or images are ever collected or transmitted.
 - Recognition Model: PARSeq (FP32)
 - Inference Runtime: ONNX Runtime Web (WebAssembly)
 - Supported Languages: Japanese (horizontal text)
-- Requirements: Chrome 116 or later
+- Requirements: Chrome 116 or later (opening PDFs requires Chrome 147 or later)
 
 ■ Acknowledgments
 
@@ -63,6 +63,7 @@ v0.9.1
 - Erased areas are filled with the surrounding background color, so erasing on dark or colored paper doesn't leave an outline that gets read as text
 - Three brush sizes; Ctrl+Z undoes one stroke at a time and "Restore all" brings back the original image
 - Fixed a bug where the selection's blue fill and dashed outline were baked into the image sent to OCR when using rectangular selection or Deskew & Select in the viewer, which broke recognition of small text
+- Updated the library used to display PDFs. Opening PDFs now requires Chrome 147 or later (older Chrome shows a message asking you to update)
 
 v0.9.0
 - Added "Deskew & Select" mode. For angled photos or documents with visible perspective, drag the four corner handles in the viewer to fit the region — it's then unwarped with a perspective transform before OCR

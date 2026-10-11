@@ -16,6 +16,8 @@ import { loadSettings } from "../shared/settings";
 import { addToHistory } from "../shared/ocr-history";
 import {
   loadPdf,
+  isPdfSupported,
+  PDF_MIN_CHROME_VERSION,
   PdfPasswordError,
   PdfLoadError,
   PdfRenderError,
@@ -288,6 +290,15 @@ function updatePdfNavUi(): void {
 }
 
 async function loadPdfFile(file: File): Promise<void> {
+  if (!isPdfSupported()) {
+    const v = String(PDF_MIN_CHROME_VERSION);
+    showToast(
+      t("viewerPdfUnsupportedBrowser", [v]) ||
+        `PDF を開くには Chrome ${v} 以降が必要です。Chrome を更新してください`,
+      8000,
+    );
+    return;
+  }
   await disposePdfDoc();
   eraseLog.clearAll();
   showToast(t("statusLoading") || "読み込み中…");

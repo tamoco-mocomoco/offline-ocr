@@ -38,6 +38,7 @@
   "viewerPdfPageIndicator": { "message": "$CURRENT$ / $TOTAL$", "placeholders": { "current": { "content": "$1" }, "total": { "content": "$2" } } },
   "viewerPdfPasswordError": { "message": "Password-protected PDFs are not currently supported" },
   "viewerPdfLoadError": { "message": "Failed to load PDF file" },
+  "viewerPdfUnsupportedBrowser": { "message": "Opening PDFs requires Chrome $VERSION$ or later. Please update Chrome.", "placeholders": { "version": { "content": "$1" } } },
   "viewerPdfRenderError": { "message": "Failed to render PDF page" },
   "popupSettingsLink": { "message": "Settings / Cleaning Rules…" },
   "popupHistorySection": { "message": "OCR history" },

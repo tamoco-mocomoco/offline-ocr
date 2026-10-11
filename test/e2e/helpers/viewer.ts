@@ -95,7 +95,7 @@ export async function measureTint(
 }
 
 /** Replace the extension APIs the viewer touches with in-page recorders. */
-async function stubChrome(page: Page): Promise<void> {
+export async function stubChrome(page: Page): Promise<void> {
   await page.addInitScript(() => {
     const sent: unknown[] = [];
     const w = window as unknown as Record<string, unknown>;

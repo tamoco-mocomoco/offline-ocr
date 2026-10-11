@@ -14,8 +14,13 @@
   - The on-screen canvas and the image used for OCR are now separate; OCR and the preview always read the latter
   - The "Corrected preview" had the same overlay in it; fixed as well
   - Added E2E tests that open the real viewer and inspect the image handed to OCR, to keep this from regressing
+- **Switched pdf.js (used to display PDFs) from its legacy build to the regular build**. The legacy build bundles core-js polyfills for old browsers, which the Chrome Web Store review flagged as obfuscated code, rejecting v0.9.0
+  - The regular build relies on recent browser features, so **opening PDFs now requires Chrome 147 or later**. On older Chrome, trying to open a PDF shows a message asking you to update Chrome
+  - Everything other than PDFs (image OCR etc.) still works on Chrome 116 or later
 
 ## v0.9.0 (2026-09-30)
+
+> v0.9.0 was rejected in Chrome Web Store review and never published. Everything in it ships in v0.9.1.
 
 - **"Deskew & Select" mode**. For photos taken at an angle or documents lying on a desk with visible perspective, the viewer now lets you fit a quadrilateral to the region with four draggable corner handles, then **unwarps the region with a perspective transform before feeding it to OCR** — as if you had taken the photo straight down
   - **Live "corrected preview"** in the top-right as you drag — see exactly what the OCR will see before you commit. Clamped to 240 px and coalesced through requestAnimationFrame so it stays smooth even on multi-megapixel source images

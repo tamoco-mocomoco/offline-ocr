@@ -129,5 +129,11 @@ export default defineConfig({
   // vitest picks up this block; test/e2e is Playwright-only.
   test: {
     exclude: ["**/node_modules/**", "**/dist/**", "test/e2e/**"],
+    // The extension ships pdf.js's modern build, which needs APIs Node lacks
+    // (Math.sumPrecise, Map#getOrInsertComputed); unit tests use the legacy
+    // build instead. See src/pdf/pdf-loader.ts.
+    alias: [
+      { find: /^pdfjs-dist$/, replacement: "pdfjs-dist/legacy/build/pdf.mjs" },
+    ],
   },
 } as import("vite").UserConfig & { test: unknown });

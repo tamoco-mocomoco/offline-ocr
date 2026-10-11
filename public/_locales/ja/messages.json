@@ -38,6 +38,7 @@
   "viewerPdfPageIndicator": { "message": "$CURRENT$ / $TOTAL$", "placeholders": { "current": { "content": "$1" }, "total": { "content": "$2" } } },
   "viewerPdfPasswordError": { "message": "パスワード付き PDF は現在サポートしていません" },
   "viewerPdfLoadError": { "message": "PDF ファイルを読み込めませんでした" },
+  "viewerPdfUnsupportedBrowser": { "message": "PDF を開くには Chrome $VERSION$ 以降が必要です。Chrome を更新してください", "placeholders": { "version": { "content": "$1" } } },
   "viewerPdfRenderError": { "message": "PDF ページの描画に失敗しました" },
   "popupSettingsLink": { "message": "設定 / クリーニングルール…" },
   "popupHistorySection": { "message": "OCR履歴" },
