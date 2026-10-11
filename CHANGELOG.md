@@ -20,8 +20,6 @@
 
 ## v0.9.0 (2026-09-30)
 
-> v0.9.0 was rejected in Chrome Web Store review and never published. Everything in it ships in v0.9.1.
-
 - **"Deskew & Select" mode**. For photos taken at an angle or documents lying on a desk with visible perspective, the viewer now lets you fit a quadrilateral to the region with four draggable corner handles, then **unwarps the region with a perspective transform before feeding it to OCR** — as if you had taken the photo straight down
   - **Live "corrected preview"** in the top-right as you drag — see exactly what the OCR will see before you commit. Clamped to 240 px and coalesced through requestAnimationFrame so it stays smooth even on multi-megapixel source images
   - Press **Enter** to confirm (works alongside the on-screen button)
