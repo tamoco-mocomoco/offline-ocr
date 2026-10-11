@@ -22,10 +22,15 @@
  *    alongside the caller's chunk; no CDN reference (see design § 5.4).
  */
 
-// The `legacy` build ships polyfills for modern browser APIs (DOMMatrix,
-// structuredClone, etc.) that pdfjs relies on. Using it means the loader
-// works both in Chrome and in vitest's Node runtime with no extra shims.
-import * as pdfjsLib from "pdfjs-dist/legacy/build/pdf.mjs";
+// The extension ships the *modern* build. The `legacy` build bundles core-js
+// polyfills, whose IE-era code (e.g. `'java' + SCRIPT + ':'` in the
+// Object.create shim) the Chrome Web Store review flagged as obfuscation
+// ("Red Titanium"). The modern build calls recent APIs without feature
+// checks, so PDF support needs a recent Chrome — see `isPdfSupported`.
+//
+// vitest aliases this import to the legacy build (vite.config.ts), because
+// Node lacks some of those APIs; the legacy build never reaches dist/.
+import * as pdfjsLib from "pdfjs-dist"; // = build/pdf.mjs (package main)
 import type {
   PDFDocumentProxy,
   PDFPageProxy,
@@ -35,7 +40,7 @@ import type {
 // In the Node test environment `?url` isn't understood, so we resolve the
 // worker path a different way (see `configureWorker` below).
 // eslint-disable-next-line import/no-unresolved
-import PdfWorkerUrl from "pdfjs-dist/legacy/build/pdf.worker.mjs?url";
+import PdfWorkerUrl from "pdfjs-dist/build/pdf.worker.mjs?url";
 
 // ---------------------------------------------------------------------------
 // Error classes
@@ -80,6 +85,36 @@ export type PdfDocument = {
 };
 
 // ---------------------------------------------------------------------------
+// Browser support
+// ---------------------------------------------------------------------------
+
+/** Chrome version the newest API below shipped in, for the user-facing message. */
+export const PDF_MIN_CHROME_VERSION = 147;
+
+/**
+ * Whether this browser has the recent APIs the modern pdf.js build calls
+ * without feature checks. Math.sumPrecise (Chrome 147) is the newest;
+ * Map#getOrInsertComputed (145), Uint8Array.fromBase64 (140) and Promise.try
+ * (128) are checked too so a partial backport can't slip through. Check this
+ * before `loadPdf` so an old Chrome gets "please update" instead of a
+ * TypeError from inside pdf.js.
+ */
+export function isPdfSupported(): boolean {
+  const g = globalThis as unknown as {
+    Math: { sumPrecise?: unknown };
+    Map: { prototype: { getOrInsertComputed?: unknown } };
+    Uint8Array: { fromBase64?: unknown };
+    Promise: { try?: unknown };
+  };
+  return (
+    typeof g.Math.sumPrecise === "function" &&
+    typeof g.Map.prototype.getOrInsertComputed === "function" &&
+    typeof g.Uint8Array.fromBase64 === "function" &&
+    typeof g.Promise.try === "function"
+  );
+}
+
+// ---------------------------------------------------------------------------
 // Worker setup
 // ---------------------------------------------------------------------------
 
@@ -96,7 +131,8 @@ async function configureWorker(): Promise<void> {
   } else {
     // In Node (vitest): resolve the worker script via createRequire and give
     // pdfjs its filesystem path. pdfjs runs it as a "fake worker" on the
-    // main thread when a real Worker constructor isn't available.
+    // main thread when a real Worker constructor isn't available. Legacy, to
+    // match the legacy main build vitest aliases in.
     const { createRequire } = await import("node:module");
     const req = createRequire(import.meta.url);
     pdfjsLib.GlobalWorkerOptions.workerSrc = req.resolve(

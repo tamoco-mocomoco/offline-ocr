@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="utf-8" />
+    <title>Fill color</title>
+    <style>
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      body {
+        width: 1200px;
+        height: 470px;
+        background: #fafafa;
+        font-family: "Hiragino Sans", "Yu Gothic", "Noto Sans JP", sans-serif;
+        color: #222;
+        padding: 32px 40px;
+      }
+      .row { display: flex; gap: 32px; }
+      .card {
+        flex: 1;
+        background: #fff;
+        border: 1px solid #e3e3e3;
+        border-radius: 10px;
+        padding: 18px;
+        box-shadow: 0 2px 6px rgba(0,0,0,0.03);
+      }
+      h3 { font-size: 16px; font-weight: 700; color: #444; margin-bottom: 6px; }
+      p { font-size: 13px; color: #666; margin-bottom: 12px; line-height: 1.6; }
+      img {
+        width: 100%;
+        border-radius: 6px;
+        border: 1px solid #ddd;
+        display: block;
+      }
+      .tag {
+        display: inline-block;
+        font-size: 12px;
+        font-weight: 700;
+        border-radius: 4px;
+        padding: 2px 8px;
+        margin-right: 6px;
+        color: #fff;
+        background: #999;
+      }
+      .tag.ok { background: #3a9d5d; }
+    </style>
+  </head>
+  <body>
+    <div class="row">
+      <div class="card">
+        <h3><span class="tag">白で塗る</span>暗い背景に白いかたまりが残る</h3>
+        <p>OCR に渡る画像（パディング込み）。この例では結果は変わらなかったが、背景と違う色のかたまりと輪郭が残る</p>
+        <img src="raw/fill-white.png" />
+      </div>
+      <div class="card">
+        <h3><span class="tag ok">周りの色で塗る</span>v0.9.1 の消しゴム</h3>
+        <p>なぞり始めた位置のまわりで一番多い色で塗る。背景に溶け込む</p>
+        <img src="raw/fill-surrounding.png" />
+      </div>
+    </div>
+  </body>
+</html>

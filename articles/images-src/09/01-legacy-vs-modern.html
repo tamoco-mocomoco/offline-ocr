@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="utf-8" />
+    <title>pdf.js legacy vs modern build</title>
+    <style>
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      body {
+        width: 1200px;
+        height: 480px;
+        background: #fafafa;
+        font-family: "Hiragino Sans", "Yu Gothic", "Noto Sans JP", sans-serif;
+        color: #222;
+        padding: 36px 44px;
+      }
+      h2 { font-size: 20px; font-weight: 700; color: #333; margin-bottom: 22px; }
+      .row { display: flex; gap: 36px; }
+      .col { flex: 1; display: flex; flex-direction: column; gap: 14px; }
+      .card {
+        background: #fff;
+        border: 1px solid #e3e3e3;
+        border-radius: 10px;
+        padding: 18px 20px;
+        box-shadow: 0 2px 6px rgba(0,0,0,0.03);
+      }
+      .card.bad { border-color: #f0b4b4; }
+      .card.good { border-color: #a9d8b8; }
+      h3 { font-size: 15px; font-weight: 700; color: #444; margin-bottom: 12px; }
+      .path {
+        font-family: "SF Mono", Menlo, Consolas, monospace;
+        font-size: 13px;
+        color: #555;
+        margin-bottom: 12px;
+      }
+      .block {
+        border-radius: 6px;
+        padding: 10px 12px;
+        font-size: 13px;
+        line-height: 1.6;
+        margin-top: 8px;
+      }
+      .block.core { background: #eef4fb; color: #2b5d8f; }
+      .block.poly { background: #fdeeee; color: #a33; border: 1px dashed #e08b8b; }
+      code {
+        font-family: "SF Mono", Menlo, Consolas, monospace;
+        font-size: 12px;
+        background: rgba(0,0,0,0.05);
+        padding: 1px 5px;
+        border-radius: 4px;
+      }
+      .arrow { text-align: center; color: #aaa; font-size: 22px; line-height: 1; }
+      .result {
+        border-radius: 8px;
+        padding: 12px 16px;
+        font-size: 14px;
+        font-weight: 700;
+        line-height: 1.6;
+      }
+      .result.bad { background: #c22; color: #fff; }
+      .result.good { background: #2a7d47; color: #fff; }
+      .result small { font-weight: 400; display: block; opacity: 0.95; }
+    </style>
+  </head>
+  <body>
+    <h2>v0.9.0 で否認された構成と、v0.9.1 の構成</h2>
+    <div class="row">
+      <div class="col">
+        <div class="card bad">
+          <h3>v0.9.0 まで: pdf.js の legacy 版</h3>
+          <div class="path">pdfjs-dist/legacy/build/pdf.mjs</div>
+          <div class="block core">pdf.js 本体</div>
+          <div class="block poly">
+            core-js の互換コード（古いブラウザ向けに同梱）<br />
+            IE 向けの <code>Object.create</code> 代替 →
+            <code>'java' + SCRIPT + ':'</code> を iframe に書き込む
+          </div>
+        </div>
+        <div class="arrow">↓</div>
+        <div class="result bad">
+          審査: 「難読化されたコード」(Red Titanium) で否認
+          <small>指摘箇所は pdf.worker と viewer の 2 ファイル</small>
+        </div>
+      </div>
+      <div class="col">
+        <div class="card good">
+          <h3>v0.9.1: pdf.js の通常版</h3>
+          <div class="path">pdfjs-dist (build/pdf.mjs)</div>
+          <div class="block core">pdf.js 本体（core-js なし）</div>
+          <div class="block core" style="background:#f4f4f4;color:#555;">
+            新しい API を確認せずに使う<br />
+            <code>Math.sumPrecise</code>（Chrome 147〜）など → <code>isPdfSupported()</code> で先に確認
+          </div>
+        </div>
+        <div class="arrow">↓</div>
+        <div class="result good">
+          Chrome 147 以降: これまで通り PDF を開ける
+          <small>それより古い Chrome: 「Chrome を更新してください」と案内（PDF 以外は Chrome 116〜 のまま）</small>
+        </div>
+      </div>
+    </div>
+  </body>
+</html>
