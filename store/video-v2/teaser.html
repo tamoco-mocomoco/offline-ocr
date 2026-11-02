@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<title>オフラインOCR 紹介動画 v2</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700;900&family=Zen+Maru+Gothic:wght@700;900&display=swap" rel="stylesheet">
+<style>
+  /* 1920x1080 で録画する。色と部品は site/index.html と同じ */
+  :root {
+    --navy: #1E3A5F; --navy-2: #2C5F8A; --blue: #3A7BBF; --blue-soft: #EAF3FB;
+    --ink: #1F2A3A; --ink-soft: #5B6676; --line: #DCE4EE; --bg: #F6F9FC; --paper: #FFFFFF;
+    --mint: #2FA98A; --mint-soft: #E3F5EF; --coral: #F0715F; --coral-soft: #FDECE9; --sun-soft: #FFF4DA;
+    --ease: cubic-bezier(.2, .8, .2, 1);
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { width: 1920px; height: 1080px; overflow: hidden; }
+  body { font-family: 'Noto Sans JP', sans-serif; color: var(--ink); background: var(--bg); }
+  body::before {
+    content: ""; position: absolute; inset: 0;
+    background:
+      radial-gradient(circle at 6% 14%, var(--sun-soft) 0 170px, transparent 171px),
+      radial-gradient(circle at 97% 6%, var(--mint-soft) 0 260px, transparent 261px),
+      radial-gradient(circle at 70% 108%, var(--coral-soft) 0 220px, transparent 221px);
+  }
+  img { display: block; }
+
+  .scene { position: absolute; inset: 0 0 150px; display: flex; align-items: center; justify-content: center; opacity: 0; transition: opacity .45s ease; }
+  .scene.on { opacity: 1; }
+  .pop { opacity: 0; transform: translateY(30px) scale(.97); transition: opacity .5s var(--ease), transform .6s var(--ease); }
+  .on .pop { opacity: 1; transform: none; }
+  .on .d1 { transition-delay: .25s; } .on .d2 { transition-delay: .6s; } .on .d3 { transition-delay: .95s; }
+  .on .d4 { transition-delay: 1.3s; } .on .d5 { transition-delay: 1.65s; }
+
+  .card { background: var(--paper); border: 1px solid var(--line); border-radius: 28px; box-shadow: 0 20px 50px rgba(30, 58, 95, .12); overflow: hidden; }
+  .big { font-weight: 900; color: var(--navy); line-height: 1.35; }
+  .tag { display: inline-block; font-size: 24px; font-weight: 700; border-radius: 999px; padding: 2px 18px; }
+  .t-blue { background: var(--blue-soft); color: var(--navy-2); } .t-coral { background: var(--coral-soft); color: #B5483A; }
+  .t-mint { background: var(--mint-soft); color: #1F7D66; } .t-sun { background: var(--sun-soft); color: #9A6B0C; }
+  .new { font-size: 20px; font-weight: 700; background: var(--coral); color: #fff; border-radius: 999px; padding: 2px 14px; margin-left: 10px; vertical-align: 6px; }
+
+  /* 字幕 */
+  #cap {
+    position: absolute; left: 0; right: 0; bottom: 44px; text-align: center;
+    font: 700 46px 'Noto Sans JP', sans-serif; color: var(--navy);
+    opacity: 0; transition: opacity .3s;
+  }
+  #cap.on { opacity: 1; }
+  #cap span { background: rgba(255, 255, 255, .94); border: 1px solid var(--line); border-radius: 18px; padding: 10px 34px; box-shadow: 0 8px 24px rgba(30, 58, 95, .08); }
+
+  /* hook: 使い道の絵が並んだ上に、ひとこと */
+  #hook .grid { position: absolute; inset: 70px 90px 0; display: grid; grid-template-columns: repeat(3, 1fr); gap: 34px; opacity: .3; filter: saturate(.8); }
+  #hook .grid img { width: 100%; height: 100%; object-fit: cover; border-radius: 24px; }
+  #hook .msg { position: relative; display: flex; align-items: center; gap: 40px; }
+  #hook .bubble { background: var(--paper); border: 1px solid var(--line); border-radius: 40px; padding: 46px 64px; font-size: 76px; box-shadow: 0 24px 60px rgba(30, 58, 95, .16); }
+  #hook .msg img { width: 330px; }
+
+  /* demo: ブラウザの中で吹き出しを囲む */
+  #demo .row { display: flex; align-items: center; gap: 80px; }
+  #demo .browser { width: 1000px; }
+  #demo .bar { display: flex; align-items: center; gap: 10px; padding: 16px 22px; border-bottom: 1px solid var(--line); background: #FAFCFE; }
+  #demo .bar i { width: 14px; height: 14px; border-radius: 50%; background: #E3E8EF; }
+  #demo .bar span { margin-left: 12px; font: 20px ui-monospace, monospace; color: var(--ink-soft); background: var(--bg); border-radius: 8px; padding: 3px 14px; }
+  #demo .view { position: relative; aspect-ratio: 4 / 3; container-type: inline-size; }
+  #demo .view img { width: 100%; height: 100%; object-fit: cover; }
+  #demo .say { position: absolute; transform: translate(-50%, -50%); writing-mode: vertical-rl; font: 900 8cqw/1.3 'Zen Maru Gothic', 'Noto Sans JP', sans-serif; color: #1F1F1F; letter-spacing: 0.06em; white-space: nowrap; }
+  #demo .sel { position: absolute; left: 16%; top: 13%; width: 26%; height: 74%; border: 4px dashed var(--blue); background: rgba(58, 123, 191, .15); border-radius: 6px; clip-path: inset(0 100% 100% 0); }
+  #demo.on .sel { transition: clip-path 1.1s var(--ease) .9s; clip-path: inset(0 0 0 0); }
+  #demo .toast { position: absolute; right: 22px; bottom: 22px; background: var(--navy); color: #fff; font-size: 26px; font-weight: 700; padding: 12px 22px; border-radius: 14px; opacity: 0; transform: translateY(14px); }
+  #demo.on .toast { transition: all .45s var(--ease) 2.3s; opacity: 1; transform: none; }
+  #demo .toast b { color: #7FE0C4; }
+  #demo .side { width: 560px; }
+  #demo .side .big { font-size: 92px; }
+  #demo .side .paste { margin-top: 34px; font-size: 30px; color: var(--ink-soft); }
+  #demo .side .paste code { display: block; margin-top: 12px; font: 700 40px 'Noto Sans JP', sans-serif; color: var(--navy); background: var(--paper); border: 1px solid var(--line); border-radius: 16px; padding: 14px 24px; }
+
+  /* uses / tools: 絵のカード */
+  .cards { display: flex; gap: 48px; }
+  .cards .card { width: 520px; }
+  .cards .card img { width: 100%; aspect-ratio: 3 / 2; object-fit: cover; }
+  .cards .card .b { padding: 26px 32px 32px; }
+  .cards .card h3 { font-size: 40px; font-weight: 900; color: var(--navy); margin-top: 10px; line-height: 1.4; }
+  #tools .cards .card { width: 700px; }
+
+  /* safe: 通信ゼロ */
+  #safe .row { display: flex; align-items: center; gap: 90px; }
+  #safe .pic { width: 760px; }
+  #safe .pic img { width: 100%; aspect-ratio: 4 / 3; object-fit: cover; }
+  #safe .big { font-size: 74px; }
+  #safe ul { list-style: none; margin-top: 40px; display: grid; gap: 22px; }
+  #safe li { display: flex; align-items: center; gap: 22px; font-size: 40px; font-weight: 700; color: var(--navy); }
+  #safe li i { width: 56px; height: 56px; border-radius: 50%; background: var(--mint-soft); color: var(--mint); display: grid; place-items: center; font-style: normal; font-size: 32px; }
+
+  /* engine: しくみ */
+  #engine { background: var(--navy); }
+  #engine .wrap { text-align: center; color: #fff; }
+  #engine .big { color: #fff; font-size: 70px; }
+  #engine .sub { font-size: 32px; color: rgba(255, 255, 255, .75); margin-top: 14px; }
+  #engine .pipe { display: flex; align-items: center; justify-content: center; gap: 26px; margin-top: 70px; }
+  #engine .node { border: 2px solid rgba(255, 255, 255, .35); background: rgba(255, 255, 255, .07); border-radius: 22px; padding: 26px 34px; min-width: 280px; }
+  #engine .node b { display: block; font-size: 42px; }
+  #engine .node span { font-size: 26px; color: rgba(255, 255, 255, .72); }
+  #engine .arrow { font-size: 44px; color: #9CCBF0; }
+  #engine .chips { margin-top: 60px; display: flex; justify-content: center; gap: 18px; }
+  #engine .chips span { font: 26px ui-monospace, monospace; border: 1px solid rgba(255, 255, 255, .35); border-radius: 999px; padding: 6px 22px; color: rgba(255, 255, 255, .85); }
+
+  /* cta */
+  #cta .row { display: flex; align-items: center; gap: 80px; }
+  #cta .logo { display: flex; align-items: center; gap: 30px; }
+  #cta .logo img { width: 150px; }
+  #cta .logo b { font-size: 112px; font-weight: 900; color: var(--navy); }
+  #cta .lead { font-size: 44px; color: var(--ink-soft); margin-top: 18px; }
+  #cta .btn { display: inline-flex; margin-top: 46px; font-size: 46px; font-weight: 700; color: #fff; background: var(--blue); border-radius: 22px; padding: 24px 50px; box-shadow: 0 14px 34px rgba(58, 123, 191, .4); }
+  #cta .trust { margin-top: 34px; display: flex; gap: 34px; font-size: 30px; font-weight: 700; color: var(--navy); }
+  #cta .trust span::before { content: "✓ "; color: var(--mint); }
+  #cta .tamoko { width: 400px; }
+</style>
+</head>
+<body>
+
+<div class="scene" id="hook">
+  <div class="grid">
+    <img src="../../site/assets/use-manga.webp"><img src="../../site/assets/use-sake.webp"><img src="../../site/assets/use-newspaper.webp">
+    <img src="../../site/assets/use-invoice.webp"><img src="../../site/assets/use-book.webp"><img src="../../site/assets/use-pdf.webp">
+  </div>
+  <div class="msg">
+    <img class="pop" src="../../site/assets/tamoko-normal.png">
+    <div class="bubble big pop d1">画像の文字、<br>コピーできたらいいのに。</div>
+  </div>
+</div>
+
+<div class="scene" id="demo">
+  <div class="row">
+    <div class="card browser pop">
+      <div class="bar"><i></i><i></i><i></i><span>example.jp/comic/episode-12</span></div>
+      <div class="view">
+        <img src="../../site/assets/hero.webp">
+        <div class="say" style="left:29%;top:50%">今日も<br>がんばろう！</div>
+        <div class="sel"></div>
+        <div class="toast"><b>✓</b> コピーしました（9文字）</div>
+      </div>
+    </div>
+    <div class="side">
+      <div class="big pop d1">囲むだけ。</div>
+      <div class="paste pop d5">そのまま貼り付け<code id="pasted">今日もがんばろう！</code></div>
+    </div>
+  </div>
+</div>
+
+<div class="scene" id="uses">
+  <div class="cards">
+    <div class="card pop"><img src="../../site/assets/use-manga.webp"><div class="b"><span class="tag t-blue">縦書き</span><h3>漫画のセリフ</h3></div></div>
+    <div class="card pop d2"><img src="../../site/assets/use-sake.webp"><div class="b"><span class="tag t-coral">筆文字</span><h3>日本酒のラベル</h3></div></div>
+    <div class="card pop d4"><img src="../../site/assets/use-newspaper.webp"><div class="b"><span class="tag t-sun">長い文章</span><h3>新聞のコラム</h3></div></div>
+  </div>
+</div>
+
+<div class="scene" id="tools">
+  <div class="cards">
+    <div class="card pop"><img src="../../site/assets/use-invoice.webp"><div class="b"><span class="tag t-mint">消しゴム</span><span class="new">NEW</span><h3>はんこを消してから読む</h3></div></div>
+    <div class="card pop d4"><img src="../../site/assets/use-book.webp"><div class="b"><span class="tag t-blue">ゆがみ補正</span><span class="new">NEW</span><h3>斜めの写真も、平らにして読む</h3></div></div>
+  </div>
+</div>
+
+<div class="scene" id="safe">
+  <div class="row">
+    <div class="card pic pop"><img src="../../site/assets/offline.webp"></div>
+    <div>
+      <div class="big pop d1">画像も文字も、<br>パソコンの外に出ません。</div>
+      <ul>
+        <li class="pop d2"><i>✓</i>通信ゼロ</li>
+        <li class="pop d3"><i>✓</i>データ収集なし</li>
+        <li class="pop d4"><i>✓</i>オフラインでも動く</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<div class="scene" id="engine">
+  <div class="wrap">
+    <div class="big pop">国立国会図書館の OCR 技術を、<br>ブラウザの中だけで。</div>
+    <div class="sub pop d1">NDLOCR-Lite × ONNX Runtime Web（WebAssembly）</div>
+    <div class="pipe">
+      <div class="node pop d2"><b>DEIM</b><span>文字のある所を探す</span></div><div class="arrow pop d2">→</div>
+      <div class="node pop d3"><b>XY-Cut</b><span>読む順番を決める</span></div><div class="arrow pop d3">→</div>
+      <div class="node pop d4"><b>PARSeq</b><span>文字を読み取る</span></div>
+    </div>
+  </div>
+</div>
+
+<div class="scene" id="cta">
+  <div class="row">
+    <div>
+      <div class="logo pop"><img src="../../public/icons/icon128.png"><b>オフラインOCR</b></div>
+      <div class="lead pop d1">画像の文字を、ブラウザの中だけで読み取る。</div>
+      <div class="btn pop d2">Chrome ウェブストアで無料</div>
+      <div class="trust pop d3"><span>通信ゼロ</span><span>データ収集なし</span><span>ソースコード公開</span></div>
+    </div>
+    <img class="tamoko pop d1" src="../../site/assets/tamoko.png">
+  </div>
+</div>
+
+<div id="cap"><span></span></div>
+
+<script>
+// build.mjs が start({ total, scenes }) を呼ぶ。scenes は script.json の順で、start / end は秒
+const TEXT = {
+  hook: '画像の文字、コピーできたらいいのに。', demo: 'オフラインOCRなら、囲むだけ。',
+  uses: '漫画のセリフも、日本酒のラベルも、新聞のコラムも。', tools: 'はんこは消しゴムで消して、斜めの写真は、ゆがみを直してから読めます。',
+  safe: 'しかも、画像も文字も、パソコンの外に出ません。', engine: '国立国会図書館のOCR技術を、ブラウザの中だけで。',
+  cta: 'オフラインOCR。Chromeウェブストアで、無料です。',
+};
+const cap = document.getElementById('cap');
+function show(id) {
+  document.querySelectorAll('.scene').forEach(s => s.classList.toggle('on', s.id === id));
+  cap.querySelector('span').textContent = TEXT[id];
+  cap.classList.add('on');
+  cap.style.display = id === 'cta' ? 'none' : '';
+}
+window.start = ({ scenes }) => {
+  scenes.forEach(s => setTimeout(() => show(s.id), s.start * 1000));
+};
+// 録画の前 (start を呼ぶまで) は何も見せない。?scene=demo で 1 場面だけ確かめられる
+const q = new URLSearchParams(location.search).get('scene');
+if (q) show(q);
+</script>
+</body>
+</html>

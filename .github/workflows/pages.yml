@@ -26,8 +26,9 @@ jobs:
       - name: Prepare Pages site
         run: |
           mkdir -p _site/public/icons _site/store
+          cp -r site/* _site/
+          rm -rf _site/README.md _site/assets-src
           cp store/screenshots.html _site/store/screenshots.html
-          cp store/screenshots.html _site/index.html
           cp store/privacy-policy.html _site/privacy-policy.html
           cp -r public/icons/* _site/public/icons/
 

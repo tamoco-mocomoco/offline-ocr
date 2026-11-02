@@ -1,0 +1,111 @@
+{
+  "_note": "site/assets の絵の作り方。local-imagegen の zimage-turbo で生成し、make_assets.py で webp にする。expect の文字が OCR で読めることを確かめてから使う (読めなければ seed を替えて描き直す)",
+  "style": "Soft flat vector illustration, pastel blue, mint and cream colors, clean thin outlines, gentle shading, light airy background, friendly and trustworthy mood, high quality.",
+  "images": [
+    {
+      "out": "hero",
+      "size": [
+        1024,
+        768
+      ],
+      "seed": 21,
+      "prompt": "A cute Japanese manga panel. A cheerful girl with long pink hair raises her fist happily on the right side. On the left side is a large tall oval white speech bubble that is completely empty, with nothing written inside. No text, no letters.",
+      "expect": "",
+      "_tried": "吹き出しの文字を描かせると「今日もがんばるう」(seed 11・111)・「おばよう！」(seed 111〜411) と誤字が続いたので、吹き出しは空で描かせ、文字は index.html で重ねる",
+      "overlay": "今日もがんばろう！"
+    },
+    {
+      "out": "use-manga",
+      "size": [
+        1152,
+        768
+      ],
+      "seed": 12,
+      "prompt": "An open Japanese manga book lying on a desk, with comic panels and a big white speech bubble with bold vertical Japanese text that reads \"また明日ね\".",
+      "expect": "また明日ね"
+    },
+    {
+      "out": "use-sake",
+      "size": [
+        1152,
+        768
+      ],
+      "seed": 41,
+      "prompt": "A Japanese sake bottle on a wooden table next to a small cup. The white paper label has bold black brush calligraphy vertical Japanese kanji that reads \"辛口\".",
+      "expect": "辛口",
+      "_tried": "「純米吟醸」は seed 13〜513 の 6 回とも「純来」。「大吟醸」は seed 113・31〜34 の 5 回とも「醸」が簡体字の「酿」で描かれたのに、OCR は 5 回とも「大吟醸」と読んだ (OCR が正しい字に寄せて読む)。中国の簡体字と形が同じ字だけの「辛口」に替えた"
+    },
+    {
+      "out": "use-newspaper",
+      "size": [
+        1152,
+        768
+      ],
+      "seed": 14,
+      "prompt": "A folded Japanese newspaper and a cup of coffee on a table. The headline in bold black vertical text reads \"朝のコラム\".",
+      "expect": "朝のコラム"
+    },
+    {
+      "out": "use-invoice",
+      "size": [
+        1152,
+        768
+      ],
+      "seed": 25,
+      "prompt": "A business document on a desk with a pen. The paper has only thin gray lines and boxes, no text and no letters at all. A plain round red seal stamp mark is pressed near the top right corner.",
+      "expect": "",
+      "_tried": "「請求書」と描かせると seed 15〜515 の 6 回とも「請」が書けなかった (簡体字や別の字) ので、文字のない書類とはんこにした。言葉はカードの見出しで出す"
+    },
+    {
+      "out": "use-book",
+      "size": [
+        1152,
+        768
+      ],
+      "seed": 31,
+      "prompt": "An open book lying on a desk, seen from a tilted oblique angle so the pages look skewed in perspective. Four small blue round markers sit exactly on the four corners of the left page. The left page title in bold black Japanese text reads \"第一章\". No phone, no hands.",
+      "expect": "第一章",
+      "_tried": "スマホで撮る絵 (seed 16) は、スマホの上に紙が載っているように見えたので、斜めに置いた本と四隅の印にした。seed 31 を採用 (斜めのままだと OCR は何も読めず、まさにゆがみ補正が要る絵)"
+    },
+    {
+      "out": "use-pdf",
+      "size": [
+        1152,
+        768
+      ],
+      "seed": 42,
+      "prompt": "A laptop screen showing a PDF document viewer with a page of a Japanese report. The page title in large bold black Japanese kanji reads \"企画案\".",
+      "expect": "企画案",
+      "_tried": "「報告書」は seed 17・31〜34 で「書」が簡体字の「书」になった (seed 32 は OCR が「報告書」と読んだ)。「企画案」は seed 41・42 の 2 回とも「画」の中の「田」の下の線が欠けた。文字なしで描かせた seed 51・52 は画面がほぼ白で寂しい。PDF の題名はもともと活字なので、seed 42 の題名を紙の色で消して、make_assets.py で書体を重ねる (retype)",
+      "retype": {
+        "text": "企画案",
+        "box": [
+          300,
+          340,
+          850,
+          545
+        ],
+        "fill": [
+          255,
+          255,
+          255
+        ],
+        "color": [
+          17,
+          17,
+          17
+        ],
+        "size": 160
+      }
+    },
+    {
+      "out": "offline",
+      "size": [
+        1024,
+        768
+      ],
+      "seed": 18,
+      "prompt": "A laptop on a desk inside a cozy room, protected by a large translucent shield with a padlock icon. Outside the window, a small cloud with a crossed-out wifi symbol. No text."
+    }
+  ]
+}

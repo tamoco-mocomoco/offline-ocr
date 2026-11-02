@@ -1,0 +1,558 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>オフラインOCR — 画像の文字を、ブラウザの中だけで読み取る</title>
+<meta name="description" content="通信ゼロで動く、日本語の範囲選択OCR（Chrome拡張）。画像・漫画・PDFの文字をドラッグで囲むだけでコピー。国立国会図書館のOCR技術をブラウザの中で動かします。">
+<meta property="og:title" content="オフラインOCR — 画像の文字を、ブラウザの中だけで読み取る">
+<meta property="og:description" content="通信ゼロで動く、日本語の範囲選択OCR（Chrome拡張）。">
+<meta property="og:image" content="https://tamoco-mocomoco.github.io/offline-ocr/assets/ogp.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="public/icons/icon128.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700;900&family=Zen+Maru+Gothic:wght@700;900&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --navy: #1E3A5F;
+    --navy-2: #2C5F8A;
+    --blue: #3A7BBF;
+    --blue-soft: #EAF3FB;
+    --ink: #1F2A3A;
+    --ink-soft: #5B6676;
+    --line: #DCE4EE;
+    --bg: #F6F9FC;
+    --paper: #FFFFFF;
+    --mint: #2FA98A;
+    --mint-soft: #E3F5EF;
+    --coral: #F0715F;
+    --coral-soft: #FDECE9;
+    --sun: #F5B83D;
+    --sun-soft: #FFF4DA;
+    --shadow: 0 10px 30px rgba(30, 58, 95, 0.08);
+    --radius: 18px;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body { font-family: 'Noto Sans JP', sans-serif; color: var(--ink); background: var(--bg); line-height: 1.8; overflow-x: hidden; }
+  a { color: inherit; }
+  img { max-width: 100%; display: block; }
+  .wrap { max-width: 1120px; margin: 0 auto; padding: 0 20px; }
+  .round { font-family: 'Zen Maru Gothic', 'Noto Sans JP', sans-serif; }
+
+  /* ── 上のバー ── */
+  .top { position: sticky; top: 0; z-index: 10; background: rgba(255, 255, 255, 0.92); backdrop-filter: blur(8px); border-bottom: 1px solid var(--line); }
+  .top .wrap { display: flex; align-items: center; gap: 12px; height: 60px; }
+  .brand { display: flex; align-items: center; gap: 8px; font-weight: 900; font-size: 17px; text-decoration: none; color: var(--navy); }
+  .brand img { width: 30px; height: 30px; }
+  .top nav { margin-left: auto; display: flex; align-items: center; gap: 4px; }
+  .top nav a.link { font-size: 14px; font-weight: 500; text-decoration: none; padding: 6px 10px; border-radius: 8px; color: var(--ink-soft); }
+  .top nav a.link:hover { background: var(--blue-soft); color: var(--navy); }
+  .lang { display: flex; border: 1px solid var(--line); border-radius: 999px; overflow: hidden; margin-left: 6px; }
+  .lang button { font: 700 12px 'Noto Sans JP', sans-serif; border: 0; background: var(--paper); color: var(--ink-soft); padding: 4px 11px; cursor: pointer; }
+  .lang button.on { background: var(--navy); color: var(--paper); }
+
+  /* ── ボタン ── */
+  .btn {
+    display: inline-flex; align-items: center; gap: 10px; text-decoration: none;
+    font: 700 17px 'Noto Sans JP', sans-serif; padding: 14px 26px; border-radius: 12px;
+    background: var(--blue); color: var(--paper); box-shadow: 0 6px 18px rgba(58, 123, 191, 0.35);
+    transition: transform .15s, box-shadow .15s;
+  }
+  .btn:hover { transform: translateY(-1px); box-shadow: 0 10px 24px rgba(58, 123, 191, 0.4); }
+  .btn.sub { background: var(--paper); color: var(--navy); border: 1px solid var(--line); box-shadow: none; font-size: 15px; padding: 13px 20px; }
+  .btn svg { width: 20px; height: 20px; }
+
+  /* ── ヒーロー ── */
+  .hero { position: relative; padding: 64px 0 56px; background: linear-gradient(180deg, var(--paper) 0%, var(--bg) 100%); overflow: hidden; }
+  .hero::before {
+    content: ""; position: absolute; inset: 0; z-index: 0; pointer-events: none;
+    background:
+      radial-gradient(circle at 8% 18%, var(--sun-soft) 0 90px, transparent 91px),
+      radial-gradient(circle at 96% 8%, var(--mint-soft) 0 150px, transparent 151px),
+      radial-gradient(circle at 58% 104%, var(--coral-soft) 0 120px, transparent 121px);
+  }
+  .hero .wrap { position: relative; display: grid; grid-template-columns: 1.05fr 1fr; gap: 48px; align-items: center; }
+  .pill { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 700; color: var(--navy-2); background: var(--blue-soft); border-radius: 999px; padding: 3px 12px; margin-bottom: 18px; }
+  .hero h1 { font-size: clamp(34px, 5.4vw, 56px); line-height: 1.3; font-weight: 900; color: var(--navy); letter-spacing: 0.01em; }
+  .hero h1 .mark { background: linear-gradient(transparent 64%, var(--sun-soft) 64%); }
+  .hero .lead { margin: 18px 0 28px; font-size: 17px; color: var(--ink-soft); max-width: 31em; }
+  .hero .cta { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
+  .trust { display: flex; flex-wrap: wrap; gap: 8px 18px; margin-top: 26px; list-style: none; }
+  .trust li { display: flex; align-items: center; gap: 6px; font-size: 14px; font-weight: 700; color: var(--navy); }
+  .trust svg { width: 18px; height: 18px; color: var(--mint); flex: none; }
+  .hero .meta { margin-top: 14px; font-size: 13px; color: var(--ink-soft); }
+
+  /* ヒーローの絵: 吹き出しを囲むと、トーストが出る */
+  .stage { position: relative; }
+  .browser { background: var(--paper); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: 0 24px 60px rgba(30, 58, 95, 0.16); overflow: hidden; }
+  .browser .bar { display: flex; align-items: center; gap: 6px; padding: 10px 14px; border-bottom: 1px solid var(--line); background: #FAFCFE; }
+  .browser .bar i { width: 10px; height: 10px; border-radius: 50%; background: #E3E8EF; }
+  .browser .bar span { margin-left: 8px; font: 12px ui-monospace, monospace; color: var(--ink-soft); background: var(--bg); border-radius: 6px; padding: 2px 10px; }
+  .browser .view { position: relative; aspect-ratio: 4 / 3; container-type: inline-size; }
+  .browser .view img { width: 100%; height: 100%; object-fit: cover; }
+  /* 吹き出しの文字は絵に描かせず、ここで重ねる (画像生成では誤字が続いたため。site/assets-src/prompts.json) */
+  .say { position: absolute; transform: translate(-50%, -50%); writing-mode: vertical-rl; font: 900 8cqw/1.3 'Zen Maru Gothic', 'Noto Sans JP', sans-serif; color: #1F1F1F; letter-spacing: 0.06em; white-space: nowrap; }
+  .sel { position: absolute; border: 2px dashed var(--blue); background: rgba(58, 123, 191, 0.14); border-radius: 4px; animation: sel 6s ease-in-out infinite; }
+  @keyframes sel {
+    0%, 8% { clip-path: inset(0 100% 100% 0); opacity: 1; }
+    35%, 72% { clip-path: inset(0 0 0 0); opacity: 1; }
+    86%, 100% { clip-path: inset(0 0 0 0); opacity: 0; }
+  }
+  .toast {
+    position: absolute; right: 14px; bottom: 14px; display: flex; align-items: center; gap: 8px;
+    background: var(--navy); color: var(--paper); font-size: 13px; font-weight: 700;
+    padding: 8px 14px; border-radius: 10px; opacity: 0; animation: toast 6s ease-in-out infinite;
+  }
+  .toast b { color: #7FE0C4; }
+  @keyframes toast {
+    0%, 42% { opacity: 0; transform: translateY(8px); }
+    48%, 82% { opacity: 1; transform: none; }
+    90%, 100% { opacity: 0; transform: translateY(8px); }
+  }
+
+  /* ── 見出し ── */
+  section { padding: 80px 0; }
+  .head { text-align: center; margin-bottom: 44px; }
+  .eyebrow { font: 700 13px 'Zen Maru Gothic', sans-serif; color: var(--blue); letter-spacing: 0.14em; }
+  .head h2, .split h2 { font-size: clamp(26px, 3.8vw, 38px); font-weight: 900; line-height: 1.4; color: var(--navy); }
+  .head p { color: var(--ink-soft); margin-top: 10px; }
+
+  /* ── 安全 ── */
+  .safety { background: var(--paper); border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+  .split { display: grid; grid-template-columns: 1fr 1.15fr; gap: 56px; align-items: center; }
+  .split .pic { border-radius: var(--radius); overflow: hidden; box-shadow: var(--shadow); border: 1px solid var(--line); }
+  .split .pic img { aspect-ratio: 4 / 3; width: 100%; object-fit: cover; }
+  .split .lead { margin: 14px 0 24px; color: var(--ink-soft); }
+  .checks { list-style: none; display: grid; gap: 12px; }
+  .checks li { display: flex; gap: 14px; align-items: flex-start; }
+  .checks .c { flex: none; width: 30px; height: 30px; border-radius: 50%; background: var(--mint-soft); color: var(--mint); display: grid; place-items: center; }
+  .checks .c svg { width: 16px; height: 16px; }
+  .checks b { display: block; color: var(--navy); }
+  .checks span { font-size: 14px; color: var(--ink-soft); }
+
+  .perm { margin-top: 56px; background: var(--bg); border: 1px solid var(--line); border-radius: var(--radius); padding: 28px; }
+  .perm h3 { font-size: 18px; font-weight: 900; color: var(--navy); }
+  .perm > p { font-size: 14px; color: var(--ink-soft); margin-top: 4px; }
+  .perm table { width: 100%; border-collapse: collapse; margin-top: 16px; font-size: 14px; }
+  .perm th, .perm td { text-align: left; padding: 10px 12px; border-top: 1px solid var(--line); vertical-align: top; }
+  .perm th { width: 34%; font: 600 13px ui-monospace, monospace; color: var(--navy-2); white-space: nowrap; }
+  .perm .note { margin-top: 16px; font-size: 13px; color: var(--ink-soft); background: var(--paper); border-radius: 10px; padding: 12px 14px; border: 1px solid var(--line); }
+  .perm .note a { color: var(--blue); }
+
+  /* ── 使い道 ── */
+  .uses { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; }
+  .use { background: var(--paper); border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; box-shadow: var(--shadow); transition: transform .2s; }
+  .use:hover { transform: translateY(-4px); }
+  .use img { aspect-ratio: 3 / 2; width: 100%; object-fit: cover; }
+  .use .body { padding: 18px 20px 22px; }
+  .tag { display: inline-block; font-size: 12px; font-weight: 700; border-radius: 999px; padding: 1px 10px; margin-bottom: 8px; }
+  .use h3 { font-size: 18px; font-weight: 900; line-height: 1.45; color: var(--navy); }
+  .use p { font-size: 14px; color: var(--ink-soft); margin-top: 6px; }
+  .t-blue { background: var(--blue-soft); color: var(--navy-2); }
+  .t-coral { background: var(--coral-soft); color: #B5483A; }
+  .t-mint { background: var(--mint-soft); color: #1F7D66; }
+  .t-sun { background: var(--sun-soft); color: #9A6B0C; }
+
+  /* ── 3 ステップ ── */
+  .steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; counter-reset: step; }
+  .step { position: relative; background: var(--paper); border: 1px solid var(--line); border-radius: var(--radius); padding: 30px 24px 24px; box-shadow: var(--shadow); }
+  .step .n { font: 700 14px 'Zen Maru Gothic', sans-serif; color: var(--blue); letter-spacing: 0.1em; }
+  .step h3 { font-size: 21px; font-weight: 900; color: var(--navy); margin-top: 2px; }
+  .step p { font-size: 14px; color: var(--ink-soft); margin-top: 6px; }
+  .step .icon { position: absolute; right: 20px; top: 22px; width: 46px; height: 46px; border-radius: 14px; display: grid; place-items: center; }
+  .step .icon svg { width: 24px; height: 24px; }
+  .keys { margin-top: 28px; text-align: center; font-size: 14px; color: var(--ink-soft); }
+  kbd { font: 600 12px ui-monospace, monospace; background: var(--paper); border: 1px solid var(--line); border-bottom-width: 3px; border-radius: 6px; padding: 1px 7px; color: var(--ink); }
+
+  /* ── 機能 ── */
+  .feature-band { background: var(--paper); border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+  .groups { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; }
+  .group h3 { display: flex; align-items: center; gap: 8px; font-size: 16px; font-weight: 900; color: var(--navy); padding-bottom: 10px; border-bottom: 2px solid var(--blue-soft); margin-bottom: 6px; }
+  .group h3 i { width: 10px; height: 10px; border-radius: 3px; }
+  .group ul { list-style: none; }
+  .group li { padding: 12px 0; border-bottom: 1px solid var(--line); }
+  .group li b { display: block; font-size: 15px; color: var(--ink); }
+  .group li > span { display: block; font-size: 13px; color: var(--ink-soft); }
+  .new { display: inline-block; font: 700 10px 'Noto Sans JP', sans-serif; background: var(--coral); color: var(--paper); border-radius: 999px; padding: 0 7px; margin-left: 6px; vertical-align: 2px; letter-spacing: 0.04em; }
+
+  /* ── 更新履歴 ── */
+  .timeline { max-width: 780px; margin: 0 auto; list-style: none; position: relative; }
+  .timeline::before { content: ""; position: absolute; left: 92px; top: 6px; bottom: 6px; width: 2px; background: var(--line); }
+  .timeline li { display: grid; grid-template-columns: 80px 1fr; gap: 30px; padding: 10px 0; position: relative; }
+  .timeline li::before { content: ""; position: absolute; left: 87px; top: 20px; width: 12px; height: 12px; border-radius: 50%; background: var(--paper); border: 3px solid var(--blue); }
+  .timeline .v { font: 700 15px 'Zen Maru Gothic', sans-serif; color: var(--navy); text-align: right; }
+  .timeline .v small { display: block; font: 12px 'Noto Sans JP', sans-serif; color: var(--ink-soft); }
+  .timeline b { color: var(--navy); }
+  .timeline span { display: block; font-size: 14px; color: var(--ink-soft); }
+  .more { text-align: center; margin-top: 20px; font-size: 14px; }
+  .more a { color: var(--blue); }
+
+  /* ── 開発者向け ── */
+  .dev { background: var(--navy); color: var(--paper); }
+  .dev .head h2 { color: var(--paper); }
+  .dev .head p { color: rgba(255, 255, 255, 0.74); }
+  .dev .eyebrow { color: #9CCBF0; }
+  .pipe { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 10px; }
+  .pipe .node { background: rgba(255, 255, 255, 0.07); border: 1px solid rgba(255, 255, 255, 0.28); border-radius: 12px; padding: 10px 16px; text-align: center; min-width: 150px; }
+  .pipe .node b { display: block; font-size: 15px; }
+  .pipe .node span { font-size: 12px; color: rgba(255, 255, 255, 0.7); }
+  .pipe .arrow { color: #9CCBF0; }
+  .stack { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin-top: 28px; }
+  .stack span { font: 12px ui-monospace, monospace; border: 1px solid rgba(255, 255, 255, 0.3); border-radius: 999px; padding: 2px 10px; color: rgba(255, 255, 255, 0.85); }
+  .reads { margin: 36px auto 0; display: grid; grid-template-columns: repeat(2, 1fr); gap: 4px 28px; max-width: 860px; }
+  .reads a { font-size: 14px; color: var(--paper); text-decoration: none; border-bottom: 1px solid rgba(255, 255, 255, 0.16); padding: 9px 0; }
+  .reads a:hover { color: #9CCBF0; }
+
+  /* ── 最後の呼びかけ ── */
+  .last .card { position: relative; text-align: center; background: linear-gradient(135deg, var(--blue-soft), var(--mint-soft)); border-radius: 28px; padding: 52px 24px; overflow: hidden; }
+  .last h2 { font-size: clamp(24px, 3.6vw, 34px); font-weight: 900; color: var(--navy); }
+  .last p { color: var(--ink-soft); margin: 8px 0 26px; }
+  .last .tamoko { position: absolute; width: 150px; right: 5%; bottom: -54px; }
+
+  footer { padding: 28px 0 40px; font-size: 13px; color: var(--ink-soft); }
+  footer .wrap { display: flex; flex-wrap: wrap; gap: 8px 20px; justify-content: space-between; }
+  footer a { text-decoration: none; border-bottom: 1px solid var(--line); }
+
+  /* ── 狭い画面 ── */
+  @media (max-width: 900px) {
+    .hero .wrap, .split { grid-template-columns: 1fr; gap: 36px; }
+    .uses { grid-template-columns: repeat(2, 1fr); }
+    .groups { grid-template-columns: 1fr; gap: 28px; }
+    .stage { max-width: 540px; margin: 0 auto 24px; width: 100%; }
+  }
+  @media (max-width: 600px) {
+    .top nav a.link { display: none; }
+    .uses, .steps, .reads { grid-template-columns: 1fr; }
+    section { padding: 60px 0; }
+    .perm { padding: 20px 16px; }
+    .perm th, .perm td { display: block; width: auto; padding: 4px 0; border: 0; }
+    .perm tr { display: block; padding: 10px 0; border-top: 1px solid var(--line); }
+    .timeline::before { left: 70px; }
+    .timeline li { grid-template-columns: 58px 1fr; gap: 26px; }
+    .timeline li::before { left: 65px; }
+    .last .tamoko { display: none; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .sel { animation: none; }
+    .toast { animation: none; opacity: 1; }
+  }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></symbol>
+  <symbol id="i-shield" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l8 3v6c0 4.5-3.4 8.2-8 9-4.6-.8-8-4.5-8-9V6l8-3z"/><path d="M8.5 12l2.5 2.5 4.5-5"/></symbol>
+</svg>
+
+<header class="top">
+  <div class="wrap">
+    <a class="brand" href="#"><img src="public/icons/icon128.png" alt=""><span data-en="Offline OCR">オフラインOCR</span></a>
+    <nav>
+      <a class="link" href="#safety" data-en="Privacy">安全性</a>
+      <a class="link" href="#uses" data-en="Use cases">使い道</a>
+      <a class="link" href="#features" data-en="Features">機能</a>
+      <a class="link" href="#updates" data-en="Updates">更新</a>
+      <a class="link" href="https://github.com/tamoco-mocomoco/offline-ocr" target="_blank" rel="noopener">GitHub</a>
+      <div class="lang">
+        <button id="btn-ja" class="on" onclick="setLang('ja')">日本語</button>
+        <button id="btn-en" onclick="setLang('en')">EN</button>
+      </div>
+    </nav>
+  </div>
+</header>
+
+<main>
+<!-- ── ヒーロー ── -->
+<section class="hero">
+  <div class="wrap">
+    <div>
+      <span class="pill"><svg width="14" height="14"><use href="#i-shield"/></svg><span data-en="Chrome extension · Free · Japanese OCR">Chrome 拡張 ・ 無料 ・ 日本語 OCR</span></span>
+      <h1 data-en="Read text in images —<br><span class=&quot;mark&quot;>without it ever leaving</span><br>your browser.">画像の文字を、<br><span class="mark">ブラウザの中だけで</span><br>読み取る。</h1>
+      <p class="lead" data-en="Comics, labels, invoices, PDFs — drag a box around the text and it’s copied. The OCR runs on your own computer, so images and text are never sent anywhere.">漫画のセリフも、お酒のラベルも、請求書や PDF も。文字を囲むだけでコピーできます。OCR はあなたのパソコンの中で動くので、画像も文字もどこにも送りません。</p>
+      <div class="cta">
+        <a class="btn" href="https://chromewebstore.google.com/detail/offline-ocr/cfppiicaeemimcbodibggnnolckcpmpd" target="_blank" rel="noopener">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+          <span data-en="Add to Chrome — free">Chrome に追加（無料）</span>
+        </a>
+        <a class="btn sub" href="#safety" data-en="How we keep it safe">安全への取り組み</a>
+      </div>
+      <ul class="trust">
+        <li><svg><use href="#i-check"/></svg><span data-en="Zero network requests">通信ゼロ</span></li>
+        <li><svg><use href="#i-check"/></svg><span data-en="No data collection">データ収集なし</span></li>
+        <li><svg><use href="#i-check"/></svg><span data-en="NDL’s OCR technology">国立国会図書館の OCR 技術</span></li>
+        <li><svg><use href="#i-check"/></svg><span data-en="Open source">ソースコード公開</span></li>
+      </ul>
+      <p class="meta" data-en="★ 4.8 on the Chrome Web Store · v0.9.1">Chrome ウェブストアで ★4.8 ・ 最新 v0.9.1</p>
+    </div>
+    <div class="stage" aria-hidden="true">
+      <div class="browser">
+        <div class="bar"><i></i><i></i><i></i><span>example.jp/comic/episode-12</span></div>
+        <div class="view">
+          <img src="assets/hero.webp" alt="">
+          <div class="say" style="left:29%;top:50%">今日も<br>がんばろう！</div>
+          <div class="sel" style="left:16%;top:13%;width:26%;height:74%"></div>
+          <div class="toast"><b>✓</b> <span data-en="Copied (9 chars)">コピーしました（9文字）</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── 安全 ── -->
+<section id="safety" class="safety">
+  <div class="wrap">
+    <div class="split">
+      <div class="pic"><img src="assets/offline.webp" alt="" loading="lazy"></div>
+      <div>
+        <div class="eyebrow">PRIVACY &amp; SECURITY</div>
+        <h2 data-en="Your images and text<br>stay on your device.">画像も文字も、<br>パソコンの外に出ません。</h2>
+        <p class="lead" data-en="The OCR models are bundled with the extension and run locally with WebAssembly. Contracts, receipts and internal documents are safe to OCR.">OCR のモデルは拡張の中に入っていて、WebAssembly でパソコンの中で動きます。契約書やレシート、社内の資料も安心して読み取れます。</p>
+        <ul class="checks">
+          <li><div class="c"><svg><use href="#i-check"/></svg></div><div><b data-en="No network requests for OCR">OCR のための通信はありません</b><span data-en="Images, screenshots and recognized text are never sent to a server.">画像・スクリーンショット・読み取った文字を、サーバーに送りません。</span></div></li>
+          <li><div class="c"><svg><use href="#i-check"/></svg></div><div><b data-en="No data collection">データを集めません</b><span data-en="No personal data, analytics, telemetry or cookies.">個人情報も、利用の統計も、Cookie も使いません。</span></div></li>
+          <li><div class="c"><svg><use href="#i-check"/></svg></div><div><b data-en="Works offline">オフラインでも動きます</b><span data-en="Once installed, it works without an internet connection.">入れたあとは、ネットにつながっていなくても使えます。</span></div></li>
+          <li><div class="c"><svg><use href="#i-check"/></svg></div><div><b data-en="Open source">ソースコードを公開しています</b><span data-en="Anyone can check what it does on GitHub.">何をしているかは、だれでも GitHub で確かめられます。</span></div></li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="perm">
+      <h3 data-en="Permissions and why we need them">求める権限と、その理由</h3>
+      <p data-en="Every permission is used only for local OCR.">どの権限も、パソコンの中での OCR のためだけに使います。</p>
+      <table>
+        <tr><th>scripting</th><td data-en="Shows the selection box on the page you are viewing">見ているページに、範囲を選ぶ枠を出すため</td></tr>
+        <tr><th data-en="Host permission (all sites)">サイトへのアクセス（全サイト）</th><td data-en="Takes a screenshot of the visible tab only when you start a selection">範囲選択を始めたときだけ、見えている画面を撮るため</td></tr>
+        <tr><th>offscreen</th><td data-en="Runs the OCR engine (it cannot run in a service worker)">OCR のエンジンを動かすため（Service Worker では動かせないため）</td></tr>
+        <tr><th>clipboardWrite / clipboardRead</th><td data-en="Copies the result, and opens a copied image in the viewer">結果をコピーするため、コピーした画像をビューアで開くため</td></tr>
+        <tr><th>contextMenus</th><td data-en="Adds OCR to the right-click menu">右クリックのメニューに OCR を出すため</td></tr>
+        <tr><th>storage</th><td data-en="Saves your history, settings and cleaning rules">履歴・設定・クリーニングルールを保存するため</td></tr>
+      </table>
+      <p class="note" data-en="OCR history is stored only on this computer (chrome.storage.local). Settings and cleaning rules use chrome.storage.sync, so if Chrome sync is on, Chrome syncs them through your own Google account. Details: <a href=&quot;privacy-policy.html&quot;>Privacy policy</a>">OCR の履歴は、このパソコンの中だけに保存します（chrome.storage.local）。設定とクリーニングルールは chrome.storage.sync に保存するので、Chrome の同期をオンにしている場合は、あなたの Google アカウントで Chrome が同期します。くわしくは <a href="privacy-policy.html">プライバシーポリシー</a> をご覧ください。</p>
+    </div>
+  </div>
+</section>
+
+<!-- ── 使い道 ── -->
+<section id="uses">
+  <div class="wrap">
+    <div class="head">
+      <div class="eyebrow">USE CASES</div>
+      <h2 data-en="“I wish I could copy this…”<br>Now you can.">「この文字、コピーできたらなあ」<br>が、できます。</h2>
+      <p data-en="Vertical text, brush lettering, stamps and tilted photos included.">縦書きも、筆文字も、はんこも、斜めに撮った写真も。</p>
+    </div>
+    <div class="uses">
+      <article class="use">
+        <img src="assets/use-manga.webp" alt="" loading="lazy">
+        <div class="body">
+          <span class="tag t-blue" data-en="Vertical text">縦書き</span>
+          <h3 data-en="Quote a line from a comic">漫画のセリフを引用したい</h3>
+          <p data-en="Drag around the speech bubble instead of typing vertical text by hand.">縦書きの吹き出しを手で打たなくても、囲めばそのまま文字に。</p>
+        </div>
+      </article>
+      <article class="use">
+        <img src="assets/use-sake.webp" alt="" loading="lazy">
+        <div class="body">
+          <span class="tag t-coral" data-en="Brush lettering">筆文字</span>
+          <h3 data-en="Note down a sake label">日本酒のラベルを記録したい</h3>
+          <p data-en="Read the label off a photo to keep notes or share it.">撮った写真からラベルの文字を読み取って、メモや共有に。</p>
+        </div>
+      </article>
+      <article class="use">
+        <img src="assets/use-newspaper.webp" alt="" loading="lazy">
+        <div class="body">
+          <span class="tag t-sun" data-en="Long text">長い文章</span>
+          <h3 data-en="Keep a passage from a column">新聞のコラムを残したい</h3>
+          <p data-en="Reading order is detected automatically — right to left for vertical text.">縦書きは右から左へ。読む順番は自動で判断します。</p>
+        </div>
+      </article>
+      <article class="use">
+        <img src="assets/use-invoice.webp" alt="" loading="lazy">
+        <div class="body">
+          <span class="tag t-mint" data-en="Eraser">消しゴム</span>
+          <h3 data-en="Leave out the stamp on an invoice">請求書のはんこは読ませたくない</h3>
+          <p data-en="Paint over stamps or handwritten notes first, then OCR the rest.">はんこや手書きのメモをなぞって消してから、残りを読み取り。</p>
+        </div>
+      </article>
+      <article class="use">
+        <img src="assets/use-book.webp" alt="" loading="lazy">
+        <div class="body">
+          <span class="tag t-blue" data-en="Deskew">ゆがみ補正</span>
+          <h3 data-en="Read a page shot at an angle">斜めに撮った本のページも</h3>
+          <p data-en="Fit four corners to the page; it’s flattened before OCR.">四隅を合わせると、真上から見たように平らにしてから読みます。</p>
+        </div>
+      </article>
+      <article class="use">
+        <img src="assets/use-pdf.webp" alt="" loading="lazy">
+        <div class="body">
+          <span class="tag t-coral">PDF</span>
+          <h3 data-en="Copy from a scanned PDF">文字を選べない PDF から</h3>
+          <p data-en="Open a local PDF, go to the page and select just the part you need.">手元の PDF を開いて、ページを移って、ほしい所だけ。</p>
+        </div>
+      </article>
+    </div>
+  </div>
+</section>
+
+<!-- ── 3 ステップ ── -->
+<section style="padding-top:0">
+  <div class="wrap">
+    <div class="head">
+      <div class="eyebrow">HOW TO</div>
+      <h2 data-en="Three steps.">使い方は、3 ステップ。</h2>
+    </div>
+    <div class="steps">
+      <div class="step">
+        <div class="icon" style="background:var(--blue-soft);color:var(--blue)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-dasharray="3 3"><rect x="4" y="5" width="16" height="13" rx="2"/></svg></div>
+        <div class="n">STEP 1</div>
+        <h3 data-en="Select">囲む</h3>
+        <p data-en="Drag a box around the text you want.">ほしい文字を、マウスで囲みます。</p>
+      </div>
+      <div class="step">
+        <div class="icon" style="background:var(--sun-soft);color:#C48A12"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="8"/><path d="M12 8v4l3 2"/></svg></div>
+        <div class="n">STEP 2</div>
+        <h3 data-en="Wait a moment">少し待つ</h3>
+        <p data-en="Your browser reads it in a few seconds.">ブラウザの中で、数秒で読み取ります。</p>
+      </div>
+      <div class="step">
+        <div class="icon" style="background:var(--mint-soft);color:var(--mint)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="4" width="12" height="17" rx="2"/><path d="M9 4h6v3H9zM9.5 13.5l2 2 3.5-4"/></svg></div>
+        <div class="n">STEP 3</div>
+        <h3 data-en="Paste">貼る</h3>
+        <p data-en="It’s already on your clipboard.">もうコピー済み。どこにでも貼れます。</p>
+      </div>
+    </div>
+    <p class="keys" data-en="Start from the toolbar icon, the right-click menu, or <kbd>Alt</kbd> + <kbd>Shift</kbd> + <kbd>O</kbd>">ツールバーのアイコン、右クリック、または <kbd>Alt</kbd> + <kbd>Shift</kbd> + <kbd>O</kbd> で始められます</p>
+  </div>
+</section>
+
+<!-- ── 機能 ── -->
+<section id="features" class="feature-band">
+  <div class="wrap">
+    <div class="head">
+      <div class="eyebrow">FEATURES</div>
+      <h2 data-en="Everything in one small extension">小さな拡張に、ひととおり。</h2>
+    </div>
+    <div class="groups">
+      <div class="group">
+        <h3><i style="background:var(--blue)"></i><span data-en="Read">読み取る</span></h3>
+        <ul>
+          <li><b data-en="Region-select OCR on any page">どのページでも範囲選択 OCR</b><span data-en="Even small buttons and link text">小さなボタンやリンクの文字も読めます</span></li>
+          <li><b data-en="Vertical &amp; horizontal text">縦書き・横書き</b><span data-en="Reading order is detected automatically">読む順番は自動で判断</span></li>
+          <li><b data-en="Image viewer">画像ビューア</b><span data-en="Local files, pasted images, or right-click an image on a page">手元の画像、貼り付けた画像、ページ上の画像を右クリックで</span></li>
+          <li><b data-en="PDF viewer">PDF ビューア</b><span data-en="Move between pages and OCR any of them">ページを移りながら、好きなページを読み取り</span></li>
+          <li><b><span data-en="Deskew &amp; select">ゆがみ補正で選択</span><span class="new">NEW</span></b><span data-en="Flatten a page photographed at an angle">斜めに撮った紙面を、平らにしてから読む</span></li>
+          <li><b><span data-en="Eraser">消しゴム</span><span class="new">NEW</span></b><span data-en="Erase stamps and notes before OCR; undo with Ctrl+Z">はんこやメモを消してから読む。Ctrl+Z で戻せる</span></li>
+        </ul>
+      </div>
+      <div class="group">
+        <h3><i style="background:var(--mint)"></i><span data-en="Tidy up">整える</span></h3>
+        <ul>
+          <li><b data-en="Cleaning rules">クリーニングルール</b><span data-en="Clean up results with regex before copying">正規表現で、コピーの前に結果を整える</span></li>
+          <li><b data-en="Tables &amp; receipts">表やレシート</b><span data-en="Items on the same row are tab-separated">同じ行の項目はタブ区切りに</span></li>
+          <li><b data-en="Furigana filter">ふりがなを除く</b><span data-en="Ruby text is removed automatically">ルビは自動で取り除く</span></li>
+          <li><b data-en="Noise protection">読み間違いのくり返しを抑える</b><span data-en="Repeated garbage is trimmed; real repeats like ドドドド are kept">同じ文字が続くノイズを切り、「ドドドド」のような本当のくり返しは残す</span></li>
+        </ul>
+      </div>
+      <div class="group">
+        <h3><i style="background:var(--coral)"></i><span data-en="Keep &amp; speed">残す・速く</span></h3>
+        <ul>
+          <li><b data-en="OCR history">OCR の履歴</b><span data-en="Re-copy, edit, search and delete past results">前の結果を、もう一度コピー・編集・検索・削除</span></li>
+          <li><b data-en="Parallel recognition">並べて速く読む</b><span data-en="Up to 4 lines are recognized at the same time">最大 4 行を同時に読み取り、長い文章も速く</span></li>
+          <li><b data-en="Model cache">モデルのキャッシュ</b><span data-en="Faster from the second run">2 回目からはすぐに始まります</span></li>
+          <li><b data-en="Japanese / English UI">日本語・英語の画面</b><span data-en="Follows your browser’s language">ブラウザの言語に合わせて切り替え</span></li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── 更新履歴 ── -->
+<section id="updates">
+  <div class="wrap">
+    <div class="head">
+      <div class="eyebrow">UPDATES</div>
+      <h2 data-en="Getting better, one release at a time">使いながら、少しずつ良くしています。</h2>
+    </div>
+    <ul class="timeline">
+      <li><div class="v">v0.9.1<small>2026-10</small></div><div><b data-en="Eraser in the viewer">ビューアに消しゴム</b><span data-en="Also fixed the selection box showing up in the OCR input">選択枠が OCR の画像に写り込む不具合も直しました</span></div></li>
+      <li><div class="v">v0.9.0<small>2026-09</small></div><div><b data-en="Deskew &amp; select">ゆがみ補正で選択</b><span data-en="Fit four corners to flatten a tilted page, with a live preview">四隅を合わせて平らにして読む。補正後の様子をその場で確認</span></div></li>
+      <li><div class="v">v0.8.1<small>2026-08</small></div><div><b data-en="Faster multi-line OCR">長い文章の OCR を高速化</b><span data-en="Up to 4 lines in parallel, and less repeated noise">最大 4 行を同時に。くり返しのノイズも抑えました</span></div></li>
+      <li><div class="v">v0.8.0<small>2026-08</small></div><div><b data-en="PDF support">PDF に対応</b><span data-en="Open a local PDF and OCR any page">手元の PDF を開いて、好きなページを読み取り</span></div></li>
+      <li><div class="v">v0.7.0<small>2026-07</small></div><div><b data-en="OCR history">OCR の履歴</b><span data-en="Results are saved on your computer for later">結果をパソコンの中に残して、あとから使える</span></div></li>
+    </ul>
+    <p class="more"><a href="https://github.com/tamoco-mocomoco/offline-ocr/blob/main/CHANGELOG_ja.md" target="_blank" rel="noopener" data-en="Full changelog →">すべての更新履歴 →</a></p>
+  </div>
+</section>
+
+<!-- ── 開発者向け ── -->
+<section class="dev">
+  <div class="wrap">
+    <div class="head">
+      <div class="eyebrow">FOR DEVELOPERS</div>
+      <h2 data-en="How it works">しくみ</h2>
+      <p data-en="The National Diet Library’s OCR technology (NDLOCR-Lite), running on ONNX Runtime Web (WASM).">国立国会図書館の OCR 技術（NDLOCR-Lite）を、ONNX Runtime Web（WASM）で動かしています。</p>
+    </div>
+    <div class="pipe">
+      <div class="node"><b>DEIM</b><span data-en="find text regions">文字のある所を探す</span></div>
+      <div class="arrow">→</div>
+      <div class="node"><b>XY-Cut</b><span data-en="decide reading order">読む順番を決める</span></div>
+      <div class="arrow">→</div>
+      <div class="node"><b>PARSeq</b><span data-en="recognize characters">文字を読み取る</span></div>
+      <div class="arrow">→</div>
+      <div class="node"><b data-en="Clipboard">クリップボード</b><span data-en="cleaned &amp; copied">整えてコピー</span></div>
+    </div>
+    <div class="stack">
+      <span>Manifest V3</span><span>Service Worker</span><span>Offscreen Document</span><span>Web Worker</span>
+      <span>ONNX Runtime Web</span><span>TypeScript + Vite</span><span>pdf.js</span>
+    </div>
+    <div class="reads">
+      <a href="https://github.com/tamoco-mocomoco/offline-ocr" target="_blank" rel="noopener" data-en="GitHub — source code →">GitHub — ソースコード →</a>
+      <a href="https://github.com/tamoco-mocomoco/ndlocr-lite-wasm" target="_blank" rel="noopener" data-en="ndlocr-lite-wasm — the OCR engine →">ndlocr-lite-wasm — OCR エンジン →</a>
+      <a href="https://zenn.dev/lecto/articles/a2ee65243b02b3" target="_blank" rel="noopener" data-en="Zenn: how it was built (Japanese) →">Zenn：作った話 →</a>
+      <a href="https://zenn.dev/lecto/articles/7a9398c0cbbb04" target="_blank" rel="noopener" data-en="Zenn: use cases on video (Japanese) →">Zenn：OCR の使い道を動画にしている話 →</a>
+    </div>
+  </div>
+</section>
+
+<!-- ── 最後の呼びかけ ── -->
+<section class="last">
+  <div class="wrap">
+    <div class="card">
+      <img class="tamoko" src="assets/tamoko.png" alt="">
+      <h2 data-en="Try it today.">画像の文字、今日からコピーしよう。</h2>
+      <p data-en="Free · No account · No network">無料 ・ 登録なし ・ 通信なし</p>
+      <a class="btn" href="https://chromewebstore.google.com/detail/offline-ocr/cfppiicaeemimcbodibggnnolckcpmpd" target="_blank" rel="noopener">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+        <span data-en="Add to Chrome — free">Chrome に追加（無料）</span>
+      </a>
+    </div>
+  </div>
+</section>
+</main>
+
+<footer>
+  <div class="wrap">
+    <div>© tamoco-mocomoco ・ <a href="privacy-policy.html" data-en="Privacy policy">プライバシーポリシー</a></div>
+    <div data-en="Illustrations: generated locally with Z-Image-Turbo · OCR: NDLOCR-Lite">イラスト：Z-Image-Turbo で手元で生成 ・ OCR：NDLOCR-Lite</div>
+  </div>
+</footer>
+
+<script>
+// data-en に英語を持たせ、日本語はもとの中身を data-ja に覚えておいて入れ替える
+const nodes = [...document.querySelectorAll('[data-en]')];
+nodes.forEach(n => { n.dataset.ja = n.innerHTML; });
+const meta = { ja: [document.title, 'ja'], en: ['Offline OCR — Read text in images, right in your browser', 'en'] };
+function setLang(lang) {
+  nodes.forEach(n => { n.innerHTML = lang === 'en' ? n.dataset.en : n.dataset.ja; });
+  [document.title, document.documentElement.lang] = meta[lang];
+  document.getElementById('btn-ja').classList.toggle('on', lang === 'ja');
+  document.getElementById('btn-en').classList.toggle('on', lang === 'en');
+  try { localStorage.setItem('lang', lang); } catch (e) {}
+}
+let saved = null;
+try { saved = localStorage.getItem('lang'); } catch (e) {}
+if (saved === 'en' || (!saved && !navigator.language.startsWith('ja'))) setLang('en');
+</script>
+</body>
+</html>
