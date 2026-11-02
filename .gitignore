@@ -13,6 +13,8 @@ store/video/voice/
 store/video/recordings/
 store/video/promo-video-*.mp4
 store/video/screenshots/
+store/video-v2/out/
+store/video-v2/promo-video-*.mp4
 
 # Social video generated assets (re-creatable from scripts)
 social/frames/
@@ -22,3 +24,4 @@ social/*/voice/
 social/*/frames/
 social/*/*.wav
 social/*/*.mp4
+_site/
