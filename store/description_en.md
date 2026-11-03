@@ -48,7 +48,7 @@ No personal data or images are ever collected or transmitted.
 - Detection Model: DEIM (FP32)
 - Recognition Model: PARSeq (FP32)
 - Inference Runtime: ONNX Runtime Web (WebAssembly)
-- Supported Languages: Japanese (horizontal text)
+- Supported Languages: Japanese (vertical and horizontal text)
 - Requirements: Chrome 116 or later (opening PDFs requires Chrome 147 or later)
 
 ■ Acknowledgments

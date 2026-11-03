@@ -1,0 +1,264 @@
+<!doctype html>
+<!--
+  ストアの画面写真 (1280×800 × 5) とプロモタイル (440×280、1400×560)。
+  render.mjs が ?lang=ja / ?lang=en で開いて、.frame ごとに撮る。
+  画面の中身は capture.mjs が撮った本物の拡張の画面 (shots/<lang>/)、絵は site/assets/ のもの。
+-->
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700;900&family=Zen+Maru+Gothic:wght@700;900&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --navy: #1E3A5F; --navy-2: #2C5F8A; --blue: #3A7BBF; --blue-soft: #EAF3FB;
+    --ink: #1F2A3A; --ink-soft: #5B6676; --line: #DCE4EE; --bg: #F6F9FC; --paper: #FFFFFF;
+    --mint: #2FA98A; --mint-soft: #E3F5EF; --coral: #F0715F; --coral-soft: #FDECE9; --sun: #F5B83D; --sun-soft: #FFF4DA;
+    --shadow: 0 14px 40px rgba(30, 58, 95, 0.14);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Noto Sans JP', sans-serif; color: var(--ink); background: #888; line-height: 1.7; }
+  .round { font-family: 'Zen Maru Gothic', 'Noto Sans JP', sans-serif; }
+  .frame { position: relative; overflow: hidden; margin: 0 0 40px; background: linear-gradient(180deg, var(--paper), var(--bg)); }
+  .slide { width: 1280px; height: 800px; padding: 56px 64px; }
+  .dots::before { content: ""; position: absolute; inset: 0; pointer-events: none;
+    background: radial-gradient(circle at 6% 12%, var(--sun-soft) 0 110px, transparent 111px),
+                radial-gradient(circle at 97% 4%, var(--mint-soft) 0 170px, transparent 171px),
+                radial-gradient(circle at 60% 106%, var(--coral-soft) 0 140px, transparent 141px); }
+  .frame > * { position: relative; }
+
+  .eyebrow { font-size: 14px; font-weight: 700; letter-spacing: .18em; color: var(--blue); }
+  h2 { font-size: 40px; font-weight: 900; color: var(--navy); line-height: 1.35; }
+  .lead { font-size: 18px; color: var(--ink-soft); margin-top: 6px; }
+  .head { text-align: center; margin-bottom: 30px; }
+  .pill { display: inline-flex; align-items: center; gap: 6px; font-size: 15px; font-weight: 700; color: var(--navy-2); background: var(--blue-soft); border-radius: 999px; padding: 4px 14px; }
+  .mark { background: linear-gradient(transparent 64%, var(--sun-soft) 64%); }
+  .tag { display: inline-block; font-size: 13px; font-weight: 700; border-radius: 999px; padding: 1px 11px; }
+  .t-blue { background: var(--blue-soft); color: var(--navy-2); } .t-coral { background: var(--coral-soft); color: #c4503f; }
+  .t-sun { background: var(--sun-soft); color: #a8741a; } .t-mint { background: var(--mint-soft); color: #1f8068; }
+  .brand { display: flex; align-items: center; gap: 10px; font-weight: 900; font-size: 22px; color: var(--navy); }
+  .brand img { width: 40px; height: 40px; }
+  svg.ck { width: 18px; height: 18px; flex: none; }
+
+  /* 本物の画面を切り抜いて置く: --sx --sy (元の位置) --k (倍率) */
+  .shot { position: relative; overflow: hidden; border-radius: 14px; box-shadow: var(--shadow); border: 1px solid var(--line); background: #1a1a1a; }
+  .shot img { position: absolute; left: calc(var(--sx, 0) * var(--k) * -1px); top: calc(var(--sy, 0) * var(--k) * -1px); width: calc(1280px * var(--k)); }
+  .win { border-radius: 14px; overflow: hidden; box-shadow: var(--shadow); border: 1px solid var(--line); background: #fff; }
+  .win .bar { height: 34px; background: #eef2f7; display: flex; align-items: center; gap: 7px; padding: 0 14px; border-bottom: 1px solid var(--line); }
+  .win .bar i { width: 11px; height: 11px; border-radius: 50%; background: #f0715f; } .win .bar i:nth-child(2) { background: #f5b83d; } .win .bar i:nth-child(3) { background: #2fa98a; }
+  .win .bar span { margin-left: 12px; flex: 1; background: #fff; border-radius: 6px; font-size: 12px; color: var(--ink-soft); padding: 1px 12px; }
+  .win .shot { border-radius: 0; box-shadow: none; border: 0; }
+  .note { position: absolute; font-size: 11px; color: var(--ink-soft); opacity: .85; }
+
+  /* 1. 表紙 */
+  #s1 { display: grid; grid-template-columns: 450px 1fr; gap: 40px; align-items: center; }
+  #s1 h1 { font-size: 50px; line-height: 1.32; font-weight: 900; color: var(--navy); margin: 18px 0 16px; }
+  #s1 .sub { font-size: 17px; color: var(--ink-soft); }
+  #s1 ul { list-style: none; margin-top: 24px; display: grid; gap: 10px; }
+  #s1 li { display: flex; align-items: center; gap: 10px; font-weight: 700; color: var(--navy); font-size: 17px; }
+  #s1 li svg { color: var(--mint); }
+  #s1 .result { left: -36px; bottom: -64px; width: 340px; }
+  .result { position: absolute; background: #fff; border-radius: 14px; box-shadow: var(--shadow); border: 1px solid var(--line); padding: 14px 16px; }
+  .result .t { display: flex; align-items: center; gap: 8px; font-weight: 700; color: var(--mint); font-size: 14px; }
+  .result pre { font: 500 13px/1.7 'Noto Sans JP', sans-serif; color: var(--ink); margin-top: 6px; white-space: pre-wrap; }
+  #s1 .tamoko { position: absolute; right: -30px; bottom: -150px; width: 150px; }
+
+  /* 2. 使い道 */
+  .uses { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
+  .use { background: var(--paper); border: 1px solid var(--line); border-radius: 16px; overflow: hidden; box-shadow: 0 8px 24px rgba(30,58,95,.08); }
+  .use img { width: 100%; height: 170px; object-fit: cover; display: block; }
+  .use .body { padding: 12px 18px 14px; }
+  .use h3 { font-size: 18px; font-weight: 900; color: var(--navy); line-height: 1.4; margin-top: 4px; }
+
+  /* 3・4. 画面 2 つ */
+  .pair { display: grid; grid-template-columns: 1fr 1fr; gap: 28px; }
+  .pane .cap { display: flex; align-items: baseline; gap: 10px; margin-top: 14px; }
+  .pane .cap b { font-size: 21px; font-weight: 900; color: var(--navy); }
+  .pane .cap span { font-size: 15px; color: var(--ink-soft); }
+  .chips { display: flex; justify-content: center; gap: 12px; margin-top: 22px; flex-wrap: wrap; }
+  .chips span { background: #fff; border: 1px solid var(--line); border-radius: 999px; padding: 6px 16px; font-size: 15px; font-weight: 700; color: var(--navy-2); }
+
+  /* 5. 安全 */
+  #s5 { display: grid; grid-template-columns: 500px 1fr; gap: 44px; align-items: start; }
+  #s5 .art { width: 100%; border-radius: 18px; box-shadow: var(--shadow); margin: 22px 0 0; display: block; }
+  .checks { list-style: none; display: grid; gap: 14px; margin-top: 4px; }
+  .checks li { display: flex; gap: 14px; align-items: flex-start; }
+  .checks .c { flex: none; width: 32px; height: 32px; border-radius: 50%; background: var(--mint-soft); color: var(--mint); display: grid; place-items: center; }
+  .checks b { display: block; color: var(--navy); font-size: 17px; }
+  .checks span { font-size: 14px; color: var(--ink-soft); }
+  .perm { margin-top: 22px; background: #fff; border: 1px solid var(--line); border-radius: 16px; padding: 18px 22px; box-shadow: 0 8px 24px rgba(30,58,95,.06); }
+  .perm h3 { font-size: 17px; font-weight: 900; color: var(--navy); }
+  .perm table { width: 100%; border-collapse: collapse; margin-top: 8px; font-size: 13px; }
+  .perm th, .perm td { text-align: left; padding: 6px 8px; border-top: 1px solid var(--line); vertical-align: top; }
+  .perm th { width: 42%; font: 600 12px ui-monospace, monospace; color: var(--navy-2); }
+
+  /* 吹き出しの文字は絵に描かせず重ねる (サイトと同じ。site/assets-src/prompts.json) */
+  /* プロモタイル */
+  #small { width: 440px; height: 280px; padding: 26px 26px; }
+  #small h1 { font-size: 30px; font-weight: 900; color: var(--navy); line-height: 1.3; margin-top: 18px; }
+  #small .brand { font-size: 19px; } #small .brand img { width: 34px; height: 34px; }
+  #small .chip { position: absolute; left: 26px; bottom: 24px; font-size: 13px; font-weight: 700; color: #1f8068; background: var(--mint-soft); border-radius: 999px; padding: 2px 12px; }
+  #small .shot { position: absolute; right: 26px; top: 38px; width: 167px; height: 205px; border-radius: 10px; }
+  #marquee { width: 1400px; height: 560px; padding: 60px 70px; }
+  #marquee h1 { font-size: 52px; font-weight: 900; color: var(--navy); line-height: 1.3; margin: 24px 0 22px; }
+  #marquee ul { list-style: none; display: flex; gap: 12px; }
+  #marquee li { display: flex; align-items: center; gap: 8px; font-weight: 700; color: var(--navy); background: #fff; border: 1px solid var(--line); border-radius: 999px; padding: 6px 16px; font-size: 17px; }
+  #marquee .side { position: absolute; right: 90px; top: 43px; width: 440px; }
+  #marquee .result { left: -190px; bottom: -10px; width: 330px; }
+  #marquee li svg { color: var(--mint); }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute"><symbol id="i-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></symbol></svg>
+
+<!-- 1. 表紙: ページの上で囲むだけ -->
+<section class="frame slide dots" id="s1">
+  <div>
+    <div class="brand"><img src="../../public/icons/icon128.png" alt=""><span data-en="Offline OCR">オフラインOCR</span></div>
+    <h1 data-en="Copy text<br>from images,<br><span class='mark'>right in your browser.</span>">画像の文字を、<br><span class="mark">ブラウザの中だけで</span><br>読み取る。</h1>
+    <p class="sub" data-en="Drag around any text on the page. It’s recognized on your PC and copied to the clipboard.">ページの上で、読みたい所を囲むだけ。パソコンの中で読み取って、クリップボードにコピーします。</p>
+    <ul>
+      <li><svg class="ck"><use href="#i-check"/></svg><span data-en="Zero network requests">通信ゼロ・データ収集なし</span></li>
+      <li><svg class="ck"><use href="#i-check"/></svg><span data-en="Vertical and horizontal Japanese">縦書き・横書きの日本語に強い</span></li>
+      <li><svg class="ck"><use href="#i-check"/></svg><span data-en="Built on NDL’s OCR technology">国立国会図書館の OCR 技術</span></li>
+    </ul>
+  </div>
+  <div style="position:relative">
+    <div class="win">
+      <div class="bar"><i></i><i></i><i></i><span>blog.example.jp/kosho</span></div>
+      <div class="shot" style="--k:.517; width:662px; height:414px"><img src="shots/{lang}/page-select.png" alt=""></div>
+    </div>
+    <div class="result">
+      <div class="t"><svg class="ck"><use href="#i-check"/></svg><span data-en="Copied (111 chars)">コピーしました（111文字）</span></div>
+      <pre>第三章 古本屋の午後
+駅前の古本屋は、午後になると西日が差しこむ。
+棚の奥から一冊を抜くと、表紙の角がすこし丸くなっていた。…</pre>
+    </div>
+    <img class="tamoko" src="../../site/assets/tamoko.png" alt="">
+  </div>
+  <div class="note" style="left:64px; bottom:20px" data-en="Screens are from the actual extension; the page and documents are made-up examples.">画面は実際の拡張のものです。ページや文書は説明のための架空の例です。</div>
+</section>
+
+<!-- 2. 使い道 -->
+<section class="frame slide dots" id="s2">
+  <div class="head">
+    <h2 data-en="“I wish I could copy this…” — now you can.">「この文字、コピーできたらなあ」が、できます。</h2>
+    <p class="lead" data-en="Vertical text, brush lettering, stamps, tilted photos and PDFs.">縦書きも、筆文字も、はんこも、斜めに撮った写真も、PDF も。</p>
+  </div>
+  <div class="uses">
+    <article class="use"><img src="../../site/assets/use-manga.webp" alt=""><div class="body"><span class="tag t-blue" data-en="Vertical text">縦書き</span><h3 data-en="Quote a line from a comic">漫画のセリフを引用したい</h3></div></article>
+    <article class="use"><img src="../../site/assets/use-sake.webp" alt=""><div class="body"><span class="tag t-coral" data-en="Brush lettering">筆文字</span><h3 data-en="Note down a sake label">日本酒のラベルを記録したい</h3></div></article>
+    <article class="use"><img src="../../site/assets/use-newspaper.webp" alt=""><div class="body"><span class="tag t-sun" data-en="Long text">長い文章</span><h3 data-en="Keep a passage from a column">新聞のコラムを残したい</h3></div></article>
+    <article class="use"><img src="../../site/assets/use-invoice.webp" alt=""><div class="body"><span class="tag t-mint" data-en="Eraser">消しゴム</span><h3 data-en="Leave out the stamp on an invoice">請求書のはんこは読ませたくない</h3></div></article>
+    <article class="use"><img src="../../site/assets/use-book.webp" alt=""><div class="body"><span class="tag t-blue" data-en="Deskew">ゆがみ補正</span><h3 data-en="Read a page shot at an angle">斜めに撮った本のページも</h3></div></article>
+    <article class="use"><img src="../../site/assets/use-pdf.webp" alt=""><div class="body"><span class="tag t-coral">PDF</span><h3 data-en="Copy from a scanned PDF">文字を選べない PDF から</h3></div></article>
+  </div>
+</section>
+
+<!-- 3. ビューア: 消しゴムとゆがみ補正 -->
+<section class="frame slide dots" id="s3">
+  <div class="head">
+    <div class="eyebrow">VIEWER</div>
+    <h2 data-en="Tidy up the image, then read it.">画像を整えてから、読み取れます。</h2>
+  </div>
+  <div class="pair">
+    <div class="pane">
+      <div class="shot" style="--k:.82; --sx:400; --sy:0; width:562px; height:500px"><img src="shots/{lang}/erase-mid.png" alt=""></div>
+      <div class="cap"><span class="tag t-mint" data-en="Eraser">消しゴム</span><b data-en="Paint out stamps and notes">はんこや書き込みを消す</b></div>
+    </div>
+    <div class="pane">
+      <div class="shot" style="--k:.545; --sx:240; --sy:0; width:562px; height:500px"><img src="shots/{lang}/quad-fit.png" alt=""></div>
+      <div class="cap"><span class="tag t-blue" data-en="Deskew">ゆがみ補正</span><b data-en="Flatten a tilted photo">斜めの写真を平らにする</b></div>
+    </div>
+  </div>
+</section>
+
+<!-- 4. PDF と履歴 -->
+<section class="frame slide dots" id="s4">
+  <div class="head">
+    <div class="eyebrow">PDF · HISTORY</div>
+    <h2 data-en="PDFs too, and every result is kept on your PC.">PDF も読めて、結果はパソコンに残ります。</h2>
+  </div>
+  <div class="pair">
+    <div class="pane">
+      <div class="shot" style="--k:.66; --sx:330; --sy:0; width:562px; height:450px"><img src="shots/{lang}/pdf-copied.png" alt=""></div>
+      <div class="cap"><span class="tag t-coral">PDF</span><b data-en="Turn pages, select a part">ページを移って、ほしい所だけ</b></div>
+    </div>
+    <div class="pane">
+      <div class="shot" style="--k:.66; --sx:0; --sy:0; width:562px; height:450px; background:#fff"><img src="shots/{lang}/history.png" alt=""></div>
+      <div class="cap"><span class="tag t-sun" data-en="History">OCR の履歴</span><b data-en="Search, re-copy, edit">検索・再コピー・編集</b></div>
+    </div>
+  </div>
+  <div class="chips">
+    <span data-en="Cleaning rules (regex) before copying">コピー前に正規表現で整形</span>
+    <span data-en="Toolbar · Alt+Shift+O · right-click">ツールバー・Alt+Shift+O・右クリック</span>
+    <span data-en="Japanese / English UI">日本語・英語の画面</span>
+  </div>
+</section>
+
+<!-- 5. 安全 -->
+<section class="frame slide dots" id="s5">
+  <div>
+    <div class="eyebrow">PRIVACY &amp; SECURITY</div>
+    <h2 data-en="Images and text<br>never leave your PC.">画像も文字も、<br>パソコンの外に出ません。</h2>
+    <img class="art" src="../../site/assets/offline.webp" alt="">
+  </div>
+  <div style="padding-top:28px">
+    <ul class="checks">
+      <li><div class="c"><svg class="ck"><use href="#i-check"/></svg></div><div><b data-en="No network requests for OCR">OCR のための通信はありません</b><span data-en="Images, screenshots and recognized text are never sent to a server.">画像・スクリーンショット・読み取った文字を、サーバーに送りません。</span></div></li>
+      <li><div class="c"><svg class="ck"><use href="#i-check"/></svg></div><div><b data-en="No data collection">データを集めません</b><span data-en="No personal data, analytics, telemetry or cookies.">個人情報も、利用の統計も、Cookie も使いません。</span></div></li>
+      <li><div class="c"><svg class="ck"><use href="#i-check"/></svg></div><div><b data-en="Works offline">オフラインでも動きます</b><span data-en="The OCR models ship inside the extension.">OCR のモデルは拡張の中に入っています。</span></div></li>
+      <li><div class="c"><svg class="ck"><use href="#i-check"/></svg></div><div><b data-en="Open source">ソースコードを公開しています</b><span data-en="Anyone can check what it does on GitHub.">何をしているかは、だれでも GitHub で確かめられます。</span></div></li>
+    </ul>
+    <div class="perm">
+      <h3 data-en="Permissions and why">求める権限と、その理由</h3>
+      <table>
+        <tr><th>scripting</th><td data-en="Shows the selection box on the page">見ているページに、範囲を選ぶ枠を出す</td></tr>
+        <tr><th data-en="Host permission (all sites)">サイトへのアクセス（全サイト）</th><td data-en="Captures the visible tab only when you start a selection">範囲選択を始めたときだけ、見えている画面を撮る</td></tr>
+        <tr><th>offscreen</th><td data-en="Runs the OCR engine">OCR のエンジンを動かす</td></tr>
+        <tr><th>clipboardWrite / Read</th><td data-en="Copies the result; opens a copied image">結果をコピーする・コピーした画像を開く</td></tr>
+        <tr><th>contextMenus</th><td data-en="Adds OCR to the right-click menu">右クリックのメニューに OCR を出す</td></tr>
+        <tr><th>storage</th><td data-en="Saves history, settings and rules">履歴・設定・クリーニングルールを保存する</td></tr>
+      </table>
+    </div>
+  </div>
+</section>
+
+<!-- 小さいプロモタイル 440×280 -->
+<section class="frame" id="small">
+  <div class="brand"><img src="../../public/icons/icon128.png" alt=""><span data-en="Offline OCR">オフラインOCR</span></div>
+  <h1 data-en="Copy text<br>from<br>images.">画像の<br>文字を、<br>コピー。</h1>
+  <div class="shot" style="--k:.5; --sx:760; --sy:110"><img src="shots/{lang}/page-select.png" alt=""></div>
+  <span class="chip" data-en="Zero network">通信ゼロ</span>
+</section>
+
+<!-- マーキー 1400×560 -->
+<section class="frame" id="marquee">
+  <div class="brand"><img src="../../public/icons/icon128.png" alt=""><span data-en="Offline OCR">オフラインOCR</span></div>
+  <h1 data-en="Copy text from images,<br>right in your<br>browser.">画像の文字を、<br>ブラウザの中だけで<br>読み取る。</h1>
+  <ul>
+    <li><svg class="ck"><use href="#i-check"/></svg><span data-en="Zero network">通信ゼロ</span></li>
+    <li><svg class="ck"><use href="#i-check"/></svg><span data-en="Vertical text">縦書き対応</span></li>
+    <li><svg class="ck"><use href="#i-check"/></svg><span data-en="PDF · Deskew · Eraser">PDF・ゆがみ補正・消しゴム</span></li>
+  </ul>
+  <div class="side">
+    <div class="win">
+      <div class="bar"><i></i><i></i><i></i><span>blog.example.jp/kosho</span></div>
+      <div class="shot" style="--k:.95; --sx:718; --sy:95; height:440px"><img src="shots/{lang}/page-select.png" alt=""></div>
+    </div>
+    <div class="result">
+      <div class="t"><svg class="ck"><use href="#i-check"/></svg><span data-en="Copied (111 chars)">コピーしました（111文字）</span></div>
+      <pre>第三章 古本屋の午後
+駅前の古本屋は、午後になると西日が差しこむ。
+棚の奥から一冊を抜くと、表紙の角がすこし丸くなっていた。…</pre>
+    </div>
+  </div>
+</section>
+
+<script>
+  const lang = new URLSearchParams(location.search).get("lang") || "ja";
+  document.documentElement.lang = lang;
+  for (const img of document.querySelectorAll("img")) img.src = img.getAttribute("src").replace("{lang}", lang);
+  if (lang === "en") for (const el of document.querySelectorAll("[data-en]")) el.innerHTML = el.dataset.en;
+</script>
+</body>
+</html>

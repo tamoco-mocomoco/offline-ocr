@@ -48,7 +48,7 @@ OCR エンジン (ONNX Runtime Web) とモデルはすべて拡張機能に内�
 ・検出モデル: DEIM (FP32)
 ・認識モデル: PARSeq (FP32)
 ・推論ランタイム: ONNX Runtime Web (WebAssembly)
-・対応言語: 日本語（横書き）
+・対応言語: 日本語（縦書き・横書き）
 ・動作環境: Chrome 116 以降（PDF の読み込みは Chrome 147 以降）
 
 ■ 謝辞

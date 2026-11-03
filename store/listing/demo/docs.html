@@ -1,0 +1,102 @@
+<!doctype html>
+<!-- ストアの画面写真と動画で OCR する見本 (架空の文書)。make-demo.mjs が #id ごとに PNG / PDF にする -->
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<style>
+  body { margin: 0; background: #fff; }
+  .doc { position: relative; box-sizing: border-box; }
+  .mincho { font-family: "Hiragino Mincho ProN", serif; }
+  .gothic { font-family: "Hiragino Sans", sans-serif; }
+
+  /* 縦書きの本の頁 */
+  #book { width: 760px; height: 1000px; padding: 90px 80px; background: #f7f1e3; color: #2a2418; }
+  #book .text { writing-mode: vertical-rl; font-size: 34px; line-height: 1.95; letter-spacing: .06em; height: 100%; }
+  #book h2 { font-size: 40px; margin: 0 0 0 28px; font-weight: 600; }
+  #book p { margin: 0; text-indent: 1em; }
+  #book .folio { position: absolute; bottom: 36px; left: 0; right: 0; text-align: center; font-size: 20px; color: #6b604c; }
+
+  /* 斜めに撮った本の写真 */
+  #photo { width: 1200px; height: 1100px; overflow: hidden;
+    background: radial-gradient(ellipse at 40% 35%, #c89a6a, #8b5e3c 70%, #5c3b22); perspective: 1600px; }
+  #photo .grain { position: absolute; inset: 0; opacity: .18;
+    background: repeating-linear-gradient(8deg, transparent 0 22px, rgba(60,30,10,.6) 22px 24px, transparent 24px 60px); }
+  #photo .page { position: absolute; left: 230px; top: 70px; transform-origin: 50% 50%;
+    transform: rotateX(34deg) rotateZ(-11deg) rotateY(-6deg);
+    box-shadow: -30px 50px 60px rgba(30,15,5,.55); }
+
+  /* はんこと書き込みのある請求書 */
+  #invoice { width: 1000px; height: 1300px; padding: 80px 90px; background: #fff; color: #1d2430; }
+  #invoice h1 { text-align: center; font-size: 52px; letter-spacing: .5em; margin: 0 0 50px; font-weight: 600; }
+  #invoice .row { display: flex; justify-content: space-between; align-items: flex-end; font-size: 26px; }
+  #invoice .to { font-size: 34px; border-bottom: 2px solid #1d2430; padding-bottom: 6px; }
+  #invoice .meta { text-align: right; line-height: 1.7; font-size: 22px; }
+  #invoice .total { margin: 50px 0 40px; padding: 22px 30px; border: 3px solid #1d2430; font-size: 34px; display: flex; justify-content: space-between; }
+  #invoice table { width: 100%; border-collapse: collapse; font-size: 26px; }
+  #invoice th, #invoice td { border: 1.5px solid #8a94a6; padding: 14px 18px; }
+  #invoice th { background: #eef2f7; font-weight: 600; }
+  #invoice td.n { text-align: right; }
+  #invoice .from { margin: 34px 210px 0 auto; width: max-content; text-align: right; font-size: 24px; line-height: 1.7; }
+  #invoice .stamp { position: absolute; right: 40px; top: 300px; width: 130px; height: 130px; border: 7px solid #d22c2c; border-radius: 50%;
+    color: #d22c2c; display: grid; place-items: center; font-size: 40px; font-weight: 700; transform: rotate(-12deg); opacity: .82;
+    font-family: "Hiragino Mincho ProN", serif; line-height: 1.05; text-align: center; }
+  #invoice .memo { position: absolute; left: 600px; top: 905px; color: #d23b2b; font-size: 46px; transform: rotate(-8deg);
+    font-family: "Hiragino Maru Gothic ProN", sans-serif; }
+  #invoice .memo2 { position: absolute; left: 600px; top: 1010px; color: #2b5bd2; font-size: 34px; transform: rotate(4deg);
+    font-family: "Hiragino Maru Gothic ProN", sans-serif; }
+  #invoice .note { margin-top: 60px; font-size: 22px; line-height: 1.8; color: #3a4456; }
+
+  /* PDF の頁 (A4 比) */
+  .pdfpage { width: 794px; height: 1123px; padding: 90px 80px; box-sizing: border-box; page-break-after: always; color: #1d2430; }
+  .pdfpage h1 { font-size: 40px; margin: 0 0 12px; }
+  .pdfpage h2 { font-size: 28px; margin: 40px 0 12px; border-left: 8px solid #2e6bd6; padding-left: 14px; }
+  .pdfpage p, .pdfpage li { font-size: 21px; line-height: 1.9; }
+  .pdfpage .sub { color: #5a6475; font-size: 20px; }
+  .pdfpage .foot { position: absolute; }
+</style>
+</head>
+<body>
+
+<div id="book" class="doc mincho"><div class="text">
+  <h2>第三章　古本屋の午後</h2>
+  <p>駅前の古本屋は、午後になると西日が差しこむ。</p>
+  <p>棚の奥から一冊を抜くと、表紙の角がすこし丸くなっていた。</p>
+  <p>頁のあいだには、色あせた栞がはさまったままだった。</p>
+  <p>前の持ち主は、どこまで読んだのだろう。</p>
+</div><div class="folio">四十二</div></div>
+
+<div id="photo" class="doc"><div class="grain"></div><div class="page" id="photo-page"></div></div>
+
+<div id="invoice" class="doc gothic">
+  <h1>請求書</h1>
+  <div class="row"><div class="to">株式会社サンプル商事　御中</div><div class="meta">請求番号　2026-1102<br>発行日　2026年11月2日</div></div>
+  <div class="from">架空デザイン事務所<br>東京都千代田区見本町1-2-3<br>TEL 03-0000-0000</div>
+  <div class="stamp">架空<br>之印</div>
+  <div class="total"><span>ご請求金額（税込）</span><span>¥1,234,567</span></div>
+  <table>
+    <tr><th>品目</th><th>数量</th><th>金額</th></tr>
+    <tr><td>サイトのデザイン</td><td class="n">1式</td><td class="n">¥600,000</td></tr>
+    <tr><td>ページの制作</td><td class="n">1式</td><td class="n">¥522,334</td></tr>
+    <tr><td>消費税（10%）</td><td class="n"></td><td class="n">¥112,233</td></tr>
+  </table>
+  <div class="memo">確認済み!</div>
+  <div class="note">お支払い期限　2026年11月30日<br>振込先　見本銀行　本店　普通 0000000</div>
+  <div class="memo2">← 月末までに</div>
+</div>
+
+<div id="report" class="gothic">
+  <div class="pdfpage"><h1>新しいサービスの企画書</h1><p class="sub">2026年11月　企画部（例）</p>
+    <h2>1. ねらい</h2><p>紙の資料や写真の文字を、すぐに再利用できるようにする。入力の手間を減らし、転記のまちがいを防ぐ。</p>
+    <h2>2. 対象</h2><ul><li>請求書や納品書を扱う経理の担当者</li><li>古い資料を読み直す研究者</li><li>外出先で写真をとる営業の担当者</li></ul>
+    <p class="sub">1 / 3</p></div>
+  <div class="pdfpage"><h1>3. 進め方</h1>
+    <h2>第一段階（12月）</h2><p>試作品を作り、社内の十人に使ってもらう。読みとりの正しさと、使いやすさを確かめる。</p>
+    <h2>第二段階（1月）</h2><p>意見をもとに画面を直し、対象を広げる。</p>
+    <p class="sub">2 / 3</p></div>
+  <div class="pdfpage"><h1>4. 予算</h1><p>開発費　三百万円</p><p>運用費　月額五万円</p>
+    <h2>5. まとめ</h2><p>小さく始めて、使う人の声を聞きながら育てる。</p>
+    <p class="sub">3 / 3</p></div>
+</div>
+
+</body>
+</html>
